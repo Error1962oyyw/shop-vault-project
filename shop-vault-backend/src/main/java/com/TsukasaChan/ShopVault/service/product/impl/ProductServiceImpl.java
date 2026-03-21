@@ -1,0 +1,118 @@
+package com.TsukasaChan.ShopVault.service.product.impl;
+
+import com.TsukasaChan.ShopVault.dto.YoloSearchResultDto;
+import com.TsukasaChan.ShopVault.entity.product.Category;
+import com.TsukasaChan.ShopVault.entity.product.Product;
+import com.TsukasaChan.ShopVault.entity.system.User;
+import com.TsukasaChan.ShopVault.mapper.product.ProductMapper;
+import com.TsukasaChan.ShopVault.service.product.CategoryService;
+import com.TsukasaChan.ShopVault.service.product.ProductService;
+import com.TsukasaChan.ShopVault.service.system.UserBehaviorService;
+import com.TsukasaChan.ShopVault.service.system.UserService;
+import com.TsukasaChan.ShopVault.service.system.YoloMappingService;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.stream.Collectors;
+
+@Service
+public class ProductServiceImpl extends ServiceImpl<ProductMapper, Product> implements ProductService {
+
+    private final UserBehaviorService userBehaviorService;
+    private final UserService userService;
+    private final CategoryService categoryService;
+    private final YoloMappingService yoloMappingService;
+
+    public ProductServiceImpl(
+            UserBehaviorService userBehaviorService,
+            UserService userService,
+            CategoryService categoryService,
+            YoloMappingService yoloMappingService) {
+        this.userBehaviorService = userBehaviorService;
+        this.userService = userService;
+        this.categoryService = categoryService;
+        this.yoloMappingService = yoloMappingService;
+    }
+
+    @Override
+    public Page<Product> getProductPage(Integer current, Integer size, String keyword, Long categoryId) {
+        Page<Product> page = new Page<>(current, size);
+        LambdaQueryWrapper<Product> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(Product::getStatus, 1);
+
+        if (StringUtils.hasText(keyword)) wrapper.like(Product::getName, keyword);
+        if (categoryId != null) wrapper.eq(Product::getCategoryId, categoryId);
+
+        wrapper.orderByDesc(Product::getCreateTime);
+        return this.page(page, wrapper);
+    }
+
+    @Override
+    public Product getProductDetailWithBehavior(Long id, String username) {
+        Product product = this.getById(id);
+        if (product == null || product.getStatus() == 0) {
+            throw new RuntimeException("商品不存在或已下架");
+        }
+
+        if (username != null && !username.equals("anonymousUser")) {
+            User user = userService.getOne(new LambdaQueryWrapper<User>().eq(User::getUsername, username));
+            if (user != null) {
+                userBehaviorService.recordBehavior(user.getId(), id, 1);
+            }
+        }
+        return product;
+    }
+
+    @Override
+    public List<YoloSearchResultDto.CategoryInfo> getHotCategories() {
+        List<Category> allCategories = categoryService.list(new LambdaQueryWrapper<Category>()
+                .orderByAsc(Category::getSort));
+
+        List<YoloSearchResultDto.CategoryInfo> hotCategories = new ArrayList<>();
+        for (Category category : allCategories) {
+            long productCount = this.count(new LambdaQueryWrapper<Product>()
+                    .eq(Product::getCategoryId, category.getId())
+                    .eq(Product::getStatus, 1));
+            hotCategories.add(new YoloSearchResultDto.CategoryInfo(
+                    category.getId(),
+                    category.getName(),
+                    category.getIcon(),
+                    Math.toIntExact(productCount)
+            ));
+            if (hotCategories.size() >= 10) break;
+        }
+        return hotCategories;
+    }
+
+    @Override
+    public YoloSearchResultDto yoloSearch(List<String> labels) {
+        if (labels == null || labels.isEmpty()) {
+            return YoloSearchResultDto.noDetection(getHotCategories());
+        }
+
+        List<Long> categoryIds = yoloMappingService.findCategoryIdsByLabels(labels);
+        
+        if (categoryIds.isEmpty()) {
+            return YoloSearchResultDto.noMatch(labels, getHotCategories());
+        }
+
+        List<Category> categories = categoryService.listByIds(categoryIds);
+        List<YoloSearchResultDto.CategoryInfo> categoryInfos = categories.stream()
+                .map(c -> new YoloSearchResultDto.CategoryInfo(
+                        c.getId(), 
+                        c.getName(), 
+                        c.getIcon(),
+                        Math.toIntExact(this.count(new LambdaQueryWrapper<Product>()
+                                .eq(Product::getCategoryId, c.getId())
+                                .eq(Product::getStatus, 1)))
+                ))
+                .collect(Collectors.toList());
+
+        return YoloSearchResultDto.success(labels, categoryInfos);
+    }
+}

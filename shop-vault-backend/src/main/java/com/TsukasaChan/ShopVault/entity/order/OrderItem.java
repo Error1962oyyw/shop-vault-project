@@ -1,0 +1,41 @@
+package com.TsukasaChan.ShopVault.entity.order;
+
+import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableField;
+import com.baomidou.mybatisplus.annotation.TableId;
+import com.baomidou.mybatisplus.annotation.TableName;
+import lombok.Data;
+
+import java.io.Serial;
+import java.io.Serializable;
+import java.math.BigDecimal;
+
+@Data
+@TableName("oms_order_item")
+public class OrderItem implements Serializable {
+
+    @TableField(exist = false)
+    @Serial
+    private static final long serialVersionUID = 1L;
+
+    @TableId(value = "id", type = IdType.AUTO)
+    private Long id;
+
+    private Long orderId;
+
+    private String orderNo;
+
+    private Long productId;
+
+    private String productName;
+
+    private String productImg;
+
+    private BigDecimal productPrice;
+
+    private Integer quantity;
+
+    private Long skuId;
+
+    private String specJson;
+}
