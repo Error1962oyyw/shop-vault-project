@@ -2,6 +2,11 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { 
+  ArrowDown, User, List, Star, Coin, SwitchButton, 
+  Shop, Search, ShoppingCart, Service, Camera, Menu,
+  HomeFilled, Goods, Calendar
+} from '@element-plus/icons-vue'
 import { useUserStore } from '@/stores/user'
 import { useCartStore } from '@/stores/cart'
 import { useCategoryStore } from '@/stores/category'
@@ -101,9 +106,9 @@ onMounted(() => {
             <el-dropdown @command="handleCommand">
               <span class="user-dropdown">
                 <el-avatar :size="24" :src="userStore.userInfo?.avatar">
-                  {{ userStore.userInfo?.nickname?.charAt(0) || userStore.userInfo?.username?.charAt(0) }}
+                  {{ (userStore.userInfo?.nickname || userStore.userInfo?.username || 'U')?.charAt(0) }}
                 </el-avatar>
-                <span class="user-name">{{ userStore.userInfo?.nickname || userStore.userInfo?.username }}</span>
+                <span class="user-name">{{ userStore.userInfo?.nickname || userStore.userInfo?.username || '用户' }}</span>
                 <el-icon><ArrowDown /></el-icon>
               </span>
               <template #dropdown>
@@ -128,8 +133,13 @@ onMounted(() => {
             </el-dropdown>
           </template>
           <template v-else>
+            <span class="guest-info">
+              <el-avatar :size="24">
+                游
+              </el-avatar>
+              <span class="guest-name">游客</span>
+            </span>
             <router-link to="/login" class="top-link">登录</router-link>
-            <span class="divider">|</span>
             <router-link to="/register" class="top-link">注册</router-link>
           </template>
         </div>
@@ -253,17 +263,17 @@ onMounted(() => {
             <router-link 
               to="/products"
               class="nav-link"
-              :class="{ active: route.path === '/products' }"
+              :class="{ active: route.path.startsWith('/products') }"
             >
               全部商品
             </router-link>
-            <router-link 
-              to="/member-day"
+            <span
               class="nav-link highlight"
               :class="{ active: route.path === '/member-day' }"
+              @click="goTo('/member-day')"
             >
               会员日
-            </router-link>
+            </span>
           </div>
         </div>
       </div>
@@ -330,6 +340,10 @@ onMounted(() => {
           <div class="mobile-nav-item" @click="goTo('/chat')">
             <el-icon><Service /></el-icon>
             <span>在线客服</span>
+          </div>
+          <div v-if="isLoggedIn" class="mobile-nav-item" @click="goTo('/profile')">
+            <el-icon><User /></el-icon>
+            <span>个人中心</span>
           </div>
         </div>
         
@@ -417,6 +431,27 @@ onMounted(() => {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  line-height: 36px;
+  font-size: 13px;
+}
+
+.guest-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-right: 16px;
+}
+
+.guest-info .el-avatar {
+  background: linear-gradient(135deg, #e6f4ff 0%, #bae0ff 100%);
+  color: var(--primary-color);
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.guest-name {
+  font-size: 13px;
+  color: var(--text-secondary);
 }
 
 .top-right {
@@ -482,7 +517,7 @@ onMounted(() => {
   flex: 1;
   max-width: 500px;
   display: flex;
-  gap: 0;
+  align-items: stretch;
 }
 
 .search-input {
@@ -493,6 +528,12 @@ onMounted(() => {
   border-radius: 12px 0 0 12px;
   border-right: none;
   box-shadow: 0 0 0 1px var(--primary-color);
+  height: 40px;
+}
+
+.search-input :deep(.el-input__inner) {
+  height: 38px;
+  line-height: 38px;
 }
 
 .search-input :deep(.el-input__wrapper:focus-within) {
@@ -501,9 +542,11 @@ onMounted(() => {
 
 .search-btn {
   border-radius: 0 12px 12px 0;
-  height: 32px;
+  height: 40px;
   padding: 0 24px;
   font-weight: 600;
+  display: flex;
+  align-items: center;
 }
 
 .action-section {
@@ -672,6 +715,8 @@ onMounted(() => {
 
 .mobile-menu {
   padding: 16px;
+  padding-bottom: calc(80px + env(safe-area-inset-bottom));
+  min-height: calc(100vh - 60px);
 }
 
 .mobile-user-card {
@@ -701,7 +746,7 @@ onMounted(() => {
 
 .mobile-quick-actions {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(2, 1fr);
   gap: 12px;
   margin-top: 16px;
 }
@@ -710,8 +755,8 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 6px;
-  padding: 12px;
+  gap: 8px;
+  padding: 16px 12px;
   background: var(--primary-50);
   border-radius: 12px;
   cursor: pointer;
@@ -722,9 +767,15 @@ onMounted(() => {
   background: var(--primary-100);
 }
 
+.quick-action-item .el-icon {
+  font-size: 24px;
+  color: var(--primary-color);
+}
+
 .quick-action-item span {
-  font-size: 12px;
-  color: var(--text-secondary);
+  font-size: 14px;
+  color: var(--text-primary);
+  font-weight: 500;
 }
 
 .mobile-nav-list {
@@ -773,12 +824,15 @@ onMounted(() => {
 .mobile-logout {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 12px;
-  padding: 14px 16px;
+  padding: 16px;
   background: #fff1f0;
   border-radius: 12px;
   color: #ff4d4f;
   cursor: pointer;
+  font-weight: 500;
+  margin-top: 8px;
 }
 
 .mobile-auth-btns {
@@ -808,7 +862,12 @@ onMounted(() => {
   }
   
   .main-content {
-    gap: 16px;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  
+  .logo-section {
+    flex-shrink: 0;
   }
   
   .logo-icon {
@@ -825,21 +884,44 @@ onMounted(() => {
     order: 3;
     width: 100%;
     max-width: none;
-    margin-top: 12px;
+    display: flex;
+    align-items: stretch;
   }
   
-  .main-content {
-    flex-wrap: wrap;
+  .search-input {
+    flex: 1;
+  }
+  
+  .search-input :deep(.el-input__wrapper) {
+    border-radius: 12px 0 0 12px;
+    height: 40px;
+  }
+  
+  .search-input :deep(.el-input__inner) {
+    height: 38px;
+    line-height: 38px;
+  }
+  
+  .search-btn {
+    flex-shrink: 0;
+    border-radius: 0 12px 12px 0;
+    height: 40px;
+    display: flex;
+    align-items: center;
   }
   
   .action-section {
-    gap: 12px;
+    gap: 8px;
   }
   
   .action-icon {
     width: 32px;
     height: 32px;
     font-size: 16px;
+  }
+  
+  .action-label {
+    display: none;
   }
   
   .header-nav {

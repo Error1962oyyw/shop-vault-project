@@ -30,8 +30,11 @@ public class SecurityConfig {
                         .requestMatchers(
                                 "/api/auth/**",
                                 "/api/product/list",
+                                "/api/product/yolo-search",
+                                "/api/product/hot-categories",
                                 "/api/upload/image",
                                 "/api/recommendation/guess-you-like",
+                                "/uploads/**",
                                 "/ws/**",
                                 "/error"
                         ).permitAll()

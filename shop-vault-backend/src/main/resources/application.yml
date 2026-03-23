@@ -55,6 +55,9 @@ shop-vault:
     points-to-cash-rate: 100
     min-use-points: 100
     max-use-percent: 50
+  upload:
+    path: ./uploads
+    url-prefix: /uploads
 
 logging:
   level:

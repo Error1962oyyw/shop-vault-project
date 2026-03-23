@@ -1,5 +1,5 @@
 import axios, { InternalAxiosRequestConfig, AxiosResponse } from 'axios';
-import { ElMessageBox } from 'element-plus';
+import { ElMessage } from 'element-plus';
 import router from '@/router';
 import { useUserStore } from '@/stores/user';
 
@@ -8,6 +8,8 @@ const service = axios.create({
   timeout: 10000,
   headers: { 'Content-Type': 'application/json' }
 });
+
+let isRedirecting = false;
 
 service.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
@@ -44,16 +46,29 @@ service.interceptors.response.use(
       const msg = error.response.data?.message || error.response.data?.msg;
       
       if (status === 401) {
-        const userStore = useUserStore();
-        userStore.clearToken();
-        localStorage.removeItem('token');
-        
-        ElMessageBox.alert(msg || '登录状态已过期，请重新登录', '提示', {
-          confirmButtonText: '确定',
-          callback: () => {
-            router.push('/login');
+        if (!isRedirecting) {
+          isRedirecting = true;
+          const userStore = useUserStore();
+          userStore.clearToken();
+          userStore.setIsGuest(true);
+          
+          ElMessage.warning('请先登录');
+          
+          const currentPath = router.currentRoute.value.fullPath;
+          const isLoginPage = router.currentRoute.value.path === '/login' || 
+                              router.currentRoute.value.path === '/admin/login';
+          
+          if (!isLoginPage) {
+            router.push({ 
+              path: '/login', 
+              query: { redirect: currentPath } 
+            }).finally(() => {
+              isRedirecting = false;
+            });
+          } else {
+            isRedirecting = false;
           }
-        });
+        }
       } else if (status === 403) {
         return Promise.reject({
           response: { 
@@ -97,6 +112,7 @@ interface RequestConfig {
   data?: any;
   params?: any;
   headers?: any;
+  timeout?: number;
 }
 
 export default function request<T>(config: RequestConfig): Promise<T> {

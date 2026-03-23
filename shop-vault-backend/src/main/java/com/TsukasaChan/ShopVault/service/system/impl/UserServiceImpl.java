@@ -62,6 +62,12 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         if (updateInfo.getPhone() != null) {
             user.setPhone(updateInfo.getPhone());
         }
+        if (updateInfo.getGender() != null) {
+            user.setGender(updateInfo.getGender());
+        }
+        if (updateInfo.getBirthday() != null) {
+            user.setBirthday(updateInfo.getBirthday());
+        }
 
         updateById(user);
     }

@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { ref, onMounted, nextTick, computed } from 'vue'
-import { getChatUsers, getAdminChatHistory, adminReply, type ChatUser } from '@/api/chat'
+import { getChatUsers, getAdminChatHistory, adminReply, adminReplyImage, type ChatUser } from '@/api/chat'
 import { useUserStore } from '@/stores/user'
 import type { ChatMessage } from '@/types/api'
 import { ElMessage } from 'element-plus'
+import { Picture } from '@element-plus/icons-vue'
 
 const userStore = useUserStore()
 
@@ -15,6 +16,7 @@ const loading = ref(false)
 const sending = ref(false)
 const messagesContainer = ref<HTMLElement>()
 const searchKeyword = ref('')
+const imageInputRef = ref<HTMLInputElement | null>(null)
 
 const filteredUsers = computed(() => {
   if (!searchKeyword.value.trim()) return chatUsers.value
@@ -97,6 +99,65 @@ const formatTime = (time: string) => {
 
 const isMyMessage = (msg: ChatMessage) => {
   return msg.senderId === userStore.userInfo?.id
+}
+
+const isImageMessage = (msg: ChatMessage) => {
+  return msg.msgType === 2 || (msg.content && (msg.content.startsWith('/uploads/') || msg.content.startsWith('http')))
+}
+
+const getFullImageUrl = (url: string) => {
+  if (!url) return ''
+  if (url.startsWith('http')) return url
+  const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080'
+  return baseUrl + url
+}
+
+const getAvatarUrl = (url: string) => {
+  if (!url) return ''
+  if (url.startsWith('http')) return url
+  const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080'
+  return baseUrl + url
+}
+
+const handleImageClick = (imageUrl: string) => {
+  window.open(getFullImageUrl(imageUrl), '_blank')
+}
+
+const triggerImageUpload = () => {
+  imageInputRef.value?.click()
+}
+
+const handleImageChange = async (event: Event) => {
+  const target = event.target as HTMLInputElement
+  const file = target.files?.[0]
+  if (!file || !selectedUser.value) return
+
+  const allowedTypes = ['image/jpeg', 'image/png', 'image/jpg', 'image/webp', 'image/gif']
+  if (!allowedTypes.includes(file.type)) {
+    ElMessage.error('仅支持 JPG、PNG、WEBP、GIF 格式的图片')
+    return
+  }
+
+  const maxSize = 5 * 1024 * 1024
+  if (file.size > maxSize) {
+    ElMessage.error('图片大小不能超过 5MB')
+    return
+  }
+
+  sending.value = true
+  try {
+    await adminReplyImage(selectedUser.value.id, file)
+    await fetchMessages()
+    ElMessage.success('图片发送成功')
+  } catch (error: any) {
+    const msg = error?.response?.data?.msg || error?.message || '图片发送失败'
+    ElMessage.error(msg)
+  } finally {
+    sending.value = false
+    if (target) {
+      target.value = ''
+    }
+  }
 }
 
 const formatLastTime = (time: string) => {
@@ -199,14 +260,25 @@ onMounted(() => {
               >
                 <div class="message-content">
                   <div class="message-avatar" v-if="!isMyMessage(msg)">
-                    <el-avatar :size="40" class="avatar-user">
+                    <el-avatar :size="40" :src="getAvatarUrl(selectedUser.avatar)" class="avatar-user">
                       {{ selectedUser.nickname?.charAt(0) || selectedUser.username?.charAt(0) }}
                     </el-avatar>
                   </div>
                   
                   <div class="message-body">
                     <div class="message-bubble" :class="isMyMessage(msg) ? 'bubble-blue' : 'bubble-white'">
-                      <p class="message-text">{{ msg.content }}</p>
+                      <template v-if="isImageMessage(msg)">
+                        <img 
+                          :src="getFullImageUrl(msg.content)" 
+                          class="message-image" 
+                          @click="handleImageClick(msg.content)"
+                          alt="聊天图片"
+                          @error="(e) => (e.target as HTMLImageElement).style.display='none'"
+                        />
+                      </template>
+                      <template v-else>
+                        <p class="message-text">{{ msg.content }}</p>
+                      </template>
                     </div>
                     <div class="message-time" :class="isMyMessage(msg) ? 'time-right' : 'time-left'">
                       {{ formatTime(msg.createTime) }}
@@ -214,8 +286,8 @@ onMounted(() => {
                   </div>
                   
                   <div class="message-avatar" v-if="isMyMessage(msg)">
-                    <el-avatar :size="40" class="avatar-admin">
-                      客服
+                    <el-avatar :size="40" :src="getAvatarUrl(userStore.userInfo?.avatar || '')" class="avatar-admin">
+                      {{ userStore.userInfo?.nickname?.charAt(0) || '管' }}
                     </el-avatar>
                   </div>
                 </div>
@@ -226,6 +298,20 @@ onMounted(() => {
           
           <div class="input-area">
             <div class="input-wrapper">
+              <input 
+                ref="imageInputRef"
+                type="file"
+                accept="image/jpeg,image/png,image/jpg,image/webp,image/gif"
+                style="display: none"
+                @change="handleImageChange"
+              />
+              <el-button 
+                class="image-btn"
+                :loading="sending"
+                @click="triggerImageUpload"
+              >
+                <el-icon><Picture /></el-icon>
+              </el-button>
               <el-input 
                 v-model="inputMessage"
                 placeholder="输入消息..."
@@ -462,7 +548,13 @@ onMounted(() => {
 }
 
 .my-message .message-content {
-  flex-direction: row-reverse;
+  justify-content: flex-end;
+}
+
+.my-message .message-body {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
 }
 
 .message-avatar {
@@ -506,6 +598,18 @@ onMounted(() => {
   font-size: 15px;
   line-height: 1.5;
   word-break: break-word;
+}
+
+.message-image {
+  max-width: 200px;
+  max-height: 200px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+
+.message-image:hover {
+  transform: scale(1.02);
 }
 
 .message-time {
@@ -554,6 +658,27 @@ onMounted(() => {
   padding: 0 24px;
   border-radius: 12px;
   font-weight: 600;
+}
+
+.image-btn {
+  height: 44px;
+  width: 44px;
+  border-radius: 12px;
+  border: 2px solid var(--border-light);
+  background: #fff;
+  color: var(--text-regular);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.image-btn:hover {
+  border-color: var(--primary-color);
+  color: var(--primary-color);
+}
+
+.image-btn .el-icon {
+  font-size: 20px;
 }
 
 .no-chat-selected {

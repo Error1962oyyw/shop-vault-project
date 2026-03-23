@@ -41,17 +41,33 @@ export const useUserStore = defineStore('user', () => {
   };
 
   const fetchUserInfo = async () => {
+    if (!token.value) {
+      throw new Error('No token');
+    }
+    
     try {
       const res = await getProfile();
       userInfo.value = res;
+      return res;
     } catch (error) {
-      console.error('获取用户信息失败', error);
+      userInfo.value = null;
+      throw error;
+    }
+  };
+
+  const updateUserInfo = (updates: Partial<UserInfo>) => {
+    if (userInfo.value) {
+      userInfo.value = { ...userInfo.value, ...updates };
     }
   };
 
   const enterGuestMode = () => {
     clearToken();
     setIsGuest(true);
+  };
+
+  const isLoggedIn = () => {
+    return !!token.value;
   };
 
   return {
@@ -64,6 +80,8 @@ export const useUserStore = defineStore('user', () => {
     setIsGuest,
     clearToken,
     fetchUserInfo,
-    enterGuestMode
+    updateUserInfo,
+    enterGuestMode,
+    isLoggedIn
   };
 });

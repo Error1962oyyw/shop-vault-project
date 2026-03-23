@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { useUserStore } from '@/stores/user'
+import { ElMessage } from 'element-plus'
 
 const router = createRouter({
   history: createWebHistory(),
@@ -44,73 +45,73 @@ const router = createRouter({
       path: '/ai-search',
       name: 'AISearch',
       component: () => import('@/views/ai-search/index.vue'),
-      meta: { requiresAuth: true, requiresLoggedIn: true }
+      meta: { requiresAuth: true }
     },
     {
       path: '/cart',
       name: 'Cart',
       component: () => import('@/views/cart/index.vue'),
-      meta: { requiresAuth: true, requiresLoggedIn: true }
+      meta: { requiresAuth: true }
     },
     {
       path: '/checkout',
       name: 'Checkout',
       component: () => import('@/views/checkout/index.vue'),
-      meta: { requiresAuth: true, requiresLoggedIn: true }
+      meta: { requiresAuth: true }
     },
     {
       path: '/orders',
       name: 'Orders',
       component: () => import('@/views/orders/index.vue'),
-      meta: { requiresAuth: true, requiresLoggedIn: true }
+      meta: { requiresAuth: true }
     },
     {
       path: '/order/pay/:orderNo',
       name: 'OrderPay',
       component: () => import('@/views/order/pay.vue'),
-      meta: { requiresAuth: true, requiresLoggedIn: true }
+      meta: { requiresAuth: true }
     },
     {
       path: '/profile',
       name: 'Profile',
       component: () => import('@/views/profile/index.vue'),
-      meta: { requiresAuth: true, requiresLoggedIn: true }
+      meta: { requiresAuth: true }
     },
     {
       path: '/points',
       name: 'Points',
       component: () => import('@/views/points/index.vue'),
-      meta: { requiresAuth: true, requiresLoggedIn: true }
+      meta: { requiresAuth: true }
     },
     {
       path: '/chat',
       name: 'Chat',
       component: () => import('@/views/chat/index.vue'),
-      meta: { requiresAuth: true, requiresLoggedIn: true }
+      meta: { requiresAuth: true }
     },
     {
       path: '/coupons',
       name: 'Coupons',
       component: () => import('@/views/coupons/index.vue'),
-      meta: { requiresAuth: true, requiresLoggedIn: true }
+      meta: { requiresAuth: true }
     },
     {
       path: '/member-day',
       name: 'MemberDay',
       component: () => import('@/views/member-day/index.vue'),
-      meta: { requiresAuth: true, requiresLoggedIn: true }
+      meta: { requiresAuth: true }
     },
     {
       path: '/messages',
       name: 'Messages',
       component: () => import('@/views/messages/index.vue'),
-      meta: { requiresAuth: true, requiresLoggedIn: true }
+      meta: { requiresAuth: true }
     },
     {
       path: '/favorites',
       name: 'Favorites',
       component: () => import('@/views/favorites/index.vue'),
-      meta: { requiresAuth: true, requiresLoggedIn: true }
+      meta: { requiresAuth: true }
     },
     {
       path: '/admin/login',
@@ -183,25 +184,55 @@ router.beforeEach(async (to, _from, next) => {
   const userStore = useUserStore()
   
   if (to.meta.requiresAdmin && !userStore.isAdmin) {
+    ElMessage.warning('请先登录管理员账号')
     next({ name: 'AdminLogin' })
-  } else if (to.meta.requiresLoggedIn && !userStore.token && !userStore.isGuest) {
-    next({ name: 'Login', query: { redirect: to.fullPath } })
-  } else if (to.meta.guest && userStore.token) {
+    return
+  }
+  
+  if (to.meta.requiresAuth) {
+    if (!userStore.token) {
+      userStore.setIsGuest(true)
+      ElMessage.warning('请先登录')
+      next({ name: 'Login', query: { redirect: to.fullPath } })
+      return
+    }
+    
+    if (userStore.token && !userStore.userInfo) {
+      try {
+        await userStore.fetchUserInfo()
+        next()
+      } catch (error) {
+        userStore.clearToken()
+        userStore.setIsGuest(true)
+        ElMessage.warning('请先登录')
+        next({ name: 'Login', query: { redirect: to.fullPath } })
+        return
+      }
+    } else {
+      next()
+    }
+    return
+  }
+  
+  if (to.meta.guest && userStore.token) {
     if (userStore.isAdmin) {
       next({ name: 'Admin' })
     } else {
       next({ name: 'Home' })
     }
-  } else if (userStore.token && !userStore.userInfo) {
+    return
+  }
+  
+  if (userStore.token && !userStore.userInfo && !to.meta.guest) {
     try {
       await userStore.fetchUserInfo()
     } catch (error) {
-      console.warn('获取用户信息失败，继续访问', error)
+      userStore.clearToken()
+      userStore.setIsGuest(true)
     }
-    next()
-  } else {
-    next()
   }
+  
+  next()
 })
 
 export default router

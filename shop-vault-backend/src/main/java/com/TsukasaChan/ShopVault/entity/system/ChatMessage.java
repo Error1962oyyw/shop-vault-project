@@ -63,4 +63,10 @@ public class ChatMessage implements Serializable {
      * 创建时间
      */
     private LocalDateTime createTime;
+
+    @TableField(exist = false)
+    private String senderAvatar;
+
+    @TableField(exist = false)
+    private String receiverAvatar;
 }

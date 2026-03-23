@@ -8,6 +8,7 @@ import com.baomidou.mybatisplus.annotation.TableName;
 import java.io.Serial;
 import java.io.Serializable;
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import lombok.Data;
 
@@ -33,6 +34,10 @@ public class User implements Serializable {
     private String phone;
 
     private String email;
+
+    private Integer gender;
+
+    private LocalDate birthday;
 
     private BigDecimal balance;
 

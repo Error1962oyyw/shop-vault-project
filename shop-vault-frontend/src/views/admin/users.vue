@@ -10,6 +10,7 @@ interface UserItem {
   nickname: string
   email: string
   phone: string
+  avatar: string
   role: string
   status: number
   points: number
@@ -92,6 +93,13 @@ const getRoleType = (role: string): 'warning' | 'info' => {
   return role === 'ADMIN' ? 'warning' : 'info'
 }
 
+const getAvatarUrl = (url: string) => {
+  if (!url) return ''
+  if (url.startsWith('http')) return url
+  const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080'
+  return baseUrl + url
+}
+
 onMounted(() => {
   fetchUsers()
 })
@@ -125,7 +133,7 @@ onMounted(() => {
         <el-table-column label="用户信息" min-width="200">
           <template #default="{ row }">
             <div class="user-info">
-              <el-avatar :size="40" class="user-avatar">
+              <el-avatar :size="40" :src="getAvatarUrl(row.avatar)" class="user-avatar">
                 {{ (row.nickname || row.username)?.charAt(0) }}
               </el-avatar>
               <div class="user-details">

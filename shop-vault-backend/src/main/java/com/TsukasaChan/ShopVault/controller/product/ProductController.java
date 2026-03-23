@@ -42,8 +42,10 @@ public class ProductController extends BaseController {
             @RequestParam(defaultValue = "1") Integer current,
             @RequestParam(defaultValue = "10") Integer size,
             @RequestParam(required = false) String keyword,
-            @RequestParam(required = false) Long categoryId) {
-        return Result.success(productService.getProductPage(current, size, keyword, categoryId));
+            @RequestParam(required = false) Long categoryId,
+            @RequestParam(required = false, defaultValue = "default") String sortBy,
+            @RequestParam(required = false, defaultValue = "desc") String sortOrder) {
+        return Result.success(productService.getProductPage(current, size, keyword, categoryId, sortBy, sortOrder));
     }
 
     @PostMapping("/yolo-search")

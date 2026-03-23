@@ -55,6 +55,7 @@ public class AdminController extends BaseController {
             map.put("nickname", user.getNickname());
             map.put("email", user.getEmail());
             map.put("phone", user.getPhone());
+            map.put("avatar", user.getAvatar());
             map.put("role", user.getRole());
             map.put("status", user.getStatus());
             map.put("points", user.getPoints());

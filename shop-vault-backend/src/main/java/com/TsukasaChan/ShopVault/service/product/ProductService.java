@@ -8,7 +8,7 @@ import com.baomidou.mybatisplus.extension.service.IService;
 import java.util.List;
 
 public interface ProductService extends IService<Product> {
-    Page<Product> getProductPage(Integer current, Integer size, String keyword, Long categoryId);
+    Page<Product> getProductPage(Integer current, Integer size, String keyword, Long categoryId, String sortBy, String sortOrder);
 
     Product getProductDetailWithBehavior(Long id, String username);
 

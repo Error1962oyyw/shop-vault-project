@@ -13,6 +13,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
@@ -57,6 +58,7 @@ public class JwtUtils {
         String key = buildRefreshTokenKey(refreshToken);
         
         Map<String, String> tokenData = createTokenData(username);
+        Objects.requireNonNull(redisTemplate.opsForValue(), "Redis operations not available");
         redisTemplate.opsForValue().set(key, tokenData, refreshExpiration, TimeUnit.MILLISECONDS);
         
         return refreshToken;
@@ -70,6 +72,9 @@ public class JwtUtils {
         }
         
         String username = tokenData.get("username");
+        if (username == null) {
+            return null;
+        }
         
         generateRefreshToken(username);
         
@@ -84,18 +89,25 @@ public class JwtUtils {
         }
         
         String username = tokenData.get("username");
+        if (username == null) {
+            return null;
+        }
         
         return generateRefreshToken(username);
     }
 
     public boolean validateRefreshToken(String refreshToken) {
         String key = buildRefreshTokenKey(refreshToken);
-        return Boolean.TRUE.equals(redisTemplate.hasKey(key));
+        Boolean hasKey = redisTemplate.hasKey(key);
+        return Boolean.TRUE.equals(hasKey);
     }
 
     public void invalidateRefreshToken(String refreshToken) {
         String key = buildRefreshTokenKey(refreshToken);
-        redisTemplate.delete(key);
+        Boolean deleted = redisTemplate.delete(key);
+        if (!Boolean.TRUE.equals(deleted)) {
+            throw new IllegalStateException("Failed to invalidate refresh token");
+        }
     }
 
     public String extractUsername(String token) {
@@ -133,10 +145,15 @@ public class JwtUtils {
     @SuppressWarnings("unchecked")
     private Map<String, String> getAndDeleteTokenData(String refreshToken) {
         String key = buildRefreshTokenKey(refreshToken);
-        Map<String, String> tokenData = (Map<String, String>) redisTemplate.opsForValue().get(key);
+        Object value = redisTemplate.opsForValue().get(key);
+        if (value == null) {
+            return null;
+        }
         
-        if (tokenData != null) {
-            redisTemplate.delete(key);
+        Map<String, String> tokenData = (Map<String, String>) value;
+        Boolean deleted = redisTemplate.delete(key);
+        if (!Boolean.TRUE.equals(deleted)) {
+            throw new IllegalStateException("Failed to delete token data");
         }
         
         return tokenData;

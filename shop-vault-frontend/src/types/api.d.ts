@@ -199,9 +199,12 @@ export interface ChatMessage {
   receiverId: number;
   content: string;
   type: number;
+  msgType?: number;
   isRead: boolean;
   createTime: string;
   senderRole?: string;
+  senderAvatar?: string;
+  receiverAvatar?: string;
 }
 
 export interface DashboardStats {
@@ -218,10 +221,18 @@ export interface DashboardStats {
 }
 
 export interface YoloSearchResult {
-  label: string;
-  confidence: number;
-  categoryId: number;
-  categoryName: string;
+  success: boolean;
+  message: string;
+  detectedLabels: string[];
+  matchedCategories: YoloCategoryInfo[];
+  hotCategories: YoloCategoryInfo[];
+}
+
+export interface YoloCategoryInfo {
+  id: number;
+  name: string;
+  icon: string;
+  productCount: number;
 }
 
 export interface LoginParams {

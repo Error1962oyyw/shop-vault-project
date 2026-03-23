@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import { ref, onMounted, nextTick, computed } from 'vue'
+import { ElMessage } from 'element-plus'
+import { Picture, Service } from '@element-plus/icons-vue'
 import UserLayout from '@/components/layout/UserLayout.vue'
-import { getChatHistory, sendMessage } from '@/api/chat'
+import { getChatHistory, sendMessage, sendImageMessage } from '@/api/chat'
 import { useUserStore } from '@/stores/user'
 import type { ChatMessage } from '@/types/api'
 
@@ -12,6 +14,7 @@ const inputMessage = ref('')
 const loading = ref(false)
 const sending = ref(false)
 const messagesContainer = ref<HTMLElement>()
+const imageInputRef = ref<HTMLInputElement | null>(null)
 
 const currentUserId = computed(() => userStore.userInfo?.id)
 
@@ -44,6 +47,43 @@ const handleSend = async () => {
   }
 }
 
+const triggerImageUpload = () => {
+  imageInputRef.value?.click()
+}
+
+const handleImageChange = async (event: Event) => {
+  const target = event.target as HTMLInputElement
+  const file = target.files?.[0]
+  if (!file) return
+
+  const allowedTypes = ['image/jpeg', 'image/png', 'image/jpg', 'image/webp', 'image/gif']
+  if (!allowedTypes.includes(file.type)) {
+    ElMessage.error('仅支持 JPG、PNG、WEBP、GIF 格式的图片')
+    return
+  }
+
+  const maxSize = 5 * 1024 * 1024
+  if (file.size > maxSize) {
+    ElMessage.error('图片大小不能超过 5MB')
+    return
+  }
+
+  sending.value = true
+  try {
+    await sendImageMessage(file)
+    await fetchMessages()
+    ElMessage.success('图片发送成功')
+  } catch (error: any) {
+    const msg = error?.response?.data?.msg || error?.message || '图片发送失败'
+    ElMessage.error(msg)
+  } finally {
+    sending.value = false
+    if (target) {
+      target.value = ''
+    }
+  }
+}
+
 const scrollToBottom = () => {
   nextTick(() => {
     if (messagesContainer.value) {
@@ -65,6 +105,39 @@ const formatTime = (time: string) => {
 
 const isMyMessage = (msg: ChatMessage) => {
   return msg.senderId === currentUserId.value
+}
+
+const isImageMessage = (msg: ChatMessage) => {
+  return msg.msgType === 2 || (msg.content && (msg.content.startsWith('/uploads/') || msg.content.startsWith('http')))
+}
+
+const getFullImageUrl = (url: string) => {
+  if (!url) return ''
+  if (url.startsWith('http')) return url
+  const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080'
+  return baseUrl + url
+}
+
+const getAvatarUrl = (url: string) => {
+  if (!url) return ''
+  if (url.startsWith('http')) return url
+  const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080'
+  return baseUrl + url
+}
+
+const getSenderAvatar = (msg: ChatMessage) => {
+  if (isMyMessage(msg)) {
+    return userStore.userInfo?.avatar ? getAvatarUrl(userStore.userInfo.avatar) : ''
+  }
+  return msg.senderAvatar ? getAvatarUrl(msg.senderAvatar) : ''
+}
+
+const getCustomerServiceAvatar = (msg: ChatMessage) => {
+  return msg.senderAvatar ? getAvatarUrl(msg.senderAvatar) : ''
+}
+
+const handleImageClick = (imageUrl: string) => {
+  window.open(getFullImageUrl(imageUrl), '_blank')
 }
 
 onMounted(() => {
@@ -105,14 +178,25 @@ onMounted(() => {
               >
                 <div class="message-content">
                   <div class="message-avatar" v-if="!isMyMessage(msg)">
-                    <el-avatar :size="40" class="avatar-service">
+                    <el-avatar :size="40" :src="getCustomerServiceAvatar(msg)" class="avatar-service">
                       客服
                     </el-avatar>
                   </div>
                   
                   <div class="message-body">
                     <div class="message-bubble" :class="isMyMessage(msg) ? 'bubble-blue' : 'bubble-white'">
-                      <p class="message-text">{{ msg.content }}</p>
+                      <template v-if="isImageMessage(msg)">
+                        <img 
+                          :src="getFullImageUrl(msg.content)" 
+                          class="message-image" 
+                          @click="handleImageClick(msg.content)"
+                          alt="聊天图片"
+                          @error="(e) => (e.target as HTMLImageElement).style.display='none'"
+                        />
+                      </template>
+                      <template v-else>
+                        <p class="message-text">{{ msg.content }}</p>
+                      </template>
                     </div>
                     <div class="message-time" :class="isMyMessage(msg) ? 'time-right' : 'time-left'">
                       {{ formatTime(msg.createTime) }}
@@ -120,8 +204,8 @@ onMounted(() => {
                   </div>
                   
                   <div class="message-avatar" v-if="isMyMessage(msg)">
-                    <el-avatar :size="40" class="avatar-user">
-                      {{ userStore.userInfo?.nickname?.charAt(0) || '我' }}
+                    <el-avatar :size="40" :src="getSenderAvatar(msg)" class="avatar-user">
+                      {{ userStore.userInfo?.nickname?.charAt(0) || userStore.userInfo?.username?.charAt(0) || '我' }}
                     </el-avatar>
                   </div>
                 </div>
@@ -132,6 +216,20 @@ onMounted(() => {
 
           <div class="input-area">
             <div class="input-wrapper">
+              <input 
+                ref="imageInputRef"
+                type="file"
+                accept="image/jpeg,image/png,image/jpg,image/webp,image/gif"
+                style="display: none"
+                @change="handleImageChange"
+              />
+              <el-button 
+                class="image-btn"
+                :loading="sending"
+                @click="triggerImageUpload"
+              >
+                <el-icon><Picture /></el-icon>
+              </el-button>
               <el-input 
                 v-model="inputMessage"
                 placeholder="输入消息..."
@@ -176,6 +274,7 @@ onMounted(() => {
   height: calc(100vh - 160px);
   display: flex;
   flex-direction: column;
+  min-height: 500px;
 }
 
 .chat-header {
@@ -272,7 +371,13 @@ onMounted(() => {
 }
 
 .my-message .message-content {
-  flex-direction: row-reverse;
+  justify-content: flex-end;
+}
+
+.my-message .message-body {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
 }
 
 .message-avatar {
@@ -321,6 +426,18 @@ onMounted(() => {
   word-break: break-word;
 }
 
+.message-image {
+  max-width: 200px;
+  max-height: 200px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+
+.message-image:hover {
+  transform: scale(1.02);
+}
+
 .message-time {
   font-size: 12px;
   color: var(--text-secondary);
@@ -340,6 +457,10 @@ onMounted(() => {
   padding: 16px 24px;
   background: #fff;
   border-top: 1px solid var(--border-light);
+  flex-shrink: 0;
+  position: sticky;
+  bottom: 0;
+  z-index: 10;
 }
 
 .input-wrapper {
@@ -368,6 +489,27 @@ onMounted(() => {
   padding: 0 24px;
   border-radius: 12px;
   font-weight: 600;
+}
+
+.image-btn {
+  height: 44px;
+  width: 44px;
+  border-radius: 12px;
+  border: 2px solid var(--border-light);
+  background: #fff;
+  color: var(--text-regular);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.image-btn:hover {
+  border-color: var(--primary-color);
+  color: var(--primary-color);
+}
+
+.image-btn .el-icon {
+  font-size: 20px;
 }
 
 .messages-area::-webkit-scrollbar {
@@ -400,10 +542,45 @@ onMounted(() => {
   .chat-window {
     border-radius: 0;
     height: calc(100vh - 60px);
+    height: calc(100dvh - 60px);
   }
 
   .message-body {
     max-width: 70%;
+  }
+
+  .messages-area {
+    flex: 1;
+    overflow-y: auto;
+    padding-bottom: 16px;
+  }
+
+  .input-area {
+    flex-shrink: 0;
+    position: sticky;
+    bottom: 0;
+    padding: 12px 16px;
+    padding-bottom: calc(12px + env(safe-area-inset-bottom));
+    background: #fff;
+    box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.05);
+  }
+
+  .input-wrapper {
+    gap: 8px;
+  }
+
+  .send-btn {
+    height: 40px;
+    padding: 0 16px;
+  }
+
+  .image-btn {
+    height: 40px;
+    width: 40px;
+  }
+
+  .message-input :deep(.el-input__wrapper) {
+    padding: 6px 12px;
   }
 }
 </style>

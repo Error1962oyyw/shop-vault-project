@@ -1,7 +1,7 @@
 package com.TsukasaChan.ShopVault.controller.system;
 
 import com.TsukasaChan.ShopVault.common.Result;
-import com.TsukasaChan.ShopVault.integration.OssService;
+import com.TsukasaChan.ShopVault.integration.LocalFileService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -14,11 +14,11 @@ import org.springframework.web.multipart.MultipartFile;
 @RequiredArgsConstructor
 public class UploadController {
 
-    private final OssService ossService;
+    private final LocalFileService localFileService;
 
     @PostMapping("/image")
     public Result<String> uploadImage(@RequestParam("file") MultipartFile file) {
-        String url = ossService.uploadFile(file);
+        String url = localFileService.uploadFile(file);
         return Result.success(url);
     }
 }

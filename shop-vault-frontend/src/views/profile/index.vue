@@ -3,12 +3,13 @@ import { ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import UserLayout from '@/components/layout/UserLayout.vue'
-import { getProfile, updateProfile, updatePassword, getAddressList, addAddress, updateAddress, deleteAddress, setDefaultAddress } from '@/api/user'
+import { getProfile, updateProfile, updatePassword, getAddressList, addAddress, updateAddress, deleteAddress, setDefaultAddress, uploadAvatar } from '@/api/user'
+import { regionOptions } from '@/utils/region'
 import { sendCode } from '@/api/auth'
 import { signIn, todaySigned } from '@/api/marketing'
 import { useUserStore } from '@/stores/user'
 import type { UserInfo, Address } from '@/types/api'
-import { Coin, User, Lock, Location, Plus } from '@element-plus/icons-vue'
+import { Coin, User, Lock, Location, Plus, Camera } from '@element-plus/icons-vue'
 
 const router = useRouter()
 const userStore = useUserStore()
@@ -18,8 +19,17 @@ const userInfo = ref<UserInfo | null>(null)
 const addresses = ref<Address[]>([])
 const loading = ref(false)
 const hasSignedToday = ref(false)
+const avatarInputRef = ref<HTMLInputElement | null>(null)
+const isEditing = ref(false)
 
 const profileForm = ref({
+  nickname: '',
+  phone: '',
+  gender: 1,
+  birthday: ''
+})
+
+const originalProfileForm = ref({
   nickname: '',
   phone: '',
   gender: 1,
@@ -38,6 +48,18 @@ const canSendCode = computed(() => {
   return passwordForm.value.email && countdown.value === 0
 })
 
+const avatarUrl = computed(() => {
+  if (!userInfo.value?.avatar) return ''
+  const url = userInfo.value.avatar
+  let fullUrl = url
+  if (!url.startsWith('http')) {
+    const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080'
+    fullUrl = baseUrl + url
+  }
+  const separator = fullUrl.includes('?') ? '&' : '?'
+  return `${fullUrl}${separator}t=${Date.now()}`
+})
+
 const addressForm = ref({
   id: 0,
   receiverName: '',
@@ -52,59 +74,27 @@ const showAddressDialog = ref(false)
 const addressFormRef = ref()
 const regionValue = ref<string[]>([])
 
-const regionOptions = ref([
-  {
-    value: '北京市',
-    children: [
-      {
-        value: '北京市',
-        children: [
-          { value: '东城区' },
-          { value: '西城区' },
-          { value: '朝阳区' },
-          { value: '海淀区' }
-        ]
-      }
-    ]
-  },
-  {
-    value: '上海市',
-    children: [
-      {
-        value: '上海市',
-        children: [
-          { value: '黄浦区' },
-          { value: '徐汇区' },
-          { value: '长宁区' },
-          { value: '静安区' }
-        ]
-      }
-    ]
-  },
-  {
-    value: '广东省',
-    children: [
-      {
-        value: '广州市',
-        children: [
-          { value: '天河区' },
-          { value: '越秀区' },
-          { value: '海珠区' },
-          { value: '荔湾区' }
-        ]
-      },
-      {
-        value: '深圳市',
-        children: [
-          { value: '南山区' },
-          { value: '福田区' },
-          { value: '罗湖区' },
-          { value: '宝安区' }
-        ]
-      }
-    ]
+
+
+const phoneError = ref('')
+
+const validatePhone = (phone: string): boolean => {
+  if (!phone) {
+    phoneError.value = ''
+    return true
   }
-])
+  const phoneReg = /^1[3-9]\d{9}$/
+  if (!phoneReg.test(phone)) {
+    phoneError.value = '请输入11位有效手机号（以1开头，第二位为3-9）'
+    return false
+  }
+  phoneError.value = ''
+  return true
+}
+
+const handlePhoneInput = () => {
+  validatePhone(profileForm.value.phone)
+}
 
 const fetchProfile = async () => {
   loading.value = true
@@ -116,6 +106,7 @@ const fetchProfile = async () => {
       gender: userInfo.value.gender || 1,
       birthday: userInfo.value.birthday || ''
     }
+    originalProfileForm.value = { ...profileForm.value }
     if (userInfo.value?.email) {
       passwordForm.value.email = userInfo.value.email
     }
@@ -175,14 +166,69 @@ const handleSignIn = async () => {
   }
 }
 
+const startEdit = () => {
+  originalProfileForm.value = { ...profileForm.value }
+  isEditing.value = true
+}
+
+const cancelEdit = () => {
+  profileForm.value = { ...originalProfileForm.value }
+  phoneError.value = ''
+  isEditing.value = false
+}
+
 const handleUpdateProfile = async () => {
+  if (!validatePhone(profileForm.value.phone)) {
+    ElMessage.error(phoneError.value)
+    return
+  }
+  
   try {
     await updateProfile(profileForm.value)
     ElMessage.success('更新成功')
+    isEditing.value = false
     await fetchProfile()
     userStore.fetchUserInfo()
   } catch (error) {
     console.error('更新失败', error)
+  }
+}
+
+const triggerAvatarUpload = () => {
+  avatarInputRef.value?.click()
+}
+
+const handleAvatarChange = async (event: Event) => {
+  const target = event.target as HTMLInputElement
+  const file = target.files?.[0]
+  if (!file) return
+
+  const allowedTypes = ['image/jpeg', 'image/png', 'image/jpg', 'image/webp']
+  if (!allowedTypes.includes(file.type)) {
+    ElMessage.error('仅支持 JPG、PNG、WEBP 格式的图片')
+    return
+  }
+
+  const maxSize = 2 * 1024 * 1024
+  if (file.size > maxSize) {
+    ElMessage.error('图片大小不能超过 2MB')
+    return
+  }
+
+  try {
+    loading.value = true
+    await uploadAvatar(file)
+    await fetchProfile()
+    await userStore.fetchUserInfo()
+    ElMessage.success('头像更新成功')
+  } catch (error: any) {
+    const msg = error?.response?.data?.msg || error?.message || '头像上传失败'
+    ElMessage.error(msg)
+  } finally {
+    loading.value = false
+    if (target) {
+      target.value = ''
+    }
   }
 }
 
@@ -321,7 +367,7 @@ const handleSaveAddress = async () => {
   })
 }
 
-const validatePhone = (_rule: any, value: any, callback: any) => {
+const validateAddressPhone = (_rule: any, value: any, callback: any) => {
   const phoneReg = /^1[3-9]\d{9}$/
   if (!value) {
     callback(new Error('请输入手机号'))
@@ -347,9 +393,22 @@ onMounted(() => {
           <aside class="profile-sidebar">
             <div class="sidebar-card">
               <div class="user-profile">
-                <el-avatar :size="80" :src="userInfo?.avatar" class="user-avatar">
-                  {{ userInfo?.nickname?.charAt(0) || userInfo?.username?.charAt(0) }}
-                </el-avatar>
+                <div class="avatar-wrapper" @click="triggerAvatarUpload">
+                  <el-avatar :size="80" :src="avatarUrl" class="user-avatar">
+                    {{ userInfo?.nickname?.charAt(0) || userInfo?.username?.charAt(0) }}
+                  </el-avatar>
+                  <div class="avatar-overlay">
+                    <el-icon><Camera /></el-icon>
+                    <span>更换头像</span>
+                  </div>
+                </div>
+                <input 
+                  ref="avatarInputRef" 
+                  type="file" 
+                  accept="image/*" 
+                  style="display: none" 
+                  @change="handleAvatarChange"
+                />
                 <h3 class="user-name">{{ userInfo?.nickname || userInfo?.username }}</h3>
                 <p class="user-points">
                   <el-icon><Coin /></el-icon>
@@ -400,13 +459,26 @@ onMounted(() => {
                     <el-input :value="userInfo?.email" disabled class="form-input" />
                   </el-form-item>
                   <el-form-item label="昵称">
-                    <el-input v-model="profileForm.nickname" placeholder="请输入昵称" class="form-input" />
+                    <el-input 
+                      v-model="profileForm.nickname" 
+                      placeholder="请输入昵称" 
+                      class="form-input" 
+                      :disabled="!isEditing"
+                    />
                   </el-form-item>
                   <el-form-item label="手机号">
-                    <el-input v-model="profileForm.phone" placeholder="请输入手机号" class="form-input" />
+                    <el-input 
+                      v-model="profileForm.phone" 
+                      placeholder="请输入手机号" 
+                      class="form-input"
+                      :disabled="!isEditing"
+                      maxlength="11"
+                      @input="handlePhoneInput"
+                    />
+                    <div v-if="phoneError" class="error-text">{{ phoneError }}</div>
                   </el-form-item>
                   <el-form-item label="性别">
-                    <el-radio-group v-model="profileForm.gender">
+                    <el-radio-group v-model="profileForm.gender" :disabled="!isEditing">
                       <el-radio :value="1">男</el-radio>
                       <el-radio :value="2">女</el-radio>
                       <el-radio :value="0">保密</el-radio>
@@ -419,12 +491,26 @@ onMounted(() => {
                       placeholder="选择日期"
                       value-format="YYYY-MM-DD"
                       class="form-input"
+                      :disabled="!isEditing"
                     />
                   </el-form-item>
                   <el-form-item>
-                    <el-button type="primary" @click="handleUpdateProfile" class="save-btn">
-                      保存修改
+                    <el-button 
+                      v-if="!isEditing" 
+                      type="primary" 
+                      @click="startEdit" 
+                      class="save-btn"
+                    >
+                      修改个人信息
                     </el-button>
+                    <div v-else class="button-group">
+                      <el-button @click="cancelEdit" class="cancel-btn">
+                        取消修改
+                      </el-button>
+                      <el-button type="primary" @click="handleUpdateProfile" class="save-btn">
+                        保存修改
+                      </el-button>
+                    </div>
                   </el-form-item>
                 </el-form>
               </template>
@@ -592,7 +678,7 @@ onMounted(() => {
         label-width="80px"
         :rules="{
           receiverName: [{ required: true, message: '请输入收货人姓名', trigger: 'blur' }],
-          receiverPhone: [{ required: true, validator: validatePhone, trigger: 'blur' }],
+          receiverPhone: [{ required: true, validator: validateAddressPhone, trigger: 'blur' }],
           province: [{ required: true, message: '请选择省份', trigger: 'change' }],
           city: [{ required: true, message: '请选择城市', trigger: 'change' }],
           region: [{ required: true, message: '请选择区县', trigger: 'change' }],
@@ -669,8 +755,44 @@ onMounted(() => {
   border-bottom: 1px solid #f3f4f6;
 }
 
-.user-avatar {
+.avatar-wrapper {
+  position: relative;
+  display: inline-block;
+  cursor: pointer;
   margin-bottom: 16px;
+}
+
+.avatar-wrapper:hover .avatar-overlay {
+  opacity: 1;
+}
+
+.avatar-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  color: #fff;
+}
+
+.avatar-overlay .el-icon {
+  font-size: 24px;
+  margin-bottom: 4px;
+}
+
+.avatar-overlay span {
+  font-size: 12px;
+}
+
+.user-avatar {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
@@ -842,6 +964,21 @@ onMounted(() => {
 .button-group {
   display: flex;
   gap: 12px;
+}
+
+.cancel-btn {
+  height: 44px;
+  padding: 0 24px;
+  font-weight: 600;
+  border-radius: var(--radius-sm);
+  transition: all 0.3s ease;
+}
+
+.error-text {
+  color: #f56c6c;
+  font-size: 12px;
+  line-height: 1;
+  padding-top: 4px;
 }
 
 .back-btn {

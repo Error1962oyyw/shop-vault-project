@@ -67,3 +67,14 @@ export const setDefaultAddress = (id: number) => {
     method: 'put'
   });
 };
+
+export const uploadAvatar = (file: File) => {
+  const formData = new FormData();
+  formData.append('file', file);
+  return request<string>({
+    url: '/api/user/avatar',
+    method: 'post',
+    data: formData,
+    headers: { 'Content-Type': 'multipart/form-data' }
+  });
+};

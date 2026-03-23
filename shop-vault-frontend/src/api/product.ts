@@ -19,13 +19,12 @@ export const getProductDetail = (id: number) => {
 export const yoloSearch = (file: File) => {
   const formData = new FormData();
   formData.append('file', file);
-  return request<YoloSearchResult[]>({
+  return request<YoloSearchResult>({
     url: '/api/product/yolo-search',
     method: 'post',
     data: formData,
-    headers: {
-      'Content-Type': 'multipart/form-data'
-    }
+    headers: { 'Content-Type': 'multipart/form-data' },
+    timeout: 30000
   });
 };
 

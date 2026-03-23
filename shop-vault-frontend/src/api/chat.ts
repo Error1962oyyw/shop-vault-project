@@ -19,6 +19,17 @@ export const sendMessage = (data: { content: string }) => {
   });
 };
 
+export const sendImageMessage = (file: File) => {
+  const formData = new FormData();
+  formData.append('file', file);
+  return request<string>({
+    url: '/api/chat/send-image',
+    method: 'post',
+    data: formData,
+    headers: { 'Content-Type': 'multipart/form-data' }
+  });
+};
+
 export const getChatHistory = () => {
   return request<ChatMessage[]>({
     url: '/api/chat/history',
@@ -31,6 +42,18 @@ export const adminReply = (data: { receiverId: number; content: string }) => {
     url: '/api/chat/admin/reply',
     method: 'post',
     data
+  });
+};
+
+export const adminReplyImage = (userId: number, file: File) => {
+  const formData = new FormData();
+  formData.append('file', file);
+  formData.append('userId', userId.toString());
+  return request<string>({
+    url: '/api/chat/admin/reply-image',
+    method: 'post',
+    data: formData,
+    headers: { 'Content-Type': 'multipart/form-data' }
   });
 };
 

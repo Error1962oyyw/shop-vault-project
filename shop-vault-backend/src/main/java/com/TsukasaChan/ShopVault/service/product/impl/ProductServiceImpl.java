@@ -17,6 +17,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -40,7 +41,7 @@ public class ProductServiceImpl extends ServiceImpl<ProductMapper, Product> impl
     }
 
     @Override
-    public Page<Product> getProductPage(Integer current, Integer size, String keyword, Long categoryId) {
+    public Page<Product> getProductPage(Integer current, Integer size, String keyword, Long categoryId, String sortBy, String sortOrder) {
         Page<Product> page = new Page<>(current, size);
         LambdaQueryWrapper<Product> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(Product::getStatus, 1);
@@ -48,7 +49,35 @@ public class ProductServiceImpl extends ServiceImpl<ProductMapper, Product> impl
         if (StringUtils.hasText(keyword)) wrapper.like(Product::getName, keyword);
         if (categoryId != null) wrapper.eq(Product::getCategoryId, categoryId);
 
-        wrapper.orderByDesc(Product::getCreateTime);
+        List<String> allowedSortBy = Arrays.asList("sales", "price", "createTime", "default");
+        if (!allowedSortBy.contains(sortBy)) {
+            sortBy = "default";
+        }
+        String sortOrderParam = sortOrder != null ? sortOrder.toLowerCase() : "desc";
+        if (!Arrays.asList("asc", "desc").contains(sortOrderParam)) {
+            sortOrderParam = "desc";
+        }
+
+        boolean isAsc = "asc".equals(sortOrderParam);
+
+        switch (sortBy) {
+            case "sales":
+                wrapper.orderByDesc(Product::getSales);
+                break;
+            case "price":
+                if (isAsc) wrapper.orderByAsc(Product::getPrice);
+                else wrapper.orderByDesc(Product::getPrice);
+                break;
+            case "createTime":
+                if (isAsc) wrapper.orderByAsc(Product::getCreateTime);
+                else wrapper.orderByDesc(Product::getCreateTime);
+                break;
+            case "default":
+            default:
+                wrapper.orderByDesc(Product::getCreateTime);
+                break;
+        }
+
         return this.page(page, wrapper);
     }
 

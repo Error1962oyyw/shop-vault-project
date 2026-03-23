@@ -33,6 +33,19 @@ public class ChatMessageServiceImpl extends ServiceImpl<ChatMessageMapper, ChatM
                 .eq(ChatMessage::getIsRead, 0)
                 .set(ChatMessage::getIsRead, 1));
 
+        User myUser = userService.getById(myId);
+        User peerUser = userService.getById(peerId);
+        
+        for (ChatMessage msg : history) {
+            if (msg.getSenderId().equals(myId)) {
+                msg.setSenderAvatar(myUser != null ? myUser.getAvatar() : null);
+                msg.setReceiverAvatar(peerUser != null ? peerUser.getAvatar() : null);
+            } else {
+                msg.setSenderAvatar(peerUser != null ? peerUser.getAvatar() : null);
+                msg.setReceiverAvatar(myUser != null ? myUser.getAvatar() : null);
+            }
+        }
+
         return history;
     }
 
@@ -102,10 +115,6 @@ public class ChatMessageServiceImpl extends ServiceImpl<ChatMessageMapper, ChatM
                 lastMessageMap.put(otherId, msg);
             }
         }
-
-        long unreadCount = messages.stream()
-                .filter(m -> m.getSenderId().equals(adminId) ? false : m.getIsRead() == 0)
-                .count();
 
         List<Map<String, Object>> result = new ArrayList<>();
         for (Map.Entry<Long, ChatMessage> entry : lastMessageMap.entrySet()) {
