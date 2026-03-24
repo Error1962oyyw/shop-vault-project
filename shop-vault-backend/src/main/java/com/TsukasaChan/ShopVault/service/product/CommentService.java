@@ -1,6 +1,7 @@
 package com.TsukasaChan.ShopVault.service.product;
 
 import com.TsukasaChan.ShopVault.entity.product.Comment;
+import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.service.IService;
 
 import java.util.List;
@@ -15,4 +16,6 @@ public interface CommentService extends IService<Comment> {
     void adminDeleteComment(Long commentId);
 
     List<Comment> getCommentsByProductId(Long productId);
+
+    IPage<Comment> getCommentPage(Integer pageNum, Integer pageSize);
 }

@@ -4,29 +4,32 @@ import { getProfile } from '@/api/user';
 import type { UserInfo } from '@/types/api';
 
 export const useUserStore = defineStore('user', () => {
-  const token = ref(localStorage.getItem('token') || '');
+  const token = ref(sessionStorage.getItem('token') || '');
   const userInfo = ref<UserInfo | null>(null);
-  const isAdmin = ref(localStorage.getItem('isAdmin') === 'true');
-  const isGuest = ref(localStorage.getItem('isGuest') === 'true');
+  const isAdmin = ref(sessionStorage.getItem('isAdmin') === 'true');
+  const isGuest = ref(sessionStorage.getItem('isGuest') === 'true');
 
   const setToken = (newToken: string) => {
     token.value = newToken;
-    localStorage.setItem('token', newToken);
+    userInfo.value = null;
+    isAdmin.value = false;
+    sessionStorage.setItem('token', newToken);
+    sessionStorage.removeItem('isAdmin');
+    sessionStorage.removeItem('isGuest');
     isGuest.value = false;
-    localStorage.removeItem('isGuest');
   };
 
   const setIsAdmin = (value: boolean) => {
     isAdmin.value = value;
-    localStorage.setItem('isAdmin', String(value));
+    sessionStorage.setItem('isAdmin', String(value));
   };
 
   const setIsGuest = (value: boolean) => {
     isGuest.value = value;
     if (value) {
-      localStorage.setItem('isGuest', 'true');
+      sessionStorage.setItem('isGuest', 'true');
     } else {
-      localStorage.removeItem('isGuest');
+      sessionStorage.removeItem('isGuest');
     }
   };
 
@@ -35,9 +38,9 @@ export const useUserStore = defineStore('user', () => {
     userInfo.value = null;
     isAdmin.value = false;
     isGuest.value = false;
-    localStorage.removeItem('token');
-    localStorage.removeItem('isAdmin');
-    localStorage.removeItem('isGuest');
+    sessionStorage.removeItem('token');
+    sessionStorage.removeItem('isAdmin');
+    sessionStorage.removeItem('isGuest');
   };
 
   const fetchUserInfo = async () => {
@@ -48,6 +51,8 @@ export const useUserStore = defineStore('user', () => {
     try {
       const res = await getProfile();
       userInfo.value = res;
+      isAdmin.value = res.role === 'ADMIN';
+      sessionStorage.setItem('isAdmin', String(isAdmin.value));
       return res;
     } catch (error) {
       userInfo.value = null;

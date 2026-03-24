@@ -298,3 +298,139 @@ export const updateUserStatus = (userId: number, status: number) => {
     params: { status }
   });
 };
+
+export interface Activity {
+  id: number;
+  name: string;
+  startTime: string;
+  endTime: string;
+  type: number;
+  discountRate: number | null;
+  pointCost: number | null;
+  productId: number | null;
+  status: number;
+  ruleExpression: string | null;
+  pointsMultiplier: number | null;
+  description: string | null;
+  createTime: string | null;
+}
+
+export interface PointsRule {
+  id: number;
+  ruleCode: string;
+  ruleName: string;
+  description: string | null;
+  pointsValue: number | null;
+  pointsRatio: number | null;
+  ruleType: number;
+  dailyLimit: number | null;
+  isActive: boolean;
+  sortOrder: number | null;
+  createTime: string | null;
+  updateTime: string | null;
+}
+
+export const getActivities = (params: { pageNum: number; pageSize: number; type?: number; status?: number }) => {
+  return request<PageResult<Activity>>({
+    url: '/api/admin/activities',
+    method: 'get',
+    params
+  });
+};
+
+export const getActivityById = (id: number) => {
+  return request<Activity>({
+    url: `/api/admin/activities/${id}`,
+    method: 'get'
+  });
+};
+
+export const createActivity = (data: Partial<Activity>) => {
+  return request<Activity>({
+    url: '/api/admin/activities',
+    method: 'post',
+    data
+  });
+};
+
+export const updateActivity = (id: number, data: Partial<Activity>) => {
+  return request<Activity>({
+    url: `/api/admin/activities/${id}`,
+    method: 'put',
+    data
+  });
+};
+
+export const deleteActivity = (id: number) => {
+  return request<void>({
+    url: `/api/admin/activities/${id}`,
+    method: 'delete'
+  });
+};
+
+export const updateActivityStatus = (id: number, status: number) => {
+  return request<string>({
+    url: `/api/admin/activities/${id}/status`,
+    method: 'put',
+    params: { status }
+  });
+};
+
+export const getMemberDayActivities = () => {
+  return request<Activity[]>({
+    url: '/api/admin/activities/member-days',
+    method: 'get'
+  });
+};
+
+export const getPointsRules = () => {
+  return request<PointsRule[]>({
+    url: '/api/admin/points-rules',
+    method: 'get'
+  });
+};
+
+export const getPointsRuleById = (id: number) => {
+  return request<PointsRule>({
+    url: `/api/admin/points-rules/${id}`,
+    method: 'get'
+  });
+};
+
+export const createPointsRule = (data: Partial<PointsRule>) => {
+  return request<PointsRule>({
+    url: '/api/admin/points-rules',
+    method: 'post',
+    data
+  });
+};
+
+export const updatePointsRule = (id: number, data: Partial<PointsRule>) => {
+  return request<PointsRule>({
+    url: `/api/admin/points-rules/${id}`,
+    method: 'put',
+    data
+  });
+};
+
+export const deletePointsRule = (id: number) => {
+  return request<void>({
+    url: `/api/admin/points-rules/${id}`,
+    method: 'delete'
+  });
+};
+
+export const togglePointsRuleStatus = (id: number) => {
+  return request<string>({
+    url: `/api/admin/points-rules/${id}/toggle`,
+    method: 'put'
+  });
+};
+
+export const updatePointsRatio = (id: number, ratio: number) => {
+  return request<string>({
+    url: `/api/admin/points-rules/${id}/ratio`,
+    method: 'put',
+    params: { ratio }
+  });
+};

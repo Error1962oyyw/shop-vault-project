@@ -14,6 +14,8 @@ CREATE TABLE `sys_user` (
                             `avatar` varchar(500) DEFAULT NULL COMMENT '头像URL',
                             `phone` varchar(20) DEFAULT NULL COMMENT '手机号',
                             `email` varchar(100) DEFAULT NULL COMMENT '邮箱',
+                            `gender` tinyint(1) DEFAULT '0' COMMENT '性别: 0未知 1男 2女',
+                            `birthday` date DEFAULT NULL COMMENT '生日',
                             `balance` decimal(10,2) DEFAULT '0.00' COMMENT '钱包余额(模拟支付用)',
                             `points` int(11) DEFAULT '0' COMMENT '当前积分',
                             `status` tinyint(1) DEFAULT '1' COMMENT '状态 1:正常 0:冻结',
@@ -194,6 +196,8 @@ CREATE TABLE `sms_activity` (
                                 `status` tinyint(1) DEFAULT '1' COMMENT '状态 1启用 0停用',
                                 `rule_expression` varchar(255) DEFAULT NULL COMMENT '规则表达式(如: 8代表每月8号, 4代表周四)',
                                 `points_multiplier` decimal(4,2) DEFAULT '1.00' COMMENT '积分获取倍率(如 2.0 代表双倍积分)',
+                                `description` VARCHAR(500) COMMENT '活动描述',
+                                `create_time` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
                                 PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='营销活动与积分商城表';
 

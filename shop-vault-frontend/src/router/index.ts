@@ -90,17 +90,11 @@ const router = createRouter({
       meta: { requiresAuth: true }
     },
     {
-      path: '/coupons',
-      name: 'Coupons',
-      component: () => import('@/views/coupons/index.vue'),
-      meta: { requiresAuth: true }
-    },
-    {
-      path: '/member-day',
-      name: 'MemberDay',
-      component: () => import('@/views/member-day/index.vue'),
-      meta: { requiresAuth: true }
-    },
+          path: '/member-day',
+          name: 'MemberDay',
+          component: () => import('@/views/member-day/index.vue'),
+          meta: { requiresAuth: true }
+        },
     {
       path: '/messages',
       name: 'Messages',
@@ -174,6 +168,16 @@ const router = createRouter({
           path: 'chat',
           name: 'AdminChat',
           component: () => import('@/views/admin/chat.vue')
+        },
+        {
+          path: 'member-days',
+          name: 'AdminMemberDays',
+          component: () => import('@/views/admin/member-days.vue')
+        },
+        {
+          path: 'points-rules',
+          name: 'AdminPointsRules',
+          component: () => import('@/views/admin/points-rules.vue')
         }
       ]
     }

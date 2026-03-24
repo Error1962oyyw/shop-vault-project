@@ -23,6 +23,13 @@ public class Activity implements Serializable {
     @Serial
     private static final long serialVersionUID = 1L;
 
+    public static final int TYPE_MEMBER_DAY = 1;
+    public static final int TYPE_POINTS_EXCHANGE = 2;
+    public static final int TYPE_COUPON = 3;
+
+    public static final int STATUS_DISABLED = 0;
+    public static final int STATUS_ENABLED = 1;
+
     /**
      * 主键ID
      */
@@ -78,4 +85,14 @@ public class Activity implements Serializable {
      * 积分获取倍率(如 2.0 代表双倍积分)
      */
     private BigDecimal pointsMultiplier;
+
+    /**
+     * 活动描述
+     */
+    private String description;
+
+    /**
+     * 创建时间
+     */
+    private LocalDateTime createTime;
 }

@@ -1,6 +1,7 @@
 package com.TsukasaChan.ShopVault.service.marketing.impl;
 
 import cn.hutool.core.util.IdUtil;
+import com.TsukasaChan.ShopVault.common.PageResult;
 import com.TsukasaChan.ShopVault.entity.marketing.Activity;
 import com.TsukasaChan.ShopVault.entity.marketing.PointsRecord;
 import com.TsukasaChan.ShopVault.entity.order.Order;
@@ -15,6 +16,7 @@ import com.TsukasaChan.ShopVault.service.order.OrderService;
 import com.TsukasaChan.ShopVault.service.product.ProductService;
 import com.TsukasaChan.ShopVault.service.system.UserService;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
@@ -52,7 +54,7 @@ public class ActivityServiceImpl extends ServiceImpl<ActivityMapper, Activity> i
         // 1. 校验活动合法性
         Activity activity = this.getById(activityId);
         LocalDateTime now = LocalDateTime.now();
-        if (activity == null || activity.getStatus() != 1 || activity.getType() != 2) {
+        if (activity == null || activity.getStatus() != Activity.STATUS_ENABLED || activity.getType() != Activity.TYPE_POINTS_EXCHANGE) {
             throw new RuntimeException("该积分兑换活动不存在或已下线");
         }
         if (now.isBefore(activity.getStartTime()) || now.isAfter(activity.getEndTime())) {
@@ -111,9 +113,41 @@ public class ActivityServiceImpl extends ServiceImpl<ActivityMapper, Activity> i
     @Override
     public List<Activity> getAvailableCoupons() {
         return this.list(new LambdaQueryWrapper<Activity>()
-                .eq(Activity::getType, 3)
-                .eq(Activity::getStatus, 1)
+                .eq(Activity::getType, Activity.TYPE_COUPON)
+                .eq(Activity::getStatus, Activity.STATUS_ENABLED)
                 .le(Activity::getStartTime, java.time.LocalDateTime.now())
                 .ge(Activity::getEndTime, java.time.LocalDateTime.now()));
+    }
+
+    @Override
+    public PageResult<Activity> getActivityPage(Integer pageNum, Integer pageSize, Integer type, Integer status) {
+        Page<Activity> page = new Page<>(pageNum, pageSize);
+        LambdaQueryWrapper<Activity> wrapper = new LambdaQueryWrapper<>();
+        
+        if (type != null) {
+            wrapper.eq(Activity::getType, type);
+        }
+        if (status != null) {
+            wrapper.eq(Activity::getStatus, status);
+        }
+        wrapper.orderByDesc(Activity::getCreateTime);
+        
+        Page<Activity> result = this.page(page, wrapper);
+        
+        PageResult<Activity> pageResult = new PageResult<>();
+        pageResult.setRecords(result.getRecords());
+        pageResult.setTotal(result.getTotal());
+        pageResult.setSize(result.getSize());
+        pageResult.setCurrent(result.getCurrent());
+        
+        return pageResult;
+    }
+
+    @Override
+    public List<Activity> getMemberDayActivities() {
+        return this.list(new LambdaQueryWrapper<Activity>()
+                .eq(Activity::getType, Activity.TYPE_MEMBER_DAY)
+                .eq(Activity::getStatus, Activity.STATUS_ENABLED)
+                .orderByDesc(Activity::getStartTime));
     }
 }

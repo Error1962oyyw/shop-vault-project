@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { Plus } from '@element-plus/icons-vue'
 import { 
   getAdminCoupons, 
   createCoupon, 
@@ -49,6 +50,17 @@ const fetchCoupons = async () => {
   } finally {
     loading.value = false
   }
+}
+
+const handleCurrentChange = (val: number) => {
+  pagination.value.current = val
+  fetchCoupons()
+}
+
+const handleSizeChange = (val: number) => {
+  pagination.value.size = val
+  pagination.value.current = 1
+  fetchCoupons()
 }
 
 const handleCreate = () => {
@@ -230,13 +242,13 @@ onMounted(() => {
 
     <div class="flex justify-end mt-4">
       <el-pagination
-        v-model:current-page="pagination.current"
-        v-model:page-size="pagination.size"
+        :current-page="pagination.current"
+        :page-size="pagination.size"
         :total="pagination.total"
         :page-sizes="[10, 20, 50]"
         layout="total, sizes, prev, pager, next"
-        @size-change="fetchCoupons"
-        @current-change="fetchCoupons"
+        @current-change="handleCurrentChange"
+        @size-change="handleSizeChange"
       />
     </div>
 

@@ -1,9 +1,11 @@
 package com.TsukasaChan.ShopVault.controller.product;
 
+import com.TsukasaChan.ShopVault.common.PageResult;
 import com.TsukasaChan.ShopVault.common.Result;
 import com.TsukasaChan.ShopVault.controller.BaseController;
 import com.TsukasaChan.ShopVault.entity.product.Comment;
 import com.TsukasaChan.ShopVault.service.product.CommentService;
+import com.baomidou.mybatisplus.core.metadata.IPage;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -57,5 +59,23 @@ public class CommentController extends BaseController {
     public Result<String> deleteComment(@PathVariable Long commentId) {
         commentService.adminDeleteComment(commentId);
         return Result.success("已删除该违规评价");
+    }
+
+    /**
+     * 管理员分页获取评价列表
+     */
+    @PreAuthorize("hasRole('ADMIN')")
+    @GetMapping("/admin/list")
+    public Result<PageResult<Comment>> getCommentList(
+            @RequestParam(defaultValue = "1") Integer pageNum,
+            @RequestParam(defaultValue = "10") Integer pageSize
+    ) {
+        IPage<Comment> page = commentService.getCommentPage(pageNum, pageSize);
+        PageResult<Comment> result = new PageResult<>();
+        result.setRecords(page.getRecords());
+        result.setTotal(page.getTotal());
+        result.setSize(page.getSize());
+        result.setCurrent(page.getCurrent());
+        return Result.success(result);
     }
 }

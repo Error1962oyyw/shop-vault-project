@@ -89,18 +89,6 @@ const fetchProducts = async () => {
   }
 }
 
-const handlePageChange = (page: number) => {
-  pagination.current = page
-  fetchProducts()
-  window.scrollTo({ top: 0, behavior: 'smooth' })
-}
-
-const handleSizeChange = (size: number) => {
-  pagination.size = size
-  pagination.current = 1
-  fetchProducts()
-}
-
 const handleSortChange = () => {
   pagination.current = 1
   fetchProducts()
@@ -137,6 +125,15 @@ watch(() => route.query, (query) => {
   }
   fetchProducts()
 }, { immediate: true })
+
+watch(() => pagination.current, () => {
+  fetchProducts()
+})
+
+watch(() => pagination.size, () => {
+  pagination.current = 1
+  fetchProducts()
+})
 
 onMounted(() => {
   fetchCategories()
@@ -295,10 +292,8 @@ onMounted(() => {
                 <div class="pagination-wrapper">
                   <Pagination 
                     :total="pagination.total"
-                    :current-page="pagination.current"
-                    :page-size="pagination.size"
-                    @change="handlePageChange"
-                    @update:page-size="handleSizeChange"
+                    v-model:current-page="pagination.current"
+                    v-model:page-size="pagination.size"
                   />
                 </div>
               </template>
@@ -358,7 +353,13 @@ onMounted(() => {
 }
 
 .title-icon {
-  font-size: 36px;
+  font-size: 24px;
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .page-subtitle {
@@ -752,7 +753,9 @@ onMounted(() => {
   }
 
   .title-icon {
-    font-size: 28px;
+    font-size: 20px;
+    width: 28px;
+    height: 28px;
   }
 
   .page-container {

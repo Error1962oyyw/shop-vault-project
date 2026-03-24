@@ -69,7 +69,7 @@ const totalAmount = computed(() => {
 const fetchAddresses = async () => {
   try {
     addresses.value = await getAddressList()
-    const defaultAddr = addresses.value.find(a => a.isDefault)
+    const defaultAddr = addresses.value.find(a => a.isDefault === 1)
     if (defaultAddr) {
       selectedAddress.value = defaultAddr
     } else if (addresses.value.length > 0) {
@@ -226,7 +226,7 @@ onMounted(async () => {
                         <span class="font-medium">{{ address.receiverName }}</span>
                         <span class="ml-2 text-gray-500">{{ address.receiverPhone }}</span>
                       </div>
-                      <el-tag v-if="address.isDefault" type="success" size="small">默认</el-tag>
+                      <el-tag v-if="address.isDefault === 1" type="success" size="small">默认</el-tag>
                     </div>
                     <div class="text-gray-500 text-sm">
                       {{ address.province }}{{ address.city }}{{ address.region }}{{ address.detailAddress }}

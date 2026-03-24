@@ -103,3 +103,11 @@ export const deleteComment = (commentId: number) => {
     method: 'delete'
   });
 };
+
+export const getAdminCommentList = (params: { pageNum: number; pageSize: number }) => {
+  return request<PageResult<Comment>>({
+    url: '/api/comment/admin/list',
+    method: 'get',
+    params
+  });
+};

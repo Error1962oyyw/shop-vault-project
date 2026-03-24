@@ -2,6 +2,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { Shop, SwitchButton, Bell, User, List, Money, Goods, RefreshLeft, ChatDotRound } from '@element-plus/icons-vue'
 import { getDashboardStats } from '@/api/dashboard'
 import { useUserStore } from '@/stores/user'
 import type { DashboardStats } from '@/types/api'
@@ -22,6 +23,8 @@ const menuItems: Array<{ path: string; icon: string; title: string; isMain?: boo
   { path: '/admin/after-sales', icon: 'RefreshLeft', title: '售后管理' },
   { path: '/admin/comments', icon: 'ChatDotRound', title: '评价管理' },
   { path: '/admin/users', icon: 'User', title: '用户管理' },
+  { path: '/admin/member-days', icon: 'Calendar', title: '会员日活动' },
+  { path: '/admin/points-rules', icon: 'Coin', title: '积分倍率' },
   { path: '/admin/chat', icon: 'ChatDotRound', title: '客服消息' }
 ]
 
@@ -93,10 +96,10 @@ onMounted(() => {
       </nav>
 
       <div class="sidebar-footer">
-        <el-button type="danger" plain class="logout-btn" @click="handleLogout">
-          <el-icon class="mr-2"><SwitchButton /></el-icon>
-          退出登录
-        </el-button>
+        <div class="logout-btn" @click="handleLogout">
+          <el-icon class="logout-icon"><SwitchButton /></el-icon>
+          <span class="logout-text">退出登录</span>
+        </div>
       </div>
     </aside>
 
@@ -327,13 +330,38 @@ onMounted(() => {
 }
 
 .sidebar-footer {
-  padding: 20px;
+  padding: 20px 12px;
   border-top: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .logout-btn {
-  width: 100%;
-  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 16px;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  color: #ffffff;
+  background: rgba(255, 77, 79, 0.4);
+  border: 1px solid rgba(255, 77, 79, 0.6);
+}
+
+.logout-btn:hover {
+  background: rgba(255, 77, 79, 0.6);
+  color: #ffffff;
+  border-color: rgba(255, 77, 79, 0.8);
+  transform: translateX(4px);
+}
+
+.logout-icon {
+  font-size: 20px;
+  flex-shrink: 0;
+}
+
+.logout-text {
+  font-size: 15px;
+  font-weight: 500;
 }
 
 .admin-main {
@@ -611,7 +639,12 @@ onMounted(() => {
     padding: 12px;
   }
 
-  .logout-btn span {
+  .logout-btn {
+    justify-content: center;
+    padding: 14px;
+  }
+
+  .logout-text {
     display: none;
   }
 

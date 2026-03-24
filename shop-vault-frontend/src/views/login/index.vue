@@ -42,7 +42,6 @@ const handleLogin = async () => {
       try {
         const tokenResponse = await login(loginForm)
         userStore.setToken(tokenResponse.accessToken)
-        userStore.setIsAdmin(false)
         ElMessage.success('登录成功')
         
         try {

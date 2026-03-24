@@ -202,11 +202,11 @@ onMounted(() => {
                 </div>
                 <span>AI识图</span>
               </div>
-              <div class="action-item" @click="handleProtectedNavigation('/coupons')">
+              <div class="action-item" @click="handleProtectedNavigation('/points')">
                 <div class="action-icon action-icon-orange">
                   <Ticket />
                 </div>
-                <span>优惠券</span>
+                <span>会员中心</span>
               </div>
               <div class="action-item" @click="handleProtectedNavigation('/member-day')">
                 <div class="action-icon action-icon-purple">
@@ -356,7 +356,7 @@ onMounted(() => {
             <Timer class="title-icon" />
             热门活动
           </h2>
-          <router-link to="/coupons" class="view-more">
+          <router-link to="/points" class="view-more">
             查看全部 <ArrowRight />
           </router-link>
         </div>
@@ -365,7 +365,7 @@ onMounted(() => {
             v-for="activity in activities.slice(0, 4)"
             :key="activity.id"
             class="activity-card"
-            @click="router.push('/coupons')"
+            @click="router.push('/points')"
           >
             <div class="activity-image">
               <Coin class="activity-icon" />
@@ -809,8 +809,14 @@ onMounted(() => {
 }
 
 .title-icon {
-  font-size: 24px;
+  font-size: 18px;
   color: var(--primary-color);
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .title-icon-purple {

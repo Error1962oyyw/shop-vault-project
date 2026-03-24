@@ -144,6 +144,9 @@ onMounted(() => {
 
 <style scoped>
 .page-container {
+  padding: 24px;
+  background: linear-gradient(135deg, #f7f8fa 0%, #fff7e6 50%, #fffbf0 100%);
+  min-height: calc(100vh - 120px);
   animation: fadeIn 0.4s ease-out;
 }
 
@@ -157,6 +160,10 @@ onMounted(() => {
   justify-content: space-between;
   align-items: center;
   margin-bottom: 24px;
+  padding: 20px 24px;
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
 }
 
 .header-left {
@@ -166,18 +173,22 @@ onMounted(() => {
 .page-title {
   font-size: 22px;
   font-weight: 700;
-  color: #1f2329;
+  color: #1f2937;
   margin: 0 0 4px 0;
 }
 
 .page-subtitle {
   font-size: 14px;
-  color: #86909c;
+  color: #6b7280;
   margin: 0;
 }
 
 .custom-tabs {
   margin-bottom: 20px;
+  background: #fff;
+  padding: 0 16px;
+  border-radius: 16px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
 }
 
 :deep(.el-tabs__nav-wrap::after) {
@@ -187,7 +198,7 @@ onMounted(() => {
 
 :deep(.el-tabs__item) {
   font-size: 15px;
-  color: #86909c;
+  color: #6b7280;
   padding: 0 20px;
   height: 48px;
   line-height: 48px;
@@ -203,6 +214,13 @@ onMounted(() => {
   border-radius: 3px;
 }
 
+.content-card {
+  background: #fff;
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+}
+
 .refund-amount {
   color: #ff4d4f;
   font-weight: 700;
@@ -211,17 +229,23 @@ onMounted(() => {
 
 .handled-text {
   font-size: 13px;
-  color: #86909c;
+  color: #6b7280;
+}
+
+.pagination-wrapper {
+  display: flex;
+  justify-content: flex-end;
+  padding: 16px 0 0 0;
 }
 
 :deep(.el-table) {
-  border-radius: 12px;
+  border-radius: 16px;
   overflow: hidden;
 }
 
 :deep(.el-table th) {
-  background: #fafafa;
-  color: #1f2329;
+  background: #f8fafc;
+  color: #374151;
   font-weight: 600;
   font-size: 14px;
 }

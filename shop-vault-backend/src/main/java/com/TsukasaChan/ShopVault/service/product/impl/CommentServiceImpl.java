@@ -6,6 +6,8 @@ import com.TsukasaChan.ShopVault.mapper.product.CommentMapper;
 import com.TsukasaChan.ShopVault.service.order.OrderService;
 import com.TsukasaChan.ShopVault.service.product.CommentService;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -81,6 +83,14 @@ public class CommentServiceImpl extends ServiceImpl<CommentMapper, Comment> impl
                 .eq(Comment::getProductId, productId)
                 .eq(Comment::getAuditStatus, 1)
                 .orderByDesc(Comment::getLikes)
+                .orderByDesc(Comment::getCreateTime));
+    }
+
+    @Override
+    public IPage<Comment> getCommentPage(Integer pageNum, Integer pageSize) {
+        Page<Comment> page = new Page<>(pageNum, pageSize);
+        return this.page(page, new LambdaQueryWrapper<Comment>()
+                .eq(Comment::getAuditStatus, 1)
                 .orderByDesc(Comment::getCreateTime));
     }
 }

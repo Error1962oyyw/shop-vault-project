@@ -32,8 +32,10 @@ const fetchOrders = async () => {
     })
     orders.value = res.records
     pagination.total = res.total
-  } catch (error) {
+  } catch (error: any) {
     console.error('获取订单失败', error)
+    const msg = error?.response?.data?.message || error?.message || '获取订单列表失败，请稍后重试'
+    ElMessage.error(msg)
   } finally {
     loading.value = false
   }
@@ -41,6 +43,11 @@ const fetchOrders = async () => {
 
 const handleTabChange = () => {
   pagination.current = 1
+  fetchOrders()
+}
+
+const handleCurrentChange = (val: number) => {
+  pagination.current = val
   fetchOrders()
 }
 
@@ -57,11 +64,6 @@ const handleShip = async (orderNo: string) => {
   } catch (error) {
     // 用户取消或请求失败
   }
-}
-
-const handlePageChange = (page: number) => {
-  pagination.current = page
-  fetchOrders()
 }
 
 const getStatusColor = (status: number): 'success' | 'primary' | 'warning' | 'info' | 'danger' => {
@@ -161,7 +163,7 @@ onMounted(() => {
           :page-size="pagination.size"
           :total="pagination.total"
           layout="total, prev, pager, next"
-          @current-change="handlePageChange"
+          @current-change="handleCurrentChange"
         />
       </div>
     </div>
@@ -170,6 +172,9 @@ onMounted(() => {
 
 <style scoped>
 .page-container {
+  padding: 24px;
+  background: linear-gradient(135deg, #f7f8fa 0%, #f0f5ff 50%, #f7f8fa 100%);
+  min-height: calc(100vh - 120px);
   animation: fadeIn 0.4s ease-out;
 }
 
@@ -183,6 +188,10 @@ onMounted(() => {
   justify-content: space-between;
   align-items: center;
   margin-bottom: 24px;
+  padding: 20px 24px;
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
 }
 
 .header-left {
@@ -192,18 +201,22 @@ onMounted(() => {
 .page-title {
   font-size: 22px;
   font-weight: 700;
-  color: #1f2329;
+  color: #1f2937;
   margin: 0 0 4px 0;
 }
 
 .page-subtitle {
   font-size: 14px;
-  color: #86909c;
+  color: #6b7280;
   margin: 0;
 }
 
 .custom-tabs {
   margin-bottom: 20px;
+  background: #fff;
+  padding: 0 16px;
+  border-radius: 16px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
 }
 
 :deep(.el-tabs__nav-wrap::after) {
@@ -213,7 +226,7 @@ onMounted(() => {
 
 :deep(.el-tabs__item) {
   font-size: 15px;
-  color: #86909c;
+  color: #6b7280;
   padding: 0 20px;
   height: 48px;
   line-height: 48px;
@@ -229,6 +242,13 @@ onMounted(() => {
   border-radius: 3px;
 }
 
+.content-card {
+  background: #fff;
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+}
+
 .order-items {
   display: flex;
   align-items: center;
@@ -238,16 +258,16 @@ onMounted(() => {
 .item-image {
   width: 48px;
   height: 48px;
-  border-radius: 6px;
+  border-radius: 10px;
   object-fit: cover;
 }
 
 .more-items {
   font-size: 12px;
-  color: #86909c;
-  background: #f2f3f5;
+  color: #6b7280;
+  background: #f3f4f6;
   padding: 2px 8px;
-  border-radius: 4px;
+  border-radius: 6px;
 }
 
 .receiver-info {
@@ -257,13 +277,13 @@ onMounted(() => {
 .receiver-name {
   font-size: 14px;
   font-weight: 500;
-  color: #1f2329;
+  color: #1f2937;
   margin: 0 0 2px 0;
 }
 
 .receiver-phone {
   font-size: 12px;
-  color: #86909c;
+  color: #6b7280;
   margin: 0;
 }
 
@@ -280,13 +300,13 @@ onMounted(() => {
 }
 
 :deep(.el-table) {
-  border-radius: 12px;
+  border-radius: 16px;
   overflow: hidden;
 }
 
 :deep(.el-table th) {
-  background: #fafafa;
-  color: #1f2329;
+  background: #f8fafc;
+  color: #374151;
   font-weight: 600;
   font-size: 14px;
 }

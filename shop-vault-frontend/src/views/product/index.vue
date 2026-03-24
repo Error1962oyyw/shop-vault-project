@@ -123,6 +123,11 @@ const fetchComments = async () => {
   }
 }
 
+const handleCommentPageChange = (val: number) => {
+  commentPagination.current = val
+  fetchComments()
+}
+
 const fetchSkus = async () => {
   try {
     skus.value = await getProductSkus(productId.value)
@@ -231,11 +236,6 @@ const handleBuyNow = async () => {
   } catch (error) {
     console.error('立即购买失败', error)
   }
-}
-
-const handleCommentPageChange = (page: number) => {
-  commentPagination.current = page
-  fetchComments()
 }
 
 const formatCouponValue = (coupon: UserCoupon) => {

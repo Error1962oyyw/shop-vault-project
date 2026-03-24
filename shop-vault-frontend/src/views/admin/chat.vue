@@ -4,7 +4,7 @@ import { getChatUsers, getAdminChatHistory, adminReply, adminReplyImage, type Ch
 import { useUserStore } from '@/stores/user'
 import type { ChatMessage } from '@/types/api'
 import { ElMessage } from 'element-plus'
-import { Picture } from '@element-plus/icons-vue'
+import { Picture, Search, ChatDotRound } from '@element-plus/icons-vue'
 
 const userStore = useUserStore()
 
@@ -343,8 +343,14 @@ onMounted(() => {
 <style scoped>
 .admin-chat-page {
   height: calc(100vh - 120px);
-  padding: 20px;
+  padding: 24px;
   background: linear-gradient(135deg, #f7f8fa 0%, #e6f4ff 50%, #f0f5ff 100%);
+  animation: fadeIn 0.4s ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 .chat-container {

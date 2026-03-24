@@ -3,6 +3,9 @@ import { ref, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { getUserList, updateUserStatus } from '@/api/admin'
 import { Search, Lock, Unlock } from '@element-plus/icons-vue'
+import { usePagination } from '@/composables'
+import { AdminPageLayout } from '@/components/admin'
+import { getAvatarUrl } from '@/utils/format'
 
 interface UserItem {
   id: number
@@ -19,23 +22,21 @@ interface UserItem {
 
 const loading = ref(false)
 const users = ref<UserItem[]>([])
-const pagination = ref({
-  current: 1,
-  size: 10,
-  total: 0
-})
 const searchKeyword = ref('')
+
+const { pagination, handleCurrentChange, setTotal, getParams } = usePagination({
+  onPageChange: () => fetchUsers()
+})
 
 const fetchUsers = async () => {
   loading.value = true
   try {
     const res = await getUserList({
-      pageNum: pagination.value.current,
-      pageSize: pagination.value.size,
+      ...getParams(),
       keyword: searchKeyword.value
     })
     users.value = res.records
-    pagination.value.total = res.total
+    setTotal(res.total)
   } catch (error) {
     console.error('获取用户列表失败', error)
   } finally {
@@ -44,12 +45,7 @@ const fetchUsers = async () => {
 }
 
 const handleSearch = () => {
-  pagination.value.current = 1
-  fetchUsers()
-}
-
-const handlePageChange = (page: number) => {
-  pagination.value.current = page
+  pagination.current = 1
   fetchUsers()
 }
 
@@ -93,146 +89,92 @@ const getRoleType = (role: string): 'warning' | 'info' => {
   return role === 'ADMIN' ? 'warning' : 'info'
 }
 
-const getAvatarUrl = (url: string) => {
-  if (!url) return ''
-  if (url.startsWith('http')) return url
-  const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080'
-  return baseUrl + url
-}
-
 onMounted(() => {
   fetchUsers()
 })
 </script>
 
 <template>
-  <div class="page-container">
-    <div class="page-header">
-      <div class="header-left">
-        <h2 class="page-title">用户管理</h2>
-        <p class="page-subtitle">管理系统用户账号状态</p>
-      </div>
-      <div class="header-actions">
-        <el-input
-          v-model="searchKeyword"
-          placeholder="搜索用户名/昵称/邮箱"
-          class="search-input"
-          clearable
-          @keyup.enter="handleSearch"
-        >
-          <template #prefix>
-            <el-icon><Search /></el-icon>
-          </template>
-        </el-input>
-        <el-button type="primary" @click="handleSearch">搜索</el-button>
-      </div>
-    </div>
+  <AdminPageLayout title="用户管理" subtitle="管理系统用户账号状态" background="green">
+    <template #actions>
+      <el-input
+        v-model="searchKeyword"
+        placeholder="搜索用户名/昵称/邮箱"
+        class="search-input"
+        clearable
+        @keyup.enter="handleSearch"
+      >
+        <template #prefix>
+          <el-icon><Search /></el-icon>
+        </template>
+      </el-input>
+      <el-button type="primary" @click="handleSearch">搜索</el-button>
+    </template>
 
-    <div class="content-card">
-      <el-table :data="users" v-loading="loading" stripe>
-        <el-table-column label="用户信息" min-width="200">
-          <template #default="{ row }">
-            <div class="user-info">
-              <el-avatar :size="40" :src="getAvatarUrl(row.avatar)" class="user-avatar">
-                {{ (row.nickname || row.username)?.charAt(0) }}
-              </el-avatar>
-              <div class="user-details">
-                <p class="user-name">{{ row.nickname || row.username }}</p>
-                <p class="user-email">{{ row.email }}</p>
-              </div>
+    <el-table :data="users" v-loading="loading" stripe>
+      <el-table-column label="用户信息" min-width="200">
+        <template #default="{ row }">
+          <div class="user-info">
+            <el-avatar :size="40" :src="getAvatarUrl(row.avatar)" class="user-avatar">
+              {{ (row.nickname || row.username)?.charAt(0) }}
+            </el-avatar>
+            <div class="user-details">
+              <p class="user-name">{{ row.nickname || row.username }}</p>
+              <p class="user-email">{{ row.email }}</p>
             </div>
-          </template>
-        </el-table-column>
-        <el-table-column prop="phone" label="手机号" width="130" />
-        <el-table-column label="角色" width="100" align="center">
-          <template #default="{ row }">
-            <el-tag :type="getRoleType(row.role)" size="small">
-              {{ getRoleText(row.role) }}
-            </el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column label="状态" width="100" align="center">
-          <template #default="{ row }">
-            <el-tag :type="getStatusType(row.status)" size="small">
-              {{ getStatusText(row.status) }}
-            </el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column prop="points" label="积分" width="80" align="center" />
-        <el-table-column prop="createTime" label="注册时间" width="180" />
-        <el-table-column label="操作" width="120" align="center">
-          <template #default="{ row }">
-            <el-button
-              v-if="row.role !== 'ADMIN'"
-              :type="row.status === 1 ? 'danger' : 'success'"
-              link
-              size="small"
-              @click="handleToggleStatus(row)"
-            >
-              <el-icon class="mr-1">
-                <Lock v-if="row.status === 1" />
-                <Unlock v-else />
-              </el-icon>
-              {{ row.status === 1 ? '暂停' : '启用' }}
-            </el-button>
-            <span v-else class="text-gray-400">-</span>
-          </template>
-        </el-table-column>
-      </el-table>
+          </div>
+        </template>
+      </el-table-column>
+      <el-table-column prop="phone" label="手机号" width="130" />
+      <el-table-column label="角色" width="100" align="center">
+        <template #default="{ row }">
+          <el-tag :type="getRoleType(row.role)" size="small">
+            {{ getRoleText(row.role) }}
+          </el-tag>
+        </template>
+      </el-table-column>
+      <el-table-column label="状态" width="100" align="center">
+        <template #default="{ row }">
+          <el-tag :type="getStatusType(row.status)" size="small">
+            {{ getStatusText(row.status) }}
+          </el-tag>
+        </template>
+      </el-table-column>
+      <el-table-column prop="points" label="积分" width="80" align="center" />
+      <el-table-column prop="createTime" label="注册时间" width="180" />
+      <el-table-column label="操作" width="120" align="center">
+        <template #default="{ row }">
+          <el-button
+            v-if="row.role !== 'ADMIN'"
+            :type="row.status === 1 ? 'danger' : 'success'"
+            link
+            size="small"
+            @click="handleToggleStatus(row)"
+          >
+            <el-icon class="mr-1">
+              <Lock v-if="row.status === 1" />
+              <Unlock v-else />
+            </el-icon>
+            {{ row.status === 1 ? '暂停' : '启用' }}
+          </el-button>
+          <span v-else class="text-gray-400">-</span>
+        </template>
+      </el-table-column>
+    </el-table>
 
-      <div class="pagination-wrapper">
-        <el-pagination
-          :current-page="pagination.current"
-          :page-size="pagination.size"
-          :total="pagination.total"
-          layout="total, prev, pager, next"
-          @current-change="handlePageChange"
-        />
-      </div>
+    <div class="pagination-wrapper">
+      <el-pagination
+        :current-page="pagination.current"
+        :page-size="pagination.size"
+        :total="pagination.total"
+        layout="total, prev, pager, next"
+        @current-change="handleCurrentChange"
+      />
     </div>
-  </div>
+  </AdminPageLayout>
 </template>
 
 <style scoped>
-.page-container {
-  animation: fadeIn 0.4s ease-out;
-}
-
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-.page-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 24px;
-}
-
-.header-left {
-  flex: 1;
-}
-
-.page-title {
-  font-size: 22px;
-  font-weight: 700;
-  color: #1f2329;
-  margin: 0 0 4px 0;
-}
-
-.page-subtitle {
-  font-size: 14px;
-  color: #86909c;
-  margin: 0;
-}
-
-.header-actions {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
 .search-input {
   width: 280px;
 }
@@ -257,7 +199,7 @@ onMounted(() => {
 .user-name {
   font-size: 14px;
   font-weight: 600;
-  color: #1f2329;
+  color: #1f2937;
   margin: 0 0 4px 0;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -266,7 +208,7 @@ onMounted(() => {
 
 .user-email {
   font-size: 12px;
-  color: #86909c;
+  color: #6b7280;
   margin: 0;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -279,14 +221,22 @@ onMounted(() => {
   padding: 16px 0 0 0;
 }
 
+.text-gray-400 {
+  color: #9ca3af;
+}
+
+.mr-1 {
+  margin-right: 4px;
+}
+
 :deep(.el-table) {
-  border-radius: 12px;
+  border-radius: 16px;
   overflow: hidden;
 }
 
 :deep(.el-table th) {
-  background: #fafafa;
-  color: #1f2329;
+  background: #f8fafc;
+  color: #374151;
   font-weight: 600;
   font-size: 14px;
 }

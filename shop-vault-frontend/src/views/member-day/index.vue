@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { Star, Calendar, Coin, Ticket, ShoppingBag, Present, InfoFilled, CircleCheck } from '@element-plus/icons-vue'
 import UserLayout from '@/components/layout/UserLayout.vue'
 import { 
   getCurrentMemberDay, 
@@ -79,14 +80,25 @@ const formatTime = (date: string) => {
 }
 
 const getBenefitIcon = (type: string) => {
-  const icons: Record<string, string> = {
-    discount: 'Discount',
-    points: 'Coin',
-    coupon: 'Ticket',
-    gift: 'Present',
-    exclusive: 'Star'
+  const icons: Record<string, typeof Coin> = {
+    discount: Coin,
+    points: Coin,
+    coupon: Ticket,
+    gift: Present,
+    exclusive: Star
   }
-  return icons[type] || 'Present'
+  return icons[type] || Present
+}
+
+const getBenefitColor = (type: string) => {
+  const colors: Record<string, string> = {
+    discount: 'orange',
+    points: 'blue',
+    coupon: 'purple',
+    gift: 'pink',
+    exclusive: 'green'
+  }
+  return colors[type] || 'blue'
 }
 
 const goToProducts = () => {
@@ -107,153 +119,148 @@ onMounted(() => {
     loading.value = false
   })
 })
+
+onUnmounted(() => {
+  if (countdownTimer) {
+    clearInterval(countdownTimer)
+  }
+})
 </script>
 
 <template>
   <UserLayout>
-    <div class="bg-gradient-to-b from-purple-50 to-white min-h-screen">
-      <div v-loading="loading">
-        <div 
-          v-if="isMemberDay && currentMemberDay"
-          class="member-day-banner relative overflow-hidden"
-        >
-          <div class="absolute inset-0 bg-gradient-to-r from-purple-600 via-pink-500 to-red-500"></div>
-          <div class="absolute inset-0 opacity-20">
-            <div class="absolute top-10 left-10 w-32 h-32 bg-white rounded-full blur-3xl"></div>
-            <div class="absolute bottom-10 right-20 w-48 h-48 bg-yellow-300 rounded-full blur-3xl"></div>
-          </div>
-          
-          <div class="relative page-container py-12 text-white text-center">
-            <div class="inline-flex items-center gap-2 bg-white/20 rounded-full px-4 py-1 mb-4">
-              <el-icon class="animate-pulse"><Star /></el-icon>
-              <span class="text-sm font-medium">会员日特惠进行中</span>
+    <div class="member-day-page">
+      <div class="page-container">
+        <div v-if="isMemberDay && currentMemberDay" class="active-event">
+          <div class="event-banner">
+            <div class="banner-bg"></div>
+            <div class="banner-decor">
+              <div class="decor-circle decor-1"></div>
+              <div class="decor-circle decor-2"></div>
+              <div class="decor-circle decor-3"></div>
             </div>
-            
-            <h1 class="text-4xl font-bold mb-2">{{ currentMemberDay.name }}</h1>
-            <p class="text-lg opacity-90 mb-6">{{ currentMemberDay.description }}</p>
-            
-            <div class="flex justify-center gap-4 mb-8">
-              <div class="bg-white/20 backdrop-blur rounded-lg px-6 py-4">
-                <div class="text-3xl font-bold">{{ countdown.days }}</div>
-                <div class="text-sm opacity-80">天</div>
+            <div class="banner-content">
+              <div class="event-badge">
+                <Star class="badge-icon" />
+                <span>会员日特惠进行中</span>
               </div>
-              <div class="bg-white/20 backdrop-blur rounded-lg px-6 py-4">
-                <div class="text-3xl font-bold">{{ countdown.hours }}</div>
-                <div class="text-sm opacity-80">时</div>
+              <h1 class="event-title">{{ currentMemberDay.name }}</h1>
+              <p class="event-desc">{{ currentMemberDay.description }}</p>
+              
+              <div class="countdown-wrapper">
+                <div class="countdown-item">
+                  <div class="countdown-value">{{ countdown.days }}</div>
+                  <div class="countdown-label">天</div>
+                </div>
+                <div class="countdown-separator">:</div>
+                <div class="countdown-item">
+                  <div class="countdown-value">{{ String(countdown.hours).padStart(2, '0') }}</div>
+                  <div class="countdown-label">时</div>
+                </div>
+                <div class="countdown-separator">:</div>
+                <div class="countdown-item">
+                  <div class="countdown-value">{{ String(countdown.minutes).padStart(2, '0') }}</div>
+                  <div class="countdown-label">分</div>
+                </div>
+                <div class="countdown-separator">:</div>
+                <div class="countdown-item">
+                  <div class="countdown-value">{{ String(countdown.seconds).padStart(2, '0') }}</div>
+                  <div class="countdown-label">秒</div>
+                </div>
               </div>
-              <div class="bg-white/20 backdrop-blur rounded-lg px-6 py-4">
-                <div class="text-3xl font-bold">{{ countdown.minutes }}</div>
-                <div class="text-sm opacity-80">分</div>
-              </div>
-              <div class="bg-white/20 backdrop-blur rounded-lg px-6 py-4">
-                <div class="text-3xl font-bold">{{ countdown.seconds }}</div>
-                <div class="text-sm opacity-80">秒</div>
-              </div>
-            </div>
 
-            <div class="flex justify-center gap-4">
-              <el-button 
-                type="primary" 
-                size="large"
-                class="bg-white text-purple-600 border-0 hover:bg-gray-100"
-                @click="goToProducts"
-              >
-                <el-icon class="mr-2"><ShoppingBag /></el-icon>
-                立即抢购
-              </el-button>
-              <el-button 
-                size="large"
-                class="bg-transparent border-white text-white hover:bg-white/10"
-                @click="goToCoupons"
-              >
-                <el-icon class="mr-2"><Ticket /></el-icon>
-                领取优惠券
-              </el-button>
+              <div class="action-buttons">
+                <el-button type="primary" size="large" class="action-btn primary-btn" @click="goToProducts">
+                  <ShoppingBag class="btn-icon" />
+                  立即抢购
+                </el-button>
+                <el-button size="large" class="action-btn secondary-btn" @click="goToCoupons">
+                  <Ticket class="btn-icon" />
+                  领取优惠券
+                </el-button>
+              </div>
             </div>
           </div>
+
+          <section class="benefits-section">
+            <div class="section-header">
+              <h2 class="section-title">
+                <Present class="title-icon" />
+                会员日专属权益
+              </h2>
+            </div>
+            <div class="benefits-grid">
+              <div 
+                v-for="benefit in currentMemberDay.benefits" 
+                :key="benefit.id"
+                class="benefit-card"
+              >
+                <div class="benefit-icon" :class="`benefit-icon-${getBenefitColor(benefit.type)}`">
+                  <component :is="getBenefitIcon(benefit.type)" />
+                </div>
+                <h3 class="benefit-title">{{ benefit.title }}</h3>
+                <p class="benefit-desc">{{ benefit.description }}</p>
+                <div class="benefit-value">{{ benefit.value }}</div>
+              </div>
+            </div>
+          </section>
+
+          <section class="rules-section">
+            <div class="section-header">
+              <h2 class="section-title">
+                <InfoFilled class="title-icon orange" />
+                活动规则
+              </h2>
+            </div>
+            <div class="rules-card">
+              <ul class="rules-list">
+                <li class="rule-item">
+                  <CircleCheck class="rule-icon" />
+                  <span>会员日期间，全场商品享受 {{ currentMemberDay.discountRate }} 折优惠</span>
+                </li>
+                <li class="rule-item">
+                  <CircleCheck class="rule-icon" />
+                  <span>购物积分翻倍，每消费1元获得 {{ currentMemberDay.pointsMultiplier }} 积分</span>
+                </li>
+                <li class="rule-item">
+                  <CircleCheck class="rule-icon" />
+                  <span>活动时间：{{ formatTime(currentMemberDay.startTime) }} 至 {{ formatTime(currentMemberDay.endTime) }}</span>
+                </li>
+                <li class="rule-item">
+                  <CircleCheck class="rule-icon" />
+                  <span>优惠券数量有限，先到先得</span>
+                </li>
+              </ul>
+            </div>
+          </section>
         </div>
 
-        <div v-else class="page-container py-12">
-          <div class="bg-white rounded-2xl shadow-lg p-8 text-center">
-            <div class="w-24 h-24 mx-auto bg-purple-100 rounded-full flex items-center justify-center mb-6">
-              <el-icon size="48" class="text-purple-500"><Calendar /></el-icon>
+        <div v-else class="no-event">
+          <div class="no-event-card">
+            <div class="no-event-icon">
+              <Calendar />
             </div>
-            <h2 class="text-2xl font-bold text-gray-800 mb-2">会员日即将到来</h2>
-            <p class="text-gray-500 mb-6">敬请期待更多精彩活动</p>
+            <h2 class="no-event-title">会员日即将到来</h2>
+            <p class="no-event-desc">敬请期待更多精彩活动</p>
             
-            <div v-if="upcomingMemberDays.length > 0" class="mt-8">
-              <h3 class="text-lg font-bold text-gray-800 mb-4">即将到来的会员日</h3>
-              <div class="grid grid-cols-3 gap-4">
+            <div v-if="upcomingMemberDays.length > 0" class="upcoming-section">
+              <h3 class="upcoming-title">即将到来的会员日</h3>
+              <div class="upcoming-grid">
                 <div 
                   v-for="activity in upcomingMemberDays" 
                   :key="activity.id"
-                  class="bg-gray-50 rounded-lg p-4 text-left"
+                  class="upcoming-card"
                 >
-                  <div class="font-bold text-purple-600">{{ activity.name }}</div>
-                  <div class="text-sm text-gray-500 mt-1">
+                  <div class="upcoming-name">{{ activity.name }}</div>
+                  <div class="upcoming-time">
                     {{ formatTime(activity.startTime) }}
                   </div>
-                  <div class="text-sm text-gray-400">
+                  <div class="upcoming-end">
                     至 {{ formatTime(activity.endTime) }}
                   </div>
                 </div>
               </div>
             </div>
-          </div>
-        </div>
-
-        <div v-if="currentMemberDay" class="page-container py-8">
-          <div class="bg-white rounded-lg shadow-sm p-6">
-            <h2 class="text-xl font-bold text-gray-800 mb-6 flex items-center gap-2">
-              <el-icon class="text-purple-500"><Present /></el-icon>
-              会员日专属权益
-            </h2>
-            
-            <div class="grid grid-cols-4 gap-4">
-              <div 
-                v-for="benefit in currentMemberDay.benefits" 
-                :key="benefit.id"
-                class="bg-gradient-to-br from-purple-50 to-pink-50 rounded-lg p-6 text-center hover:shadow-md transition-shadow"
-              >
-                <div class="w-16 h-16 mx-auto bg-white rounded-full flex items-center justify-center mb-4 shadow-sm">
-                  <el-icon size="32" class="text-purple-500">
-                    <component :is="getBenefitIcon(benefit.type)" />
-                  </el-icon>
-                </div>
-                <h3 class="font-bold text-gray-800 mb-1">{{ benefit.title }}</h3>
-                <p class="text-sm text-gray-500">{{ benefit.description }}</p>
-                <div class="mt-3 text-purple-600 font-bold">
-                  {{ benefit.value }}
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div v-if="currentMemberDay" class="page-container pb-8">
-          <div class="bg-white rounded-lg shadow-sm p-6">
-            <h2 class="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
-              <el-icon class="text-orange-500"><InfoFilled /></el-icon>
-              活动规则
-            </h2>
-            <ul class="space-y-2 text-gray-600">
-              <li class="flex items-start gap-2">
-                <el-icon class="text-green-500 mt-1"><CircleCheck /></el-icon>
-                <span>会员日期间，全场商品享受 {{ currentMemberDay.discountRate }} 折优惠</span>
-              </li>
-              <li class="flex items-start gap-2">
-                <el-icon class="text-green-500 mt-1"><CircleCheck /></el-icon>
-                <span>购物积分翻倍，每消费1元获得 {{ currentMemberDay.pointsMultiplier }} 积分</span>
-              </li>
-              <li class="flex items-start gap-2">
-                <el-icon class="text-green-500 mt-1"><CircleCheck /></el-icon>
-                <span>活动时间：{{ formatTime(currentMemberDay.startTime) }} 至 {{ formatTime(currentMemberDay.endTime) }}</span>
-              </li>
-              <li class="flex items-start gap-2">
-                <el-icon class="text-green-500 mt-1"><CircleCheck /></el-icon>
-                <span>优惠券数量有限，先到先得</span>
-              </li>
-            </ul>
           </div>
         </div>
       </div>
@@ -262,20 +269,479 @@ onMounted(() => {
 </template>
 
 <style scoped>
-.member-day-banner {
-  min-height: 400px;
+.member-day-page {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #f7f8fa 0%, #e6f4ff 50%, #f0f5ff 100%);
+  padding-bottom: 40px;
+}
+
+.page-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 24px;
+}
+
+.event-banner {
+  position: relative;
+  border-radius: 20px;
+  overflow: hidden;
+  margin: 24px 0;
+  min-height: 420px;
+}
+
+.banner-bg {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, #722ed1 0%, #9c27b0 50%, #e91e63 100%);
+}
+
+.banner-decor {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  opacity: 0.15;
+}
+
+.decor-circle {
+  position: absolute;
+  border-radius: 50%;
+  background: #fff;
+}
+
+.decor-1 {
+  width: 200px;
+  height: 200px;
+  top: -50px;
+  left: -50px;
+}
+
+.decor-2 {
+  width: 300px;
+  height: 300px;
+  bottom: -100px;
+  right: -50px;
+}
+
+.decor-3 {
+  width: 150px;
+  height: 150px;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.banner-content {
+  position: relative;
+  padding: 48px;
+  text-align: center;
+  color: #fff;
+}
+
+.event-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(10px);
+  padding: 8px 20px;
+  border-radius: 24px;
+  font-size: 14px;
+  font-weight: 500;
+  margin-bottom: 24px;
+}
+
+.badge-icon {
+  font-size: 18px;
+  animation: pulse 2s ease-in-out infinite;
 }
 
 @keyframes pulse {
-  0%, 100% {
-    opacity: 1;
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+.event-title {
+  font-size: 42px;
+  font-weight: 800;
+  margin: 0 0 12px;
+}
+
+.event-desc {
+  font-size: 18px;
+  opacity: 0.9;
+  margin: 0 0 32px;
+}
+
+.countdown-wrapper {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 32px;
+}
+
+.countdown-item {
+  background: rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(10px);
+  border-radius: 12px;
+  padding: 16px 20px;
+  min-width: 80px;
+}
+
+.countdown-value {
+  font-size: 36px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.countdown-label {
+  font-size: 13px;
+  opacity: 0.8;
+  margin-top: 4px;
+}
+
+.countdown-separator {
+  font-size: 32px;
+  font-weight: 700;
+  opacity: 0.6;
+}
+
+.action-buttons {
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+}
+
+.action-btn {
+  height: 52px;
+  padding: 0 32px;
+  font-size: 16px;
+  font-weight: 600;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.primary-btn {
+  background: #fff;
+  color: #722ed1;
+  border: none;
+}
+
+.primary-btn:hover {
+  background: rgba(255, 255, 255, 0.95);
+  color: #722ed1;
+}
+
+.secondary-btn {
+  background: transparent;
+  color: #fff;
+  border: 2px solid rgba(255, 255, 255, 0.5);
+}
+
+.secondary-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.8);
+  color: #fff;
+}
+
+.btn-icon {
+  font-size: 20px;
+}
+
+.section-header {
+  margin-bottom: 20px;
+}
+
+.section-title {
+  font-size: 22px;
+  font-weight: 700;
+  color: #1f2937;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.title-icon {
+  font-size: 18px;
+  color: #722ed1;
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.title-icon.orange {
+  color: #fa8c16;
+}
+
+.benefits-section {
+  margin-bottom: 24px;
+}
+
+.benefits-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 20px;
+}
+
+.benefit-card {
+  background: #fff;
+  border-radius: 16px;
+  padding: 28px 24px;
+  text-align: center;
+  box-shadow: var(--shadow-sm);
+  transition: all 0.3s ease;
+}
+
+.benefit-card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-lg);
+}
+
+.benefit-icon {
+  width: 64px;
+  height: 64px;
+  margin: 0 auto 16px;
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 32px;
+}
+
+.benefit-icon-orange {
+  background: linear-gradient(135deg, #fff7e6 0%, #ffd591 100%);
+  color: #fa8c16;
+}
+
+.benefit-icon-blue {
+  background: linear-gradient(135deg, #e6f4ff 0%, #bae0ff 100%);
+  color: #1677ff;
+}
+
+.benefit-icon-purple {
+  background: linear-gradient(135deg, #f0e6ff 0%, #d3adf7 100%);
+  color: #722ed1;
+}
+
+.benefit-icon-pink {
+  background: linear-gradient(135deg, #fff0f6 0%, #ffadd2 100%);
+  color: #eb2f96;
+}
+
+.benefit-icon-green {
+  background: linear-gradient(135deg, #f6ffed 0%, #b7eb8f 100%);
+  color: #52c41a;
+}
+
+.benefit-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #1f2937;
+  margin: 0 0 8px;
+}
+
+.benefit-desc {
+  font-size: 13px;
+  color: #6b7280;
+  margin: 0 0 12px;
+}
+
+.benefit-value {
+  font-size: 18px;
+  font-weight: 700;
+  color: #722ed1;
+}
+
+.rules-section {
+  margin-bottom: 24px;
+}
+
+.rules-card {
+  background: #fff;
+  border-radius: 16px;
+  padding: 24px 32px;
+  box-shadow: var(--shadow-sm);
+}
+
+.rules-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.rule-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  font-size: 15px;
+  color: #4b5563;
+}
+
+.rule-icon {
+  font-size: 20px;
+  color: #52c41a;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.no-event {
+  padding: 48px 0;
+}
+
+.no-event-card {
+  background: #fff;
+  border-radius: 20px;
+  padding: 60px 48px;
+  text-align: center;
+  box-shadow: var(--shadow-sm);
+}
+
+.no-event-icon {
+  width: 96px;
+  height: 96px;
+  margin: 0 auto 24px;
+  background: linear-gradient(135deg, #f0e6ff 0%, #d3adf7 100%);
+  border-radius: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 48px;
+  color: #722ed1;
+}
+
+.no-event-title {
+  font-size: 28px;
+  font-weight: 700;
+  color: #1f2937;
+  margin: 0 0 12px;
+}
+
+.no-event-desc {
+  font-size: 16px;
+  color: #6b7280;
+  margin: 0;
+}
+
+.upcoming-section {
+  margin-top: 48px;
+  text-align: left;
+}
+
+.upcoming-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: #1f2937;
+  margin: 0 0 20px;
+}
+
+.upcoming-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+
+.upcoming-card {
+  background: #f9fafb;
+  border-radius: 12px;
+  padding: 20px;
+  transition: all 0.3s ease;
+}
+
+.upcoming-card:hover {
+  background: #f3f4f6;
+}
+
+.upcoming-name {
+  font-size: 15px;
+  font-weight: 600;
+  color: #722ed1;
+  margin-bottom: 8px;
+}
+
+.upcoming-time {
+  font-size: 13px;
+  color: #4b5563;
+}
+
+.upcoming-end {
+  font-size: 12px;
+  color: #9ca3af;
+}
+
+@media (max-width: 1024px) {
+  .benefits-grid {
+    grid-template-columns: repeat(2, 1fr);
   }
-  50% {
-    opacity: 0.5;
+
+  .upcoming-grid {
+    grid-template-columns: repeat(2, 1fr);
   }
 }
 
-.animate-pulse {
-  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+@media (max-width: 768px) {
+  .event-banner {
+    min-height: auto;
+  }
+
+  .banner-content {
+    padding: 32px 24px;
+  }
+
+  .event-title {
+    font-size: 28px;
+  }
+
+  .event-desc {
+    font-size: 15px;
+  }
+
+  .countdown-wrapper {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .countdown-item {
+    min-width: 60px;
+    padding: 12px 16px;
+  }
+
+  .countdown-value {
+    font-size: 24px;
+  }
+
+  .countdown-separator {
+    font-size: 20px;
+  }
+
+  .action-buttons {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .action-btn {
+    width: 100%;
+    max-width: 280px;
+  }
+
+  .benefits-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .upcoming-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .no-event-card {
+    padding: 40px 24px;
+  }
 }
 </style>

@@ -449,8 +449,14 @@ const triggerUpload = () => {
 }
 
 .title-icon {
-  font-size: 36px;
+  font-size: 18px;
   color: var(--primary-color);
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .page-subtitle {

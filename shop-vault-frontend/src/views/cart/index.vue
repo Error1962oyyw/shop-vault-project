@@ -261,7 +261,13 @@ onMounted(() => {
 
 .title-icon {
   color: var(--primary-color);
-  font-size: 28px;
+  font-size: 18px;
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .cart-count {

@@ -25,14 +25,14 @@ const isEditing = ref(false)
 const profileForm = ref({
   nickname: '',
   phone: '',
-  gender: 1,
+  gender: 0,
   birthday: ''
 })
 
 const originalProfileForm = ref({
   nickname: '',
   phone: '',
-  gender: 1,
+  gender: 0,
   birthday: ''
 })
 
@@ -103,7 +103,7 @@ const fetchProfile = async () => {
     profileForm.value = {
       nickname: userInfo.value.nickname || '',
       phone: userInfo.value.phone || '',
-      gender: userInfo.value.gender || 1,
+      gender: userInfo.value.gender ?? 0,
       birthday: userInfo.value.birthday || ''
     }
     originalProfileForm.value = { ...profileForm.value }
@@ -353,7 +353,7 @@ const handleSaveAddress = async () => {
     if (valid) {
       try {
         if (addressForm.value.id) {
-          await updateAddress({ ...addressForm.value, isDefault: false })
+          await updateAddress({ ...addressForm.value, isDefault: 0 })
         } else {
           await addAddress(addressForm.value)
         }
@@ -619,7 +619,7 @@ onMounted(() => {
                       <div class="address-header">
                         <span class="receiver-name">{{ address.receiverName }}</span>
                         <span class="receiver-phone">{{ address.receiverPhone }}</span>
-                        <el-tag v-if="address.isDefault" type="success" size="small" class="default-tag">
+                        <el-tag v-if="address.isDefault === 1" type="success" size="small" class="default-tag">
                           默认
                         </el-tag>
                       </div>
@@ -629,7 +629,7 @@ onMounted(() => {
                     </div>
                     <div class="address-actions">
                       <el-button 
-                        v-if="!address.isDefault"
+                        v-if="address.isDefault !== 1"
                         type="primary" 
                         link 
                         size="small"
@@ -694,7 +694,7 @@ onMounted(() => {
         <el-form-item label="省市区" prop="province">
           <el-cascader
             v-model="regionValue"
-            :options="regionOptions"
+            :options="regionOptions as any"
             @change="handleRegionChange"
             placeholder="请选择省市区"
             class="form-input"

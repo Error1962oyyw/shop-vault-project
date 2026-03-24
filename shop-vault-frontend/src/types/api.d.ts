@@ -12,6 +12,7 @@ export interface UserInfo {
   creditScore: number;
   memberLevel: number;
   createTime: string;
+  role: string;
 }
 
 export interface Category {
@@ -80,7 +81,7 @@ export interface Address {
   city: string;
   region: string;
   detailAddress: string;
-  isDefault: boolean;
+  isDefault: number;
 }
 
 export interface Order {
@@ -187,7 +188,7 @@ export interface Coupon {
 
 export interface PointsRecord {
   id: number;
-  type: number;
+  type: string;
   points: number;
   description: string;
   createTime: string;
