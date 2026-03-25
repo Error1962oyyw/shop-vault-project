@@ -9,6 +9,7 @@ import com.TsukasaChan.ShopVault.dto.ResetPasswordDto;
 import com.TsukasaChan.ShopVault.dto.TokenResponseDto;
 import com.TsukasaChan.ShopVault.infrastructure.VerificationService;
 import com.TsukasaChan.ShopVault.security.JwtUtils;
+import com.TsukasaChan.ShopVault.security.LoginSecurityService;
 import com.TsukasaChan.ShopVault.service.system.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -25,49 +26,82 @@ public class AuthController {
     private final AuthenticationManager authenticationManager;
     private final JwtUtils jwtUtils;
     private final VerificationService verificationService;
+    private final LoginSecurityService loginSecurityService;
 
     @LogOperation(module = "系统安全", action = "用户前台登录")
     @PostMapping("/login")
     public Result<TokenResponseDto> userLogin(@RequestBody EmailLoginDto dto) {
-        Authentication auth = authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(dto.getEmail(), dto.getPassword())
-        );
+        if (loginSecurityService.isAccountLocked(dto.getEmail())) {
+            String remainingTime = loginSecurityService.getLockRemainingTime(dto.getEmail());
+            return Result.error(423, "账户已锁定，请" + remainingTime + "后再试");
+        }
 
-        boolean isAdmin = auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
-        if (isAdmin) return Result.error(403, "管理员请从后台入口登录！");
+        try {
+            Authentication auth = authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(dto.getEmail(), dto.getPassword())
+            );
 
-        String realUsername = ((org.springframework.security.core.userdetails.User) auth.getPrincipal()).getUsername();
-        String accessToken = jwtUtils.generateToken(realUsername);
-        String refreshToken = jwtUtils.generateRefreshToken(realUsername);
+            boolean isAdmin = auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+            if (isAdmin) return Result.error(403, "管理员请从后台入口登录！");
 
-        return Result.success(TokenResponseDto.of(
-                accessToken, 
-                refreshToken, 
-                jwtUtils.getExpiration(), 
-                jwtUtils.getRefreshExpiration()
-        ));
+            loginSecurityService.recordLoginSuccess(dto.getEmail());
+
+            String realUsername = ((org.springframework.security.core.userdetails.User) auth.getPrincipal()).getUsername();
+            String accessToken = jwtUtils.generateToken(realUsername);
+            String refreshToken = jwtUtils.generateRefreshToken(realUsername);
+
+            return Result.success(TokenResponseDto.of(
+                    accessToken, 
+                    refreshToken, 
+                    jwtUtils.getExpiration(), 
+                    jwtUtils.getRefreshExpiration()
+            ));
+        } catch (Exception e) {
+            loginSecurityService.recordLoginFailure(dto.getEmail());
+            int remaining = loginSecurityService.getRemainingAttempts(dto.getEmail());
+            if (remaining <= 2) {
+                return Result.error(401, "登录失败，剩余尝试次数：" + remaining + "次");
+            }
+            return Result.error(401, "用户名或密码错误");
+        }
     }
 
     @LogOperation(module = "系统安全", action = "管理员后台登录")
     @PostMapping("/admin/login")
     public Result<TokenResponseDto> adminLogin(@RequestBody EmailLoginDto dto) {
-        Authentication auth = authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(dto.getEmail(), dto.getPassword())
-        );
+        if (loginSecurityService.isAccountLocked(dto.getEmail())) {
+            String remainingTime = loginSecurityService.getLockRemainingTime(dto.getEmail());
+            return Result.error(423, "账户已锁定，请" + remainingTime + "后再试");
+        }
 
-        boolean isAdmin = auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
-        if (!isAdmin) return Result.error(403, "权限不足，非管理员账号！");
+        try {
+            Authentication auth = authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(dto.getEmail(), dto.getPassword())
+            );
 
-        String realUsername = ((org.springframework.security.core.userdetails.User) auth.getPrincipal()).getUsername();
-        String accessToken = jwtUtils.generateToken(realUsername);
-        String refreshToken = jwtUtils.generateRefreshToken(realUsername);
+            boolean isAdmin = auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+            if (!isAdmin) return Result.error(403, "权限不足，非管理员账号！");
 
-        return Result.success(TokenResponseDto.of(
-                accessToken, 
-                refreshToken, 
-                jwtUtils.getExpiration(), 
-                jwtUtils.getRefreshExpiration()
-        ));
+            loginSecurityService.recordLoginSuccess(dto.getEmail());
+
+            String realUsername = ((org.springframework.security.core.userdetails.User) auth.getPrincipal()).getUsername();
+            String accessToken = jwtUtils.generateToken(realUsername);
+            String refreshToken = jwtUtils.generateRefreshToken(realUsername);
+
+            return Result.success(TokenResponseDto.of(
+                    accessToken, 
+                    refreshToken, 
+                    jwtUtils.getExpiration(), 
+                    jwtUtils.getRefreshExpiration()
+            ));
+        } catch (Exception e) {
+            loginSecurityService.recordLoginFailure(dto.getEmail());
+            int remaining = loginSecurityService.getRemainingAttempts(dto.getEmail());
+            if (remaining <= 2) {
+                return Result.error(401, "登录失败，剩余尝试次数：" + remaining + "次");
+            }
+            return Result.error(401, "用户名或密码错误");
+        }
     }
 
     @PostMapping("/refresh")

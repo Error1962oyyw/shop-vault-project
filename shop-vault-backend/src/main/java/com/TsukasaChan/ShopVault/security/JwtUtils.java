@@ -3,7 +3,9 @@ package com.TsukasaChan.ShopVault.security;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
+import jakarta.annotation.PostConstruct;
 import lombok.Getter;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Component;
@@ -17,6 +19,7 @@ import java.util.Objects;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
+@Slf4j
 @Component
 @Getter
 public class JwtUtils {
@@ -30,11 +33,28 @@ public class JwtUtils {
     @Value("${shop-vault.jwt.refresh-expiration:604800000}")
     private long refreshExpiration;
 
+    @Value("${shop-vault.jwt.min-secret-length:32}")
+    private int minSecretLength;
+
     private final RedisTemplate<String, Object> redisTemplate;
     private static final String REFRESH_TOKEN_KEY = "refresh_token:";
 
     public JwtUtils(RedisTemplate<String, Object> redisTemplate) {
         this.redisTemplate = redisTemplate;
+    }
+
+    @PostConstruct
+    public void validateSecretKey() {
+        if (secret == null || secret.trim().isEmpty()) {
+            throw new IllegalStateException("JWT密钥未配置！请设置环境变量 JWT_SECRET");
+        }
+        int actualLength = secret.getBytes(StandardCharsets.UTF_8).length;
+        if (actualLength < minSecretLength) {
+            throw new IllegalStateException(
+                String.format("JWT密钥长度不足！当前使用HS256算法，建议至少%d字节(当前: %d字节)。可通过配置 shop-vault.jwt.min-secret-length 调整最小长度要求。", 
+                    minSecretLength, actualLength));
+        }
+        log.info("JWT密钥校验通过，长度: {} 字节", actualLength);
     }
 
     private SecretKey getSignInKey() {

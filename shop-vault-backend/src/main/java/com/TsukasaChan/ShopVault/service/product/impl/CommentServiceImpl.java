@@ -1,5 +1,7 @@
 package com.TsukasaChan.ShopVault.service.product.impl;
 
+import com.TsukasaChan.ShopVault.common.EntityConstants;
+import com.TsukasaChan.ShopVault.common.QueryHelper;
 import com.TsukasaChan.ShopVault.entity.order.Order;
 import com.TsukasaChan.ShopVault.entity.product.Comment;
 import com.TsukasaChan.ShopVault.mapper.product.CommentMapper;
@@ -24,7 +26,6 @@ public class CommentServiceImpl extends ServiceImpl<CommentMapper, Comment> impl
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void addComment(Comment comment, Long userId) {
-        // 1. 校验订单是否属于该用户且已完成
         Order order = orderService.getOne(new LambdaQueryWrapper<Order>()
                 .eq(Order::getId, comment.getOrderId())
                 .eq(Order::getUserId, userId));
@@ -36,7 +37,6 @@ public class CommentServiceImpl extends ServiceImpl<CommentMapper, Comment> impl
             throw new RuntimeException("必须在确认收货后才能评价！");
         }
 
-        // 2. 校验是否重复评价 (防刷)
         long count = this.count(new LambdaQueryWrapper<Comment>()
                 .eq(Comment::getOrderId, comment.getOrderId())
                 .eq(Comment::getProductId, comment.getProductId()));
@@ -44,7 +44,6 @@ public class CommentServiceImpl extends ServiceImpl<CommentMapper, Comment> impl
             throw new RuntimeException("您已经评价过该商品，请勿重复提交");
         }
 
-        // 3. 补充信息并保存 (默认待审核状态 0，如果是自动过审可以设为 1)
         comment.setUserId(userId);
         comment.setAuditStatus(0);
         this.save(comment);
@@ -79,18 +78,18 @@ public class CommentServiceImpl extends ServiceImpl<CommentMapper, Comment> impl
 
     @Override
     public List<Comment> getCommentsByProductId(Long productId) {
-        return this.list(new LambdaQueryWrapper<Comment>()
+        return this.list(QueryHelper.build(wrapper -> wrapper
                 .eq(Comment::getProductId, productId)
-                .eq(Comment::getAuditStatus, 1)
+                .eq(Comment::getAuditStatus, EntityConstants.Status.ENABLED)
                 .orderByDesc(Comment::getLikes)
-                .orderByDesc(Comment::getCreateTime));
+                .orderByDesc(Comment::getCreateTime)));
     }
 
     @Override
     public IPage<Comment> getCommentPage(Integer pageNum, Integer pageSize) {
-        Page<Comment> page = new Page<>(pageNum, pageSize);
-        return this.page(page, new LambdaQueryWrapper<Comment>()
-                .eq(Comment::getAuditStatus, 1)
-                .orderByDesc(Comment::getCreateTime));
+        Page<Comment> page = QueryHelper.createPage(pageNum, pageSize);
+        return this.page(page, QueryHelper.build(wrapper -> wrapper
+                .eq(Comment::getAuditStatus, EntityConstants.Status.ENABLED)
+                .orderByDesc(Comment::getCreateTime)));
     }
 }
