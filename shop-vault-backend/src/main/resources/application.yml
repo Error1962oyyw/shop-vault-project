@@ -45,9 +45,10 @@ mybatis-plus:
 
 shop-vault:
   jwt:
-    secret: ${JWT_SECRET:shopvault_default_secret_key_for_development_only}
+    secret: ${JWT_SECRET}
     expiration: ${JWT_EXPIRATION:3600000}
     refresh-expiration: ${JWT_REFRESH_EXPIRATION:604800000}
+    min-secret-length: ${JWT_MIN_SECRET_LENGTH:32}
   YOLO:
     url: http://localhost:5000/predict
   points:

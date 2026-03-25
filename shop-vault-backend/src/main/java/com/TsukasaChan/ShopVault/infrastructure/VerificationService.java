@@ -23,11 +23,37 @@ public class VerificationService {
     private String fromEmail;
 
     private static final String CODE_PREFIX = "verify:code:";
+    private static final String RATE_LIMIT_PREFIX = "verify:rate:";
+    private static final String DAILY_LIMIT_PREFIX = "verify:daily:";
+    private static final int CODE_EXPIRE_MINUTES = 5;
+    private static final int RATE_LIMIT_SECONDS = 60;
+    private static final int DAILY_LIMIT = 10;
 
     public void sendVerificationCode(String email) {
+        String rateLimitKey = RATE_LIMIT_PREFIX + email;
+        String dailyLimitKey = DAILY_LIMIT_PREFIX + email;
+        
+        if (Boolean.TRUE.equals(redisTemplate.hasKey(rateLimitKey))) {
+            Long ttl = redisTemplate.getExpire(rateLimitKey, TimeUnit.SECONDS);
+            throw new RuntimeException("请求过于频繁，请" + (ttl != null ? ttl : 60) + "秒后再试");
+        }
+        
+        String dailyCountStr = redisTemplate.opsForValue().get(dailyLimitKey);
+        int dailyCount = dailyCountStr != null ? Integer.parseInt(dailyCountStr) : 0;
+        if (dailyCount >= DAILY_LIMIT) {
+            throw new RuntimeException("今日验证码发送次数已达上限，请明天再试");
+        }
+
         String code = RandomUtil.randomNumbers(6);
 
-        redisTemplate.opsForValue().set(CODE_PREFIX + email, code, 5, TimeUnit.MINUTES);
+        redisTemplate.opsForValue().set(CODE_PREFIX + email, code, CODE_EXPIRE_MINUTES, TimeUnit.MINUTES);
+        redisTemplate.opsForValue().set(rateLimitKey, "1", RATE_LIMIT_SECONDS, TimeUnit.SECONDS);
+        
+        if (dailyCount == 0) {
+            redisTemplate.opsForValue().set(dailyLimitKey, "1", 24, TimeUnit.HOURS);
+        } else {
+            redisTemplate.opsForValue().increment(dailyLimitKey);
+        }
 
         try {
             SimpleMailMessage message = new SimpleMailMessage();
@@ -42,6 +68,7 @@ public class VerificationService {
         } catch (Exception e) {
             log.error("邮件发送失败: {}", e.getMessage());
             redisTemplate.delete(CODE_PREFIX + email);
+            redisTemplate.delete(rateLimitKey);
             throw new RuntimeException("邮件发送异常，请稍后再试");
         }
     }

@@ -2,6 +2,7 @@ package com.TsukasaChan.ShopVault.service.marketing.impl;
 
 import cn.hutool.core.util.IdUtil;
 import com.TsukasaChan.ShopVault.common.PageResult;
+import com.TsukasaChan.ShopVault.common.ServiceUtils;
 import com.TsukasaChan.ShopVault.entity.marketing.Activity;
 import com.TsukasaChan.ShopVault.entity.marketing.PointsRecord;
 import com.TsukasaChan.ShopVault.entity.order.Order;
@@ -15,8 +16,6 @@ import com.TsukasaChan.ShopVault.service.order.OrderItemService;
 import com.TsukasaChan.ShopVault.service.order.OrderService;
 import com.TsukasaChan.ShopVault.service.product.ProductService;
 import com.TsukasaChan.ShopVault.service.system.UserService;
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
@@ -112,40 +111,25 @@ public class ActivityServiceImpl extends ServiceImpl<ActivityMapper, Activity> i
 
     @Override
     public List<Activity> getAvailableCoupons() {
-        return this.list(new LambdaQueryWrapper<Activity>()
+        return ServiceUtils.queryList(this, wrapper -> wrapper
                 .eq(Activity::getType, Activity.TYPE_COUPON)
                 .eq(Activity::getStatus, Activity.STATUS_ENABLED)
-                .le(Activity::getStartTime, java.time.LocalDateTime.now())
-                .ge(Activity::getEndTime, java.time.LocalDateTime.now()));
+                .le(Activity::getStartTime, LocalDateTime.now())
+                .ge(Activity::getEndTime, LocalDateTime.now()));
     }
 
     @Override
     public PageResult<Activity> getActivityPage(Integer pageNum, Integer pageSize, Integer type, Integer status) {
-        Page<Activity> page = new Page<>(pageNum, pageSize);
-        LambdaQueryWrapper<Activity> wrapper = new LambdaQueryWrapper<>();
-        
-        if (type != null) {
-            wrapper.eq(Activity::getType, type);
-        }
-        if (status != null) {
-            wrapper.eq(Activity::getStatus, status);
-        }
-        wrapper.orderByDesc(Activity::getCreateTime);
-        
-        Page<Activity> result = this.page(page, wrapper);
-        
-        PageResult<Activity> pageResult = new PageResult<>();
-        pageResult.setRecords(result.getRecords());
-        pageResult.setTotal(result.getTotal());
-        pageResult.setSize(result.getSize());
-        pageResult.setCurrent(result.getCurrent());
-        
-        return pageResult;
+        return ServiceUtils.queryPage(this, pageNum, pageSize, wrapper -> {
+            if (type != null) wrapper.eq(Activity::getType, type);
+            if (status != null) wrapper.eq(Activity::getStatus, status);
+            wrapper.orderByDesc(Activity::getCreateTime);
+        });
     }
 
     @Override
     public List<Activity> getMemberDayActivities() {
-        return this.list(new LambdaQueryWrapper<Activity>()
+        return ServiceUtils.queryList(this, wrapper -> wrapper
                 .eq(Activity::getType, Activity.TYPE_MEMBER_DAY)
                 .eq(Activity::getStatus, Activity.STATUS_ENABLED)
                 .orderByDesc(Activity::getStartTime));

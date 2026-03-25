@@ -19,6 +19,7 @@ import org.springframework.util.StringUtils;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
@@ -102,16 +103,21 @@ public class ProductServiceImpl extends ServiceImpl<ProductMapper, Product> impl
         List<Category> allCategories = categoryService.list(new LambdaQueryWrapper<Category>()
                 .orderByAsc(Category::getSort));
 
+        List<Map<String, Object>> productCounts = this.getBaseMapper().countProductsByCategory();
+        Map<Long, Integer> countMap = productCounts.stream()
+                .collect(java.util.stream.Collectors.toMap(
+                        m -> ((Number) m.get("category_id")).longValue(),
+                        m -> ((Number) m.get("count")).intValue()
+                ));
+
         List<YoloSearchResultDto.CategoryInfo> hotCategories = new ArrayList<>();
         for (Category category : allCategories) {
-            long productCount = this.count(new LambdaQueryWrapper<Product>()
-                    .eq(Product::getCategoryId, category.getId())
-                    .eq(Product::getStatus, 1));
+            int productCount = countMap.getOrDefault(category.getId(), 0);
             hotCategories.add(new YoloSearchResultDto.CategoryInfo(
                     category.getId(),
                     category.getName(),
                     category.getIcon(),
-                    Math.toIntExact(productCount)
+                    productCount
             ));
             if (hotCategories.size() >= 10) break;
         }
@@ -131,14 +137,20 @@ public class ProductServiceImpl extends ServiceImpl<ProductMapper, Product> impl
         }
 
         List<Category> categories = categoryService.listByIds(categoryIds);
+        
+        List<Map<String, Object>> productCounts = this.getBaseMapper().countProductsByCategory();
+        Map<Long, Integer> countMap = productCounts.stream()
+                .collect(java.util.stream.Collectors.toMap(
+                        m -> ((Number) m.get("category_id")).longValue(),
+                        m -> ((Number) m.get("count")).intValue()
+                ));
+        
         List<YoloSearchResultDto.CategoryInfo> categoryInfos = categories.stream()
                 .map(c -> new YoloSearchResultDto.CategoryInfo(
                         c.getId(), 
                         c.getName(), 
                         c.getIcon(),
-                        Math.toIntExact(this.count(new LambdaQueryWrapper<Product>()
-                                .eq(Product::getCategoryId, c.getId())
-                                .eq(Product::getStatus, 1)))
+                        countMap.getOrDefault(c.getId(), 0)
                 ))
                 .collect(Collectors.toList());
 
