@@ -2,6 +2,7 @@ package com.TsukasaChan.ShopVault.service.marketing.impl;
 
 import cn.hutool.core.util.IdUtil;
 import com.TsukasaChan.ShopVault.common.PageResult;
+import com.TsukasaChan.ShopVault.common.RedisDistributedLock;
 import com.TsukasaChan.ShopVault.common.ServiceUtils;
 import com.TsukasaChan.ShopVault.entity.marketing.*;
 import com.TsukasaChan.ShopVault.entity.order.Order;
@@ -39,6 +40,7 @@ public class PointsProductServiceImpl extends ServiceImpl<PointsProductMapper, P
     private final UserCouponService userCouponService;
     private final CouponTemplateService couponTemplateService;
     private final StringRedisTemplate redisTemplate;
+    private final RedisDistributedLock redisDistributedLock;
 
     @Override
     public List<PointsProduct> getAvailableProducts() {
@@ -63,8 +65,23 @@ public class PointsProductServiceImpl extends ServiceImpl<PointsProductMapper, P
     }
 
     @Override
-    @Transactional(rollbackFor = Exception.class)
     public String exchangeProduct(Long userId, Long productId) {
+        String lockKey = "points_product_exchange:" + productId;
+        String lockValue = redisDistributedLock.tryLockWithWait(lockKey, 5, 10, TimeUnit.SECONDS);
+        
+        if (lockValue == null) {
+            throw new RuntimeException("系统繁忙，请稍后重试");
+        }
+        
+        try {
+            return doExchangeProduct(userId, productId);
+        } finally {
+            redisDistributedLock.releaseLock(lockKey, lockValue);
+        }
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public String doExchangeProduct(Long userId, Long productId) {
         PointsProduct pointsProduct = this.getById(productId);
         if (pointsProduct == null || pointsProduct.getStatus() != PointsProduct.STATUS_ENABLED) {
             throw new RuntimeException("商品不存在或已下架");
