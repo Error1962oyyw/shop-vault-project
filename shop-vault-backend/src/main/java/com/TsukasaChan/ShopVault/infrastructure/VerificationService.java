@@ -9,11 +9,13 @@ import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Service;
 
+import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 
 @Slf4j
 @Service
 @RequiredArgsConstructor
+@SuppressWarnings("null")
 public class VerificationService {
 
     private final StringRedisTemplate redisTemplate;
@@ -46,7 +48,7 @@ public class VerificationService {
 
         String code = RandomUtil.randomNumbers(6);
 
-        redisTemplate.opsForValue().set(CODE_PREFIX + email, code, CODE_EXPIRE_MINUTES, TimeUnit.MINUTES);
+        redisTemplate.opsForValue().set(Objects.requireNonNull(CODE_PREFIX + email), code, CODE_EXPIRE_MINUTES, TimeUnit.MINUTES);
         redisTemplate.opsForValue().set(rateLimitKey, "1", RATE_LIMIT_SECONDS, TimeUnit.SECONDS);
         
         if (dailyCount == 0) {

@@ -64,10 +64,3 @@ logging:
   level:
     com.shopvault: debug
     org.springframework: info
-
-aliyun:
-  oss:
-    endpoint: oss-cn-shenzhen.aliyuncs.com
-    accessKeyId: ${OSS_ACCESS_KEY_ID}
-    accessKeySecret: ${OSS_ACCESS_KEY_SECRET}
-    bucketName: graduation-design-project1

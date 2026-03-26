@@ -84,6 +84,12 @@ const router = createRouter({
       meta: { requiresAuth: true }
     },
     {
+      path: '/points-mall',
+      name: 'PointsMall',
+      component: () => import('@/views/points-mall/index.vue'),
+      meta: { requiresAuth: true }
+    },
+    {
       path: '/chat',
       name: 'Chat',
       component: () => import('@/views/chat/index.vue'),
@@ -178,6 +184,16 @@ const router = createRouter({
           path: 'points-rules',
           name: 'AdminPointsRules',
           component: () => import('@/views/admin/points-rules.vue')
+        },
+        {
+          path: 'points-products',
+          name: 'AdminPointsProducts',
+          component: () => import('@/views/admin/points-products.vue')
+        },
+        {
+          path: 'vip-users',
+          name: 'AdminVipUsers',
+          component: () => import('@/views/admin/vip-users.vue')
         }
       ]
     }

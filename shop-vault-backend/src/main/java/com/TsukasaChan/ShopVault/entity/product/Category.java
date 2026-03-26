@@ -33,4 +33,10 @@ public class Category implements Serializable {
     private String icon;
 
     private Integer sort;
+
+    private Integer status;
+
+    private String yoloLabel;
+
+    private Integer cocoId;
 }

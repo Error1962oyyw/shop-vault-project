@@ -13,6 +13,7 @@ import com.TsukasaChan.ShopVault.mapper.order.OrderMapper;
 import com.TsukasaChan.ShopVault.service.marketing.ActivityService;
 import com.TsukasaChan.ShopVault.service.marketing.MemberDayService;
 import com.TsukasaChan.ShopVault.service.marketing.UserCouponService;
+import com.TsukasaChan.ShopVault.service.marketing.UserVipInfoService;
 import com.TsukasaChan.ShopVault.service.order.CartItemService;
 import com.TsukasaChan.ShopVault.service.order.OrderItemService;
 import com.TsukasaChan.ShopVault.service.order.OrderService;
@@ -45,6 +46,7 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
     private final ActivityService activityService;
     private final MemberDayService memberDayService;
     private final UserCouponService userCouponService;
+    private final UserVipInfoService userVipInfoService;
     private final UserBehaviorService userBehaviorService;
     private final StockService stockService;
     private final RecommendationEngine recommendationEngine;
@@ -58,6 +60,7 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
             @Lazy ActivityService activityService,
             MemberDayService memberDayService,
             UserCouponService userCouponService,
+            UserVipInfoService userVipInfoService,
             UserBehaviorService userBehaviorService,
             StockService stockService,
             @Lazy RecommendationEngine recommendationEngine,
@@ -69,6 +72,7 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
         this.activityService = activityService;
         this.memberDayService = memberDayService;
         this.userCouponService = userCouponService;
+        this.userVipInfoService = userVipInfoService;
         this.userBehaviorService = userBehaviorService;
         this.stockService = stockService;
         this.recommendationEngine = recommendationEngine;
@@ -86,6 +90,11 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
 
     private Order buildOrder(Long userId, BigDecimal totalAmount, String orderNo, Long userCouponId) {
         BigDecimal payAmount = memberDayService.applyMemberDayDiscount(totalAmount);
+
+        BigDecimal vipDiscountRate = userVipInfoService.getDiscountRate(userId);
+        if (vipDiscountRate.compareTo(BigDecimal.ONE) < 0) {
+            payAmount = payAmount.multiply(vipDiscountRate).setScale(2, RoundingMode.HALF_UP);
+        }
 
         if (userCouponId != null) {
             UserCoupon userCoupon = userCouponService.getById(userCouponId);
@@ -279,8 +288,10 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
         order.setReceiveTime(LocalDateTime.now());
         this.updateById(order);
 
-        BigDecimal pointsMultiplier = memberDayService.getMemberDayPointsMultiplier();
-        int rewardPoints = order.getPayAmount().multiply(new BigDecimal("100")).multiply(pointsMultiplier).intValue();
+        BigDecimal memberDayMultiplier = memberDayService.getMemberDayPointsMultiplier();
+        BigDecimal vipMultiplier = userVipInfoService.getPointsMultiplier(userId);
+        BigDecimal totalMultiplier = memberDayMultiplier.multiply(vipMultiplier);
+        int rewardPoints = order.getPayAmount().multiply(new BigDecimal("100")).multiply(totalMultiplier).intValue();
 
         User user = userService.getById(userId);
         if (rewardPoints > 0) {

@@ -2,7 +2,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Shop, SwitchButton, Bell, User, List, Money, Goods, RefreshLeft, ChatDotRound } from '@element-plus/icons-vue'
+import { Shop, SwitchButton, Bell, User, List, Money, Goods, RefreshLeft, ChatDotRound, Present, Medal } from '@element-plus/icons-vue'
 import { getDashboardStats } from '@/api/dashboard'
 import { useUserStore } from '@/stores/user'
 import type { DashboardStats } from '@/types/api'
@@ -25,6 +25,8 @@ const menuItems: Array<{ path: string; icon: string; title: string; isMain?: boo
   { path: '/admin/users', icon: 'User', title: '用户管理' },
   { path: '/admin/member-days', icon: 'Calendar', title: '会员日活动' },
   { path: '/admin/points-rules', icon: 'Coin', title: '积分倍率' },
+  { path: '/admin/points-products', icon: 'Present', title: '积分商城' },
+  { path: '/admin/vip-users', icon: 'Medal', title: 'VIP会员' },
   { path: '/admin/chat', icon: 'ChatDotRound', title: '客服消息' }
 ]
 

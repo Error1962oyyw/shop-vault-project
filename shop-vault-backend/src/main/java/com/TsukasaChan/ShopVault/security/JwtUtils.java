@@ -22,6 +22,7 @@ import java.util.concurrent.TimeUnit;
 @Slf4j
 @Component
 @Getter
+@SuppressWarnings("null")
 public class JwtUtils {
 
     @Value("${shop-vault.jwt.secret}")
@@ -79,7 +80,7 @@ public class JwtUtils {
         
         Map<String, String> tokenData = createTokenData(username);
         Objects.requireNonNull(redisTemplate.opsForValue(), "Redis operations not available");
-        redisTemplate.opsForValue().set(key, tokenData, refreshExpiration, TimeUnit.MILLISECONDS);
+        redisTemplate.opsForValue().set(Objects.requireNonNull(key), (Object) tokenData, refreshExpiration, TimeUnit.MILLISECONDS);
         
         return refreshToken;
     }
@@ -118,13 +119,13 @@ public class JwtUtils {
 
     public boolean validateRefreshToken(String refreshToken) {
         String key = buildRefreshTokenKey(refreshToken);
-        Boolean hasKey = redisTemplate.hasKey(key);
+        Boolean hasKey = redisTemplate.hasKey(Objects.requireNonNull(key));
         return Boolean.TRUE.equals(hasKey);
     }
 
     public void invalidateRefreshToken(String refreshToken) {
         String key = buildRefreshTokenKey(refreshToken);
-        Boolean deleted = redisTemplate.delete(key);
+        Boolean deleted = redisTemplate.delete(Objects.requireNonNull(key));
         if (!Boolean.TRUE.equals(deleted)) {
             throw new IllegalStateException("Failed to invalidate refresh token");
         }
@@ -165,13 +166,13 @@ public class JwtUtils {
     @SuppressWarnings("unchecked")
     private Map<String, String> getAndDeleteTokenData(String refreshToken) {
         String key = buildRefreshTokenKey(refreshToken);
-        Object value = redisTemplate.opsForValue().get(key);
+        Object value = redisTemplate.opsForValue().get(Objects.requireNonNull(key));
         if (value == null) {
             return null;
         }
         
         Map<String, String> tokenData = (Map<String, String>) value;
-        Boolean deleted = redisTemplate.delete(key);
+        Boolean deleted = redisTemplate.delete(Objects.requireNonNull(key));
         if (!Boolean.TRUE.equals(deleted)) {
             throw new IllegalStateException("Failed to delete token data");
         }

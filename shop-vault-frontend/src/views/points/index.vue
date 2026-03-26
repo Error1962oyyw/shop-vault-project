@@ -1,11 +1,13 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { ElMessage } from 'element-plus'
-import { Coin, Ticket, Present, Star } from '@element-plus/icons-vue'
+import { Coin, Ticket, Present, Star, Medal, Timer, Check } from '@element-plus/icons-vue'
 import UserLayout from '@/components/layout/UserLayout.vue'
 import { signIn, getPointsRecords, getAvailableCoupons, receiveCoupon, getMyCoupons, todaySigned } from '@/api/marketing'
 import { getProfile } from '@/api/user'
+import { getVipInfo, exchangeVip, getVipHistory } from '@/api/vip'
 import type { PointsRecord, CouponTemplate, UserCoupon } from '@/types/api'
+import type { VipInfo, VipMembership } from '@/api/vip'
 
 const activeTab = ref('points')
 const userInfo = ref({ points: 0, memberLevel: 1 })
@@ -15,6 +17,34 @@ const myCoupons = ref<UserCoupon[]>([])
 const loading = ref(false)
 const signInLoading = ref(false)
 const hasSignedIn = ref(false)
+
+const vipInfo = ref<VipInfo | null>(null)
+const vipHistory = ref<VipMembership[]>([])
+const vipLoading = ref(false)
+const exchangeLoading = ref(false)
+
+const isVip = computed(() => vipInfo.value?.isVip ?? false)
+const remainingDays = computed(() => vipInfo.value?.remainingDays ?? 0)
+
+const vipCards = [
+  {
+    type: 1,
+    name: 'VIP月卡',
+    points: 1000,
+    originalPrice: 99,
+    duration: '30天',
+    benefits: ['全场商品98折', '专属会员日活动', '1.5倍积分特权', '优先客服通道']
+  },
+  {
+    type: 2,
+    name: 'VIP年卡',
+    points: 10000,
+    originalPrice: 999,
+    duration: '365天',
+    benefits: ['全场商品98折', '专属会员日活动', '1.5倍积分特权', '优先客服通道', '生日专属礼遇', '新品优先体验'],
+    recommended: true
+  }
+]
 
 const fetchUserInfo = async () => {
   try {
@@ -61,6 +91,25 @@ const fetchCoupons = async () => {
   }
 }
 
+const fetchVipInfo = async () => {
+  vipLoading.value = true
+  try {
+    vipInfo.value = await getVipInfo()
+  } catch (error) {
+    console.error('获取VIP信息失败', error)
+  } finally {
+    vipLoading.value = false
+  }
+}
+
+const fetchVipHistory = async () => {
+  try {
+    vipHistory.value = await getVipHistory()
+  } catch (error) {
+    console.error('获取VIP历史失败', error)
+  }
+}
+
 const handleSignIn = async () => {
   if (hasSignedIn.value || signInLoading.value) return
   
@@ -92,6 +141,30 @@ const handleClaimCoupon = async (couponId: number) => {
   }
 }
 
+const handleExchangeVip = async (type: number) => {
+  const card = vipCards.find(c => c.type === type)
+  if (!card) return
+  
+  if (userInfo.value.points < card.points) {
+    ElMessage.warning(`积分不足，需要${card.points}积分`)
+    return
+  }
+  
+  exchangeLoading.value = true
+  try {
+    await exchangeVip(type)
+    ElMessage.success('VIP开通成功，享受95折优惠！')
+    await fetchUserInfo()
+    await fetchVipInfo()
+    await fetchVipHistory()
+  } catch (error: any) {
+    const msg = error?.response?.data?.msg || error?.message || '开通失败'
+    ElMessage.error(msg)
+  } finally {
+    exchangeLoading.value = false
+  }
+}
+
 const getPointsTypeText = (type: string) => {
   const types: Record<string, string> = {
     'SIGN_IN': '签到',
@@ -116,6 +189,28 @@ const formatDate = (date: string) => {
   return date ? date.split('T')[0] : ''
 }
 
+const getStatusText = (status: number) => {
+  const texts: Record<number, string> = {
+    0: '未激活',
+    1: '生效中',
+    2: '已过期'
+  }
+  return texts[status] || '未知'
+}
+
+const getStatusColor = (status: number): 'info' | 'success' | 'danger' => {
+  const colors: Record<number, 'info' | 'success' | 'danger'> = {
+    0: 'info',
+    1: 'success',
+    2: 'danger'
+  }
+  return colors[status] || 'info'
+}
+
+const getTypeText = (type: number) => {
+  return type === 1 ? '月卡' : '年卡'
+}
+
 const memberBenefits = [
   { icon: Coin, title: '积分翻倍', desc: '会员日双倍积分', color: 'orange' },
   { icon: Ticket, title: '专属优惠券', desc: '每月领取特权', color: 'blue' },
@@ -123,11 +218,20 @@ const memberBenefits = [
   { icon: Star, title: '优先发货', desc: '极速物流体验', color: 'green' }
 ]
 
+const vipBenefits = [
+  { icon: Ticket, title: '全场98折', desc: '购物自动享受优惠', color: 'orange' },
+  { icon: Present, title: '会员日活动', desc: '专属折扣与福利', color: 'blue' },
+  { icon: Star, title: '1.5倍积分', desc: '消费积分翻倍', color: 'purple' },
+  { icon: Medal, title: '优先客服', desc: '专属服务通道', color: 'green' }
+]
+
 onMounted(() => {
   fetchUserInfo()
   checkTodaySigned()
   fetchPointsRecords()
   fetchCoupons()
+  fetchVipInfo()
+  fetchVipHistory()
 })
 </script>
 
@@ -140,8 +244,9 @@ onMounted(() => {
           <div class="header-content">
             <div class="header-left">
               <div class="member-badge">
-                <Star class="badge-icon" />
-                <span>Lv.{{ userInfo.memberLevel }}</span>
+                <Medal v-if="isVip" class="badge-icon vip" />
+                <Star v-else class="badge-icon" />
+                <span>{{ isVip ? 'VIP会员' : '普通会员' }}</span>
               </div>
               <h1 class="header-title">会员中心</h1>
               <p class="header-subtitle">积分越多，福利越多</p>
@@ -165,16 +270,37 @@ onMounted(() => {
           </div>
         </div>
 
+        <div v-if="isVip" class="vip-status-card">
+          <div class="status-content">
+            <div class="status-icon">
+              <Medal />
+            </div>
+            <div class="status-info">
+              <div class="status-title">VIP会员生效中</div>
+              <div class="status-desc">
+                剩余 <span class="highlight">{{ remainingDays }}</span> 天
+                <span v-if="vipInfo?.vipExpireTime">
+                  · 到期时间: {{ formatDate(vipInfo.vipExpireTime) }}
+                </span>
+              </div>
+            </div>
+            <div class="status-discount">
+              <div class="discount-value">{{ ((vipInfo?.discountRate ?? 1) * 10).toFixed(1) }}</div>
+              <div class="discount-label">折</div>
+            </div>
+          </div>
+        </div>
+
         <section class="benefits-section">
           <div class="section-header">
             <h2 class="section-title">
               <Present class="title-icon" />
-              会员权益
+              {{ isVip ? 'VIP专属权益' : '会员权益' }}
             </h2>
           </div>
           <div class="benefits-grid">
             <div 
-              v-for="benefit in memberBenefits" 
+              v-for="benefit in isVip ? vipBenefits : memberBenefits" 
               :key="benefit.title"
               class="benefit-card"
             >
@@ -216,6 +342,78 @@ onMounted(() => {
                   </div>
                 </template>
                 <el-empty v-else description="暂无积分记录" class="empty-state" />
+              </div>
+            </el-tab-pane>
+
+            <el-tab-pane label="VIP会员" name="vip">
+              <div v-loading="vipLoading" class="tab-content">
+                <div class="vip-cards-grid">
+                  <div 
+                    v-for="card in vipCards" 
+                    :key="card.type"
+                    :class="['vip-card', { recommended: card.recommended }]"
+                  >
+                    <div v-if="card.recommended" class="recommended-badge">推荐</div>
+                    <div class="card-header">
+                      <h3 class="card-name">{{ card.name }}</h3>
+                      <div class="card-duration">
+                        <Timer class="duration-icon" />
+                        {{ card.duration }}
+                      </div>
+                    </div>
+                    <div class="card-price">
+                      <div class="points-price">
+                        <span class="points-value">{{ card.points }}</span>
+                        <span class="points-label">积分</span>
+                      </div>
+                      <div class="original-price">价值 ¥{{ card.originalPrice }}</div>
+                    </div>
+                    <div class="card-benefits">
+                      <div v-for="(benefit, index) in card.benefits" :key="index" class="benefit-item">
+                        <Check class="check-icon" />
+                        {{ benefit }}
+                      </div>
+                    </div>
+                    <el-button 
+                      :type="card.recommended ? 'warning' : 'primary'"
+                      :loading="exchangeLoading"
+                      :disabled="userInfo.points < card.points"
+                      class="exchange-btn"
+                      @click="handleExchangeVip(card.type)"
+                    >
+                      {{ userInfo.points < card.points ? '积分不足' : '立即开通' }}
+                    </el-button>
+                  </div>
+                </div>
+
+                <div v-if="vipHistory.length > 0" class="vip-history-section">
+                  <h3 class="history-title">会员记录</h3>
+                  <div class="history-list">
+                    <div 
+                      v-for="record in vipHistory" 
+                      :key="record.id"
+                      class="history-item"
+                    >
+                      <div class="history-left">
+                        <div class="history-icon">
+                          <Medal />
+                        </div>
+                        <div class="history-info">
+                          <div class="history-name">VIP{{ getTypeText(record.type) }}</div>
+                          <div class="history-time">
+                            {{ formatDate(record.startTime) }} ~ {{ formatDate(record.endTime) }}
+                          </div>
+                        </div>
+                      </div>
+                      <div class="history-right">
+                        <el-tag :type="getStatusColor(record.status)" size="small">
+                          {{ getStatusText(record.status) }}
+                        </el-tag>
+                        <div class="history-cost">{{ record.pointsCost }}积分</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
             </el-tab-pane>
 
@@ -343,6 +541,12 @@ onMounted(() => {
 
 .badge-icon {
   font-size: 14px;
+  width: 16px;
+  height: 16px;
+}
+
+.badge-icon.vip {
+  color: #ffd591;
 }
 
 .header-title {
@@ -405,6 +609,78 @@ onMounted(() => {
 
 .btn-icon {
   font-size: 16px;
+  width: 16px;
+  height: 16px;
+}
+
+.vip-status-card {
+  background: linear-gradient(135deg, #fff7e6 0%, #ffd591 100%);
+  border-radius: 16px;
+  padding: 24px;
+  margin-bottom: 24px;
+}
+
+.status-content {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.status-icon {
+  width: 56px;
+  height: 56px;
+  background: linear-gradient(135deg, #fa8c16 0%, #ffc53d 100%);
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 28px;
+}
+
+.status-icon :deep(svg) {
+  width: 28px;
+  height: 28px;
+}
+
+.status-info {
+  flex: 1;
+}
+
+.status-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: #1f2937;
+  margin-bottom: 4px;
+}
+
+.status-desc {
+  font-size: 14px;
+  color: #6b7280;
+}
+
+.highlight {
+  color: #fa8c16;
+  font-weight: 700;
+  font-size: 18px;
+}
+
+.status-discount {
+  text-align: center;
+  background: rgba(255, 255, 255, 0.5);
+  padding: 12px 20px;
+  border-radius: 12px;
+}
+
+.discount-value {
+  font-size: 32px;
+  font-weight: 800;
+  color: #fa8c16;
+}
+
+.discount-label {
+  font-size: 14px;
+  color: #6b7280;
 }
 
 .benefits-section {
@@ -436,6 +712,11 @@ onMounted(() => {
   justify-content: center;
 }
 
+.title-icon :deep(svg) {
+  width: 18px;
+  height: 18px;
+}
+
 .benefits-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
@@ -449,13 +730,13 @@ onMounted(() => {
   display: flex;
   align-items: center;
   gap: 16px;
-  box-shadow: var(--shadow-sm);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
   transition: all 0.3s ease;
 }
 
 .benefit-card:hover {
   transform: translateY(-4px);
-  box-shadow: var(--shadow-lg);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
 }
 
 .benefit-icon {
@@ -467,6 +748,11 @@ onMounted(() => {
   justify-content: center;
   font-size: 18px;
   flex-shrink: 0;
+}
+
+.benefit-icon :deep(svg) {
+  width: 18px;
+  height: 18px;
 }
 
 .benefit-icon-orange {
@@ -505,7 +791,7 @@ onMounted(() => {
 .content-section {
   background: #fff;
   border-radius: 16px;
-  box-shadow: var(--shadow-sm);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
   overflow: hidden;
 }
 
@@ -608,6 +894,208 @@ onMounted(() => {
   padding: 60px 0;
 }
 
+.vip-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 20px;
+  margin-bottom: 32px;
+}
+
+.vip-card {
+  background: #f9fafb;
+  border-radius: 20px;
+  padding: 24px;
+  position: relative;
+  transition: all 0.3s ease;
+  border: 2px solid transparent;
+}
+
+.vip-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+}
+
+.vip-card.recommended {
+  border-color: #fa8c16;
+  background: linear-gradient(135deg, #fffbe6 0%, #fff7e6 100%);
+}
+
+.recommended-badge {
+  position: absolute;
+  top: -1px;
+  right: 24px;
+  background: linear-gradient(135deg, #fa8c16 0%, #ffc53d 100%);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 6px 16px;
+  border-radius: 0 0 8px 8px;
+}
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.card-name {
+  font-size: 20px;
+  font-weight: 700;
+  color: #1f2937;
+  margin: 0;
+}
+
+.card-duration {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 14px;
+  color: #6b7280;
+}
+
+.duration-icon {
+  font-size: 14px;
+  width: 14px;
+  height: 14px;
+}
+
+.card-price {
+  margin-bottom: 20px;
+}
+
+.points-price {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+}
+
+.points-value {
+  font-size: 32px;
+  font-weight: 800;
+  color: #fa8c16;
+}
+
+.points-label {
+  font-size: 14px;
+  color: #6b7280;
+}
+
+.original-price {
+  font-size: 14px;
+  color: #9ca3af;
+  text-decoration: line-through;
+  margin-top: 4px;
+}
+
+.card-benefits {
+  margin-bottom: 20px;
+}
+
+.benefit-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: #374151;
+  margin-bottom: 8px;
+}
+
+.check-icon {
+  font-size: 14px;
+  color: #52c41a;
+  width: 14px;
+  height: 14px;
+}
+
+.exchange-btn {
+  width: 100%;
+  height: 44px;
+  border-radius: 10px;
+  font-weight: 600;
+  font-size: 15px;
+}
+
+.vip-history-section {
+  margin-top: 24px;
+  padding-top: 24px;
+  border-top: 1px solid #f3f4f6;
+}
+
+.history-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #1f2937;
+  margin: 0 0 16px;
+}
+
+.history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.history-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  background: #f9fafb;
+  border-radius: 12px;
+}
+
+.history-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.history-icon {
+  width: 40px;
+  height: 40px;
+  background: linear-gradient(135deg, #f0e6ff 0%, #d3adf7 100%);
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #722ed1;
+  font-size: 18px;
+}
+
+.history-icon :deep(svg) {
+  width: 18px;
+  height: 18px;
+}
+
+.history-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.history-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.history-time {
+  font-size: 12px;
+  color: #9ca3af;
+}
+
+.history-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.history-cost {
+  font-size: 14px;
+  color: #fa8c16;
+  font-weight: 600;
+}
+
 .coupon-section {
   margin-bottom: 32px;
 }
@@ -637,6 +1125,11 @@ onMounted(() => {
   justify-content: center;
 }
 
+.title-icon-small :deep(svg) {
+  width: 14px;
+  height: 14px;
+}
+
 .coupons-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -653,7 +1146,7 @@ onMounted(() => {
 
 .coupon-card:hover {
   transform: translateY(-2px);
-  box-shadow: var(--shadow-md);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
 }
 
 .coupon-available {
@@ -744,6 +1237,10 @@ onMounted(() => {
   .coupons-grid {
     grid-template-columns: repeat(2, 1fr);
   }
+
+  .vip-cards-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 768px) {
@@ -783,6 +1280,22 @@ onMounted(() => {
 
   .record-points {
     align-self: flex-end;
+  }
+
+  .status-content {
+    flex-direction: column;
+    text-align: center;
+  }
+
+  .history-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .history-right {
+    width: 100%;
+    justify-content: space-between;
   }
 }
 </style>

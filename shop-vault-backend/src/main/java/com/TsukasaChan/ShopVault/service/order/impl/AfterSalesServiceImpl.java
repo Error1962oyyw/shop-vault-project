@@ -46,6 +46,14 @@ public class AfterSalesServiceImpl extends ServiceImpl<AfterSalesMapper, AfterSa
             throw new RuntimeException("订单不存在");
         }
 
+        if (order.getAfterSalesDisabled() != null && order.getAfterSalesDisabled() == 1) {
+            throw new RuntimeException("积分兑换商品不支持售后申请");
+        }
+
+        if (order.getIsPointsExchange() != null && order.getIsPointsExchange() == 1) {
+            throw new RuntimeException("积分兑换订单不支持售后申请");
+        }
+
         if (order.getStatus() != 1 && order.getStatus() != 2 && order.getStatus() != 3) {
             throw new RuntimeException("当前订单状态不支持申请售后");
         }

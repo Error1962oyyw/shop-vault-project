@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Search, Plus } from '@element-plus/icons-vue'
 import { getProductList, publishProduct, getCategoryList } from '@/api/product'
@@ -19,6 +19,7 @@ const { pagination, handleCurrentChange, setTotal, getParams } = usePagination({
 const showPublishDialog = ref(false)
 const publishForm = ref({
   name: '',
+  parentCategoryId: undefined as number | undefined,
   categoryId: undefined as number | undefined,
   price: 0,
   originalPrice: 0,
@@ -26,6 +27,48 @@ const publishForm = ref({
   description: '',
   mainImage: ''
 })
+
+const categorySearchKeyword = ref('')
+
+const parentCategories = computed(() => {
+  return categories.value.filter(cat => cat.level === 1)
+})
+
+const subCategories = computed(() => {
+  if (!publishForm.value.parentCategoryId) return []
+  const parent = categories.value.find(cat => cat.id === publishForm.value.parentCategoryId)
+  return parent?.children || []
+})
+
+const filteredSubCategories = computed(() => {
+  if (!categorySearchKeyword.value) return subCategories.value
+  const keyword = categorySearchKeyword.value.toLowerCase()
+  return subCategories.value.filter(cat => 
+    cat.name.toLowerCase().includes(keyword) ||
+    (cat.yoloLabel && cat.yoloLabel.toLowerCase().includes(keyword))
+  )
+})
+
+const selectedCategory = computed(() => {
+  if (!publishForm.value.categoryId) return null
+  return subCategories.value.find(cat => cat.id === publishForm.value.categoryId)
+})
+
+const handleParentCategoryChange = () => {
+  publishForm.value.categoryId = undefined
+  categorySearchKeyword.value = ''
+}
+
+const handleCategoryChange = () => {
+  // Category selected
+}
+
+const getCategoryDisplayName = (category: Category) => {
+  if (category.cocoId) {
+    return `${category.name} (${category.cocoId}: ${category.yoloLabel})`
+  }
+  return category.name
+}
 
 const fetchProducts = async () => {
   loading.value = true
@@ -49,20 +92,49 @@ const fetchCategories = async () => {
 }
 
 const handlePublish = async () => {
+  if (!publishForm.value.categoryId) {
+    ElMessage.warning('请选择商品分类')
+    return
+  }
+  
   try {
     const formData = new FormData()
-    Object.entries(publishForm.value).forEach(([key, value]) => {
-      if (value !== undefined && value !== '') {
-        formData.append(key, String(value))
-      }
-    })
+    formData.append('name', publishForm.value.name)
+    formData.append('categoryId', String(publishForm.value.categoryId))
+    formData.append('price', String(publishForm.value.price))
+    formData.append('originalPrice', String(publishForm.value.originalPrice))
+    formData.append('stock', String(publishForm.value.stock))
+    formData.append('description', publishForm.value.description)
+    formData.append('mainImage', publishForm.value.mainImage)
+    
     await publishProduct(formData)
     ElMessage.success('发布成功')
     showPublishDialog.value = false
+    resetForm()
     fetchProducts()
   } catch (error) {
     console.error('发布失败', error)
+    ElMessage.error('发布失败，请重试')
   }
+}
+
+const resetForm = () => {
+  publishForm.value = {
+    name: '',
+    parentCategoryId: undefined,
+    categoryId: undefined,
+    price: 0,
+    originalPrice: 0,
+    stock: 0,
+    description: '',
+    mainImage: ''
+  }
+  categorySearchKeyword.value = ''
+}
+
+const openPublishDialog = () => {
+  resetForm()
+  showPublishDialog.value = true
 }
 
 onMounted(() => {
@@ -83,7 +155,7 @@ onMounted(() => {
           <el-icon><Search /></el-icon>
         </template>
       </el-input>
-      <el-button type="primary" class="add-btn" @click="showPublishDialog = true">
+      <el-button type="primary" class="add-btn" @click="openPublishDialog">
         <el-icon class="mr-1"><Plus /></el-icon>
         发布商品
       </el-button>
@@ -138,29 +210,79 @@ onMounted(() => {
     </div>
   </AdminPageLayout>
 
-  <el-dialog v-model="showPublishDialog" title="发布商品" width="600px" class="custom-dialog">
+  <el-dialog v-model="showPublishDialog" title="发布商品" width="650px" class="custom-dialog" @close="resetForm">
     <el-form :model="publishForm" label-width="100px" class="publish-form">
       <el-form-item label="商品名称" required>
         <el-input v-model="publishForm.name" placeholder="请输入商品名称" />
       </el-form-item>
+      
       <el-form-item label="商品分类" required>
-        <el-select v-model="publishForm.categoryId" placeholder="请选择分类" class="w-full">
-          <el-option 
-            v-for="cat in categories" 
-            :key="cat.id" 
-            :label="cat.name" 
-            :value="cat.id"
-          />
-        </el-select>
+        <div class="category-selector">
+          <el-select 
+            v-model="publishForm.parentCategoryId"
+            placeholder="选择大类"
+            class="parent-category-select"
+            @change="handleParentCategoryChange"
+          >
+            <el-option 
+              v-for="cat in parentCategories" 
+              :key="cat.id" 
+              :label="cat.name" 
+              :value="cat.id"
+            >
+              <div class="category-option">
+                <span>{{ cat.name }}</span>
+                <span class="category-count">{{ cat.children?.length || 0 }} 个小类</span>
+              </div>
+            </el-option>
+          </el-select>
+          
+          <el-select 
+            v-model="publishForm.categoryId"
+            placeholder="选择小类"
+            class="sub-category-select"
+            :disabled="!publishForm.parentCategoryId"
+            filterable
+            :filter-method="(query: string) => categorySearchKeyword = query"
+            @change="handleCategoryChange"
+          >
+            <el-option 
+              v-for="cat in filteredSubCategories" 
+              :key="cat.id" 
+              :label="getCategoryDisplayName(cat)"
+              :value="cat.id"
+            >
+              <div class="subcategory-option">
+                <span class="subcategory-name">{{ cat.name }}</span>
+                <span v-if="cat.cocoId" class="coco-info">
+                  COCO #{{ cat.cocoId }}: {{ cat.yoloLabel }}
+                </span>
+              </div>
+            </el-option>
+          </el-select>
+        </div>
+        
+        <div v-if="selectedCategory" class="selected-category-info">
+          <el-tag type="success" size="small">
+            已选择: {{ selectedCategory.name }}
+            <span v-if="selectedCategory.cocoId">
+              (COCO #{{ selectedCategory.cocoId }})
+            </span>
+          </el-tag>
+        </div>
       </el-form-item>
+      
       <el-form-item label="售价" required>
         <el-input-number v-model="publishForm.price" :min="0" :precision="2" />
+        <span class="price-unit">元</span>
       </el-form-item>
       <el-form-item label="原价">
         <el-input-number v-model="publishForm.originalPrice" :min="0" :precision="2" />
+        <span class="price-unit">元</span>
       </el-form-item>
       <el-form-item label="库存" required>
         <el-input-number v-model="publishForm.stock" :min="0" />
+        <span class="price-unit">件</span>
       </el-form-item>
       <el-form-item label="商品描述">
         <el-input 
@@ -237,6 +359,57 @@ onMounted(() => {
 
 .mr-1 {
   margin-right: 4px;
+}
+
+.category-selector {
+  display: flex;
+  gap: 12px;
+  width: 100%;
+}
+
+.parent-category-select {
+  width: 180px;
+}
+
+.sub-category-select {
+  flex: 1;
+}
+
+.category-option {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+}
+
+.category-count {
+  font-size: 12px;
+  color: #909399;
+}
+
+.subcategory-option {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.subcategory-name {
+  font-weight: 500;
+}
+
+.coco-info {
+  font-size: 12px;
+  color: #909399;
+}
+
+.selected-category-info {
+  margin-top: 8px;
+}
+
+.price-unit {
+  margin-left: 8px;
+  color: #909399;
+  font-size: 14px;
 }
 
 :deep(.el-table) {

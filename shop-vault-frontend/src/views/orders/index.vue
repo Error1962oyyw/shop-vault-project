@@ -147,6 +147,9 @@ onMounted(() => {
                     <div class="order-info">
                       <span class="info-item">订单编号：{{ order.orderNo }}</span>
                       <span class="info-item">{{ order.createTime }}</span>
+                      <el-tag v-if="order.isPointsExchange === 1" type="warning" size="small" class="points-tag">
+                        积分兑换
+                      </el-tag>
                     </div>
                     <el-tag :type="getStatusColor(order.status)" size="small" class="status-tag">
                       {{ getStatusText(order.status) }}
@@ -218,6 +221,9 @@ onMounted(() => {
                         <el-button size="small" @click="goToDetail(order.orderNo)">
                           订单详情
                         </el-button>
+                      </div>
+                      <div v-if="order.isPointsExchange === 1" class="points-notice">
+                        积分兑换商品不支持售后
                       </div>
                     </div>
                   </div>
@@ -307,6 +313,19 @@ onMounted(() => {
   font-weight: 500;
 }
 
+.points-tag {
+  margin-left: 8px;
+}
+
+.points-notice {
+  color: #f56c6c;
+  font-size: 12px;
+  margin-top: 8px;
+  padding: 4px 8px;
+  background: #fef0f0;
+  border-radius: 4px;
+}
+
 .order-body {
   padding: 24px;
 }
@@ -349,6 +368,7 @@ onMounted(() => {
   line-height: 1.5;
   display: -webkit-box;
   -webkit-line-clamp: 2;
+  line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }

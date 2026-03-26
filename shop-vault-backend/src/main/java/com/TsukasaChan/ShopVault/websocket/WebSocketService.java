@@ -5,24 +5,27 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 
+import java.util.Objects;
+
 @Service
 @Slf4j
 @RequiredArgsConstructor
+@SuppressWarnings("null")
 public class WebSocketService {
 
     private final SimpMessagingTemplate messagingTemplate;
     private final WebSocketEventListener webSocketEventListener;
 
     public void broadcast(String destination, Object message) {
-        messagingTemplate.convertAndSend(destination, message);
+        messagingTemplate.convertAndSend(Objects.requireNonNull(destination), Objects.requireNonNull(message));
         log.debug("广播消息: {}", message);
     }
 
     public void sendToUser(Long userId, String destination, Object message) {
         messagingTemplate.convertAndSendToUser(
-                String.valueOf(userId), 
-                destination, 
-                message);
+                Objects.requireNonNull(String.valueOf(userId)), 
+                Objects.requireNonNull(destination), 
+                Objects.requireNonNull(message));
         log.debug("发送消息给用户 {}: {}", userId, message);
     }
 

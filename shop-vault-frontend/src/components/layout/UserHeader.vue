@@ -5,7 +5,7 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { 
   ArrowDown, User, List, Star, Coin, SwitchButton, 
   Shop, Search, ShoppingCart, Service, Camera, Menu,
-  HomeFilled, Goods, Calendar
+  HomeFilled, Goods, Calendar, Present
 } from '@element-plus/icons-vue'
 import { useUserStore } from '@/stores/user'
 import { useCartStore } from '@/stores/cart'
@@ -64,13 +64,16 @@ const handleCommand = (command: string) => {
     case 'points':
       router.push('/points')
       break
+    case 'points-mall':
+      router.push('/points-mall')
+      break
     case 'logout':
       handleLogout()
       break
   }
 }
 
-const protectedPaths = ['/chat', '/favorites', '/ai-search', '/cart', '/orders', '/points', '/profile', '/coupons', '/member-day']
+const protectedPaths = ['/chat', '/favorites', '/ai-search', '/cart', '/orders', '/points', '/points-mall', '/profile', '/coupons', '/member-day']
 
 const requireLogin = (path: string) => {
   if (!isLoggedIn.value && protectedPaths.some(p => path.startsWith(p))) {
@@ -124,6 +127,9 @@ onMounted(() => {
                   </el-dropdown-item>
                   <el-dropdown-item command="points">
                     <el-icon><Coin /></el-icon>会员中心
+                  </el-dropdown-item>
+                  <el-dropdown-item command="points-mall">
+                    <el-icon><Present /></el-icon>积分商城
                   </el-dropdown-item>
                   <el-dropdown-item divided command="logout">
                     <el-icon><SwitchButton /></el-icon>退出登录
@@ -307,13 +313,13 @@ onMounted(() => {
               <el-icon><Star /></el-icon>
               <span>收藏</span>
             </div>
+            <div class="quick-action-item" @click="goTo('/points-mall')">
+              <el-icon><Present /></el-icon>
+              <span>积分商城</span>
+            </div>
             <div class="quick-action-item" @click="goTo('/points')">
               <el-icon><Coin /></el-icon>
-              <span>会员</span>
-            </div>
-            <div class="quick-action-item" @click="goTo('/profile')">
-              <el-icon><User /></el-icon>
-              <span>我的</span>
+              <span>会员中心</span>
             </div>
           </div>
         </template>

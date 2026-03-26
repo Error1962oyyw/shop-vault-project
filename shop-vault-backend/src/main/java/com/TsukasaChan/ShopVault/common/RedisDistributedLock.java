@@ -6,12 +6,14 @@ import org.springframework.data.redis.core.script.DefaultRedisScript;
 import org.springframework.stereotype.Component;
 
 import java.util.Collections;
+import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.LockSupport;
 
 @Slf4j
 @Component
+@SuppressWarnings("null")
 public class RedisDistributedLock {
 
     private final RedisTemplate<String, Object> redisTemplate;
@@ -68,6 +70,7 @@ public class RedisDistributedLock {
         return null;
     }
 
+    @SuppressWarnings("null")
     public void releaseLock(String lockKey, String lockValue) {
         String key = LOCK_PREFIX + lockKey;
         
@@ -78,7 +81,8 @@ public class RedisDistributedLock {
                 "end";
         
         DefaultRedisScript<Long> redisScript = new DefaultRedisScript<>(script, Long.class);
-        Long result = redisTemplate.execute(redisScript, Collections.singletonList(key), lockValue);
+        List<String> keys = Collections.singletonList(key);
+        Long result = redisTemplate.execute(redisScript, keys, lockValue);
         
         if (Long.valueOf(1L).equals(result)) {
             log.debug("[分布式锁] 释放锁成功 - key: {}, lockValue: {}", key, lockValue);

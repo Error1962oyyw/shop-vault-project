@@ -38,4 +38,6 @@ public class OrderItem implements Serializable {
     private Long skuId;
 
     private String specJson;
+
+    private Integer isPointsExchange;
 }

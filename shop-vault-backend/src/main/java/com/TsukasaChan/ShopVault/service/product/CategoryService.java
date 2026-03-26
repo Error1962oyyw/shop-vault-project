@@ -7,4 +7,10 @@ import java.util.List;
 
 public interface CategoryService extends IService<Category> {
     List<Category> listCategories();
+    
+    List<Category> listCategoriesWithYolo();
+    
+    Category getCategoryById(Long id);
+    
+    Category getCategoryByYoloLabel(String yoloLabel);
 }

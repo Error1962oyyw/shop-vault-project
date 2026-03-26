@@ -35,6 +35,27 @@ export const getCategoryList = () => {
   });
 };
 
+export const getCategoryListWithYolo = () => {
+  return request<Category[]>({
+    url: '/api/category/list-with-yolo',
+    method: 'get'
+  });
+};
+
+export const getCategoryById = (id: number) => {
+  return request<Category>({
+    url: `/api/category/detail/${id}`,
+    method: 'get'
+  });
+};
+
+export const getCategoryByYoloLabel = (yoloLabel: string) => {
+  return request<Category>({
+    url: `/api/category/by-yolo-label/${yoloLabel}`,
+    method: 'get'
+  });
+};
+
 export const getCommentList = (productId: number, params: { pageNum: number; pageSize: number }) => {
   return request<PageResult<Comment>>({
     url: `/api/comment/list/${productId}`,

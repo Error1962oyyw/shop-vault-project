@@ -22,7 +22,9 @@ export interface Category {
   level: number;
   icon: string;
   sort: number;
-  children?: Category[];
+    children?: Category[];
+    yoloLabel?: string;
+    cocoId?: number;
 }
 
 export interface Product {
@@ -100,6 +102,9 @@ export interface Order {
   receiveTime: string;
   createTime: string;
   items: OrderItem[];
+  orderType: number;
+  isPointsExchange: number;
+  afterSalesDisabled: number;
 }
 
 export interface OrderItem {

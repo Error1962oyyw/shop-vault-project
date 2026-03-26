@@ -14,6 +14,7 @@ import java.util.concurrent.TimeUnit;
 @Slf4j
 @Component
 @RequiredArgsConstructor
+@SuppressWarnings("null")
 public class StockTransactionalHelper {
 
     private final ProductService productService;
@@ -65,7 +66,7 @@ public class StockTransactionalHelper {
         String cacheKey = STOCK_CACHE_KEY + productId;
         Product product = productService.getById(productId);
         if (product != null) {
-            redisTemplate.opsForValue().set(cacheKey, product.getStock(), 1, TimeUnit.HOURS);
+            redisTemplate.opsForValue().set(cacheKey, (Object) product.getStock(), 1, TimeUnit.HOURS);
         } else {
             redisTemplate.delete(cacheKey);
         }

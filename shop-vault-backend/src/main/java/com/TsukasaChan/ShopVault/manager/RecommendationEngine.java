@@ -20,6 +20,7 @@ import java.util.stream.Collectors;
 @Slf4j
 @Service
 @RequiredArgsConstructor
+@SuppressWarnings("null")
 public class RecommendationEngine {
 
     private final OrderService orderService;
@@ -150,7 +151,7 @@ public class RecommendationEngine {
 
     private void cacheRecommendations(Long userId, List<Long> productIds) {
         String cacheKey = RECOMMENDATION_CACHE_KEY + userId;
-        redisTemplate.opsForValue().set(cacheKey, productIds, CACHE_EXPIRE_HOURS, TimeUnit.HOURS);
+        redisTemplate.opsForValue().set(cacheKey, (Object) productIds, CACHE_EXPIRE_HOURS, TimeUnit.HOURS);
     }
 
     private void invalidateRecommendationCache(Long userId) {

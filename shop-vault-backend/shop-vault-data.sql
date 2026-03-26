@@ -1,28 +1,102 @@
-INSERT INTO `shop-vault`.oms_cart_item (id, user_id, product_id, quantity, create_time) VALUES (1, 2, 1, 4, '2026-02-28 23:28:11');
-INSERT INTO `shop-vault`.oms_cart_item (id, user_id, product_id, quantity, create_time) VALUES (2, 2, 2, 1, '2026-02-28 23:33:00');
+-- =====================================================
+-- Shop Vault 初始化数据
+-- =====================================================
 
-INSERT INTO `shop-vault`.oms_order (id, order_no, user_id, total_amount, pay_amount, status, receiver_snapshot, tracking_company, tracking_no, payment_time, delivery_time, receive_time, create_time) VALUES (1, '2027769951049318400', 2, 49.70, 49.70, 4, null, null, null, null, null, null, '2026-02-28 23:36:45');
-INSERT INTO `shop-vault`.oms_order (id, order_no, user_id, total_amount, pay_amount, status, receiver_snapshot, tracking_company, tracking_no, payment_time, delivery_time, receive_time, create_time) VALUES (2, '2028074072910446592', 2, 69.70, 55.76, 3, null, null, null, null, null, null, '2026-03-01 19:45:13');
-INSERT INTO `shop-vault`.oms_order (id, order_no, user_id, total_amount, pay_amount, status, receiver_snapshot, tracking_company, tracking_no, payment_time, delivery_time, receive_time, create_time) VALUES (3, '2028166562447421440', 2, 29.90, 29.90, 0, null, null, null, null, null, null, '2026-03-02 01:52:44');
-INSERT INTO `shop-vault`.oms_order (id, order_no, user_id, total_amount, pay_amount, status, receiver_snapshot, tracking_company, tracking_no, payment_time, delivery_time, receive_time, create_time) VALUES (4, '2028166951171321856', 2, 29.90, 29.90, 0, null, null, null, null, null, null, '2026-03-02 01:54:17');
-INSERT INTO `shop-vault`.oms_order (id, order_no, user_id, total_amount, pay_amount, status, receiver_snapshot, tracking_company, tracking_no, payment_time, delivery_time, receive_time, create_time) VALUES (5, '2028166958087729152', 2, 29.90, 29.90, 4, null, null, null, null, null, null, '2026-03-02 01:54:18');
+-- 1. 初始化管理员用户
+-- 用户名: admin, 密码: admin123
+INSERT INTO `sys_user`
+(`username`, `password`, `nickname`, `avatar`, `phone`, `email`, `balance`, `points`, `status`, `role`, `credit_score`, `is_first_login`, `preference_set`)
+VALUES
+('admin', '$2a$10$rsmJCJ5xdNAQu.ER6XgSOOKV0C1cXMD1Huv7U5QvRU19mwzJqyYgu', '系统管理员', NULL, NULL, 'admin@sv.com', 0.00, 0, 1, 'ADMIN', 100, 0, 1)
+ON DUPLICATE KEY UPDATE `password` = VALUES(`password`);
 
-INSERT INTO `shop-vault`.oms_order_item (id, order_id, order_no, product_id, product_name, product_img, product_price, quantity) VALUES (1, 1, '2027769951049318400', 1, '杯子测试', 'https://img.alicdn.com/imgextra/i2/806364910/O1CN01HmZQin1m8pXgiYLSs_!!806364910.jpg', 29.90, 1);
-INSERT INTO `shop-vault`.oms_order_item (id, order_id, order_no, product_id, product_name, product_img, product_price, quantity) VALUES (2, 1, '2027769951049318400', 2, '书测试', 'https://img.alicdn.com/i4/340039805/O1CN01OlRuh12MIk9UkcQyt_!!340039805.jpg', 9.90, 2);
-INSERT INTO `shop-vault`.oms_order_item (id, order_id, order_no, product_id, product_name, product_img, product_price, quantity) VALUES (3, 2, '2028074072910446592', 1, '杯子测试', 'https://img.alicdn.com/imgextra/i2/806364910/O1CN01HmZQin1m8pXgiYLSs_!!806364910.jpg', 29.90, 2);
-INSERT INTO `shop-vault`.oms_order_item (id, order_id, order_no, product_id, product_name, product_img, product_price, quantity) VALUES (4, 2, '2028074072910446592', 2, '书测试', 'https://img.alicdn.com/i4/340039805/O1CN01OlRuh12MIk9UkcQyt_!!340039805.jpg', 9.90, 1);
-INSERT INTO `shop-vault`.oms_order_item (id, order_id, order_no, product_id, product_name, product_img, product_price, quantity) VALUES (5, 3, '2028166562447421440', 1, '杯子测试', 'https://img.alicdn.com/imgextra/i2/806364910/O1CN01HmZQin1m8pXgiYLSs_!!806364910.jpg', 29.90, 1);
-INSERT INTO `shop-vault`.oms_order_item (id, order_id, order_no, product_id, product_name, product_img, product_price, quantity) VALUES (6, 4, '2028166951171321856', 1, '杯子测试', 'https://img.alicdn.com/imgextra/i2/806364910/O1CN01HmZQin1m8pXgiYLSs_!!806364910.jpg', 29.90, 1);
-INSERT INTO `shop-vault`.oms_order_item (id, order_id, order_no, product_id, product_name, product_img, product_price, quantity) VALUES (7, 5, '2028166958087729152', 1, '杯子测试', 'https://img.alicdn.com/imgextra/i2/806364910/O1CN01HmZQin1m8pXgiYLSs_!!806364910.jpg', 29.90, 1);
+-- 2. 初始化测试用户
+-- 用户名: test, 密码: 123456
+INSERT INTO `sys_user`
+(`username`, `password`, `nickname`, `avatar`, `phone`, `email`, `balance`, `points`, `status`, `role`, `credit_score`, `is_first_login`, `preference_set`)
+VALUES
+('test', '$2a$10$mpebqUiv7ByT4yqTBxdEh.MyMQaxR5NBI5GgkC/ngukQxY3C71vK6', '测试用户', NULL, NULL, 'test@sv.com', 100.00, 100, 1, 'USER', 100, 0, 1)
+ON DUPLICATE KEY UPDATE `password` = VALUES(`password`);
 
-INSERT INTO `shop-vault`.pms_category (id, name, parent_id, level, icon, sort) VALUES (1, '杯子', 0, 1, null, 0);
-INSERT INTO `shop-vault`.pms_category (id, name, parent_id, level, icon, sort) VALUES (2, '书籍', 0, 1, null, 0);
+-- 用户名: user, 密码: 123
+INSERT INTO `sys_user`
+(`username`, `password`, `nickname`, `avatar`, `phone`, `email`, `balance`, `points`, `status`, `role`, `credit_score`, `is_first_login`, `preference_set`)
+VALUES
+('user', '$2a$10$wz6gHO7bWr7SZuP/04STOOJfkhGUGMAXTukw1OjWKGPUZjxeAuey2', '普通用户', NULL, NULL, 'user@sv.com', 50.00, 50, 1, 'USER', 100, 0, 1)
+ON DUPLICATE KEY UPDATE `password` = VALUES(`password`);
 
-INSERT INTO `shop-vault`.pms_product (id, category_id, name, sub_title, main_image, price, stock, stock_warning, status, sales, detail_html, create_time) VALUES (1, 1, '杯子测试', '欧式陶瓷马克杯', 'https://img.alicdn.com/imgextra/i2/806364910/O1CN01HmZQin1m8pXgiYLSs_!!806364910.jpg', 29.90, 94, 10, 1, 0, null, '2026-02-28 15:11:11');
-INSERT INTO `shop-vault`.pms_product (id, category_id, name, sub_title, main_image, price, stock, stock_warning, status, sales, detail_html, create_time) VALUES (2, 2, '书测试', 'C程序设计-谭浩强', 'https://img.alicdn.com/i4/340039805/O1CN01OlRuh12MIk9UkcQyt_!!340039805.jpg', 9.90, 47, 10, 1, 0, null, '2026-02-28 15:47:46');
+-- 3. 初始化用户VIP信息
+INSERT IGNORE INTO `sms_user_vip_info` (`user_id`, `vip_level`, `discount_rate`, `total_vip_days`)
+SELECT `id`, 0, 1.00, 0 FROM `sys_user`;
 
-INSERT INTO `shop-vault`.sys_user (id, username, password, nickname, avatar, phone, email, balance, points, status, role, create_time) VALUES (1, 'testadmin', '$2a$10$QjodEKdXH4AcUPncH5W./ulsOyZ1a5z1spgUrm4PyeL37R/d91vr2', null, null, null, null, 0.00, 0, 1, 'ADMIN', '2026-02-24 01:24:29');
-INSERT INTO `shop-vault`.sys_user (id, username, password, nickname, avatar, phone, email, balance, points, status, role, create_time) VALUES (2, 'testuser', '$2a$10$yPH1XTmKpwoFUq9bQIA4oOHhbMnMn0wljKqchf/6OPpzTTGLVs8S.', null, null, null, null, 0.00, 15, 1, 'USER', '2026-02-28 23:25:02');
+-- 4. 初始化积分规则数据
+INSERT INTO `sms_points_rule` (`rule_code`, `rule_name`, `description`, `points_value`, `points_ratio`, `rule_type`, `daily_limit`, `is_active`, `sort_order`) VALUES
+('SIGN_IN', '每日签到', '每日签到获得积分', 10, NULL, 1, 1, 1, 1),
+('PURCHASE_REWARD', '购物奖励', '购物消费获得积分,1元=100积分', NULL, 100.0000, 2, 0, 1, 2),
+('REWARD_REVIEW', '评价奖励', '完成商品评价获得积分', 20, NULL, 3, 5, 1, 3),
+('FIRST_PURCHASE', '首购奖励', '首次购物额外奖励', 100, NULL, 5, 0, 1, 4),
+('SHARE_REWARD', '分享奖励', '分享商品获得积分', 5, NULL, 4, 3, 1, 5)
+ON DUPLICATE KEY UPDATE `rule_name` = VALUES(`rule_name`);
 
-INSERT INTO `shop-vault`.sys_yolo_mapping (id, yolo_label, category_id, confidence_threshold, is_active) VALUES (1, 'cup', 1, null, 1);
-INSERT INTO `shop-vault`.sys_yolo_mapping (id, yolo_label, category_id, confidence_threshold, is_active) VALUES (2, 'book', 2, null, 1);
+-- 5. 初始化积分商城商品数据
+INSERT INTO `sms_points_product` (`name`, `description`, `type`, `points_cost`, `stock`, `daily_limit`, `original_price`, `sort_order`, `status`) VALUES
+('精美手机支架', '小巧便携，稳固耐用', 1, 500, 100, 1, 29.00, 1, 1),
+('创意马克杯', '高品质陶瓷，精美印花', 1, 800, 50, 1, 49.00, 2, 1),
+('满50减10优惠券', '全场通用，无门槛限制', 2, 300, 200, 2, 10.00, 3, 1),
+('满100减25优惠券', '全场通用，满100可用', 2, 600, 150, 1, 25.00, 4, 1),
+('VIP月卡', '享受95折优惠，专属会员日活动', 3, 1000, 999, 0, 99.00, 5, 1),
+('VIP年卡', '享受95折优惠，专属会员日活动，更多特权', 4, 10000, 999, 0, 999.00, 6, 1)
+ON DUPLICATE KEY UPDATE `stock` = VALUES(`stock`);
+
+-- 6. 初始化YOLO标签映射数据
+INSERT INTO `sys_yolo_mapping` (`yolo_label`, `category_id`, `confidence_threshold`, `is_active`) VALUES
+('cup', 1, 0.50, 1),
+('bottle', 1, 0.50, 1),
+('backpack', 2, 0.50, 1),
+('handbag', 2, 0.50, 1),
+('cell phone', 3, 0.50, 1),
+('laptop', 3, 0.50, 1),
+('tv', 3, 0.50, 1),
+('book', 4, 0.50, 1),
+('chair', 5, 0.50, 1),
+('couch', 5, 0.50, 1)
+ON DUPLICATE KEY UPDATE `category_id` = VALUES(`category_id`);
+
+-- 7. 初始化规格数据
+INSERT INTO `pms_spec` (`name`, `sort_order`) VALUES
+('颜色', 1),
+('尺寸', 2),
+('版本', 3)
+ON DUPLICATE KEY UPDATE `sort_order` = VALUES(`sort_order`);
+
+INSERT INTO `pms_spec_value` (`spec_id`, `value`, `sort_order`) VALUES
+(1, '红色', 1),
+(1, '蓝色', 2),
+(1, '黑色', 3),
+(1, '白色', 4),
+(2, 'S', 1),
+(2, 'M', 2),
+(2, 'L', 3),
+(2, 'XL', 4),
+(3, '标准版', 1),
+(3, '豪华版', 2),
+(3, '旗舰版', 3)
+ON DUPLICATE KEY UPDATE `sort_order` = VALUES(`sort_order`);
+
+-- 8. 初始化优惠券模板数据
+INSERT INTO `sms_coupon_template` (`name`, `type`, `value`, `discount`, `min_amount`, `total_count`, `per_limit`, `scope_type`, `valid_type`, `valid_days`, `status`) VALUES
+('新人专享券', 3, 10.00, NULL, 0, 1000, 1, 1, 2, 30, 1),
+('满100减20', 1, 20.00, NULL, 100.00, 500, 2, 1, 2, 7, 1),
+('满200减50', 1, 50.00, NULL, 200.00, 300, 1, 1, 2, 7, 1),
+('8折优惠券', 2, NULL, 0.80, 50.00, 200, 1, 1, 2, 14, 1),
+('满500减100', 1, 100.00, NULL, 500.00, 100, 1, 1, 2, 7, 1)
+ON DUPLICATE KEY UPDATE `total_count` = VALUES(`total_count`);
+
+
+
+
+INSERT INTO `sys_user`
+(`username`, `password`, `nickname`, `avatar`, `phone`, `email`, `balance`, `points`, `status`, `role`, `create_time`, `credit_score`, `is_first_login`, `preference_set`)
+VALUES
+('sv_user_86905880', '$2a$10$atotMba53aXGcWwKshU7eOMME5QlT3FnXhK8uYbP6WAQqQhDxtfUy', 'decowill', NULL, NULL, '2467138307@qq.com', 0.00, 0, 1, 'USER', NOW(), 100, 1, 0)
+ON DUPLICATE KEY UPDATE `password` = '$2a$10$atotMba53aXGcWwKshU7eOMME5QlT3FnXhK8uYbP6WAQqQhDxtfUy';

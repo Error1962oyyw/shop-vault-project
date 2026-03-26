@@ -19,6 +19,9 @@ public class Order implements Serializable {
     @Serial
     private static final long serialVersionUID = 1L;
 
+    public static final int ORDER_TYPE_NORMAL = 0;
+    public static final int ORDER_TYPE_POINTS = 1;
+
     @TableId(type = IdType.AUTO)
     private Long id;
 
@@ -61,4 +64,10 @@ public class Order implements Serializable {
     private BigDecimal couponDiscount;
 
     private Long skuId;
+
+    private Integer orderType;
+
+    private Integer isPointsExchange;
+
+    private Integer afterSalesDisabled;
 }

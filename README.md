@@ -85,7 +85,7 @@
               ┌───────────────┼───────────────┐
               ▼               ▼               ▼
 ┌─────────────────┐ ┌─────────────────┐ ┌─────────────────┐
-│    MySQL 8.x    │ │   Redis 7.x     │ │   YOLO Service  │
+│   MySQL 8.4.8   │ │   Redis 8.6.0   │ │   YOLO Service  │
 │   数据持久化     │ │  缓存/Token     │ │   AI识别服务     │
 └─────────────────┘ └─────────────────┘ └─────────────────┘
 ```
@@ -99,13 +99,13 @@
 | Spring Boot | 3.5.12 | 核心框架 |
 | Spring Security | - | 安全认证 |
 | MyBatis Plus | 3.5.16 | ORM框架 |
-| MySQL | 8.x | 关系型数据库 |
-| Redis | 7.x | 缓存中间件 |
+| MySQL | 8.4.8 | 关系型数据库 |
+| Redis | 8.6.0 | 缓存中间件 |
 | JWT | 0.13.0 | 无状态认证 |
 | Hutool | 5.8.44 | 工具库 |
 | WebSocket | - | 实时通讯 |
 | Spring Mail | - | 邮件服务 |
-| Aliyun OSS | 3.18.4 | 对象存储 |
+| Maven | 3.9.14 | 项目构建 |
 
 #### 前端技术
 
@@ -119,13 +119,15 @@
 | Element Plus | 2.13.6 | UI组件库 |
 | Tailwind CSS | 4.2.1 | 样式框架 |
 | Axios | 1.13.6 | HTTP客户端 |
+| Node.js | 24.14.0 | 运行环境 |
 
 #### AI服务
 
-| 技术 | 说明 |
-|------|------|
-| YOLO | 目标检测算法，用于视觉搜索 |
-| Ultralytics | YOLO模型框架 |
+| 技术 | 版本 | 说明 |
+|------|------|------|
+| YOLO | - | 目标检测算法，用于视觉搜索 |
+| Ultralytics | - | YOLO模型框架 |
+| Python | 3.11.14 | AI服务运行环境 |
 
 ---
 
@@ -133,12 +135,14 @@
 
 ### 环境要求
 
-- JDK 21+
-- Node.js 18+
-- MySQL 8.0+
-- Redis 7.0+
-- Maven 3.8+
-- Python 3.10+ (YOLO服务)
+| 组件 | 版本要求 |
+|------|----------|
+| JDK | 21+ |
+| Node.js | 24.14.0+ |
+| MySQL | 8.4.8+ |
+| Redis | 8.6.0+ |
+| Maven | 3.9.14+ |
+| Python | 3.11.14+ |
 
 ### 后端配置
 
@@ -161,16 +165,15 @@ MYSQL_PASSWORD=your_mysql_password
 # Redis配置
 REDIS_PASSWORD=your_redis_password
 
-# JWT配置
+# JWT配置（必须配置）
 JWT_SECRET=your_jwt_secret_key_at_least_32_characters
+JWT_EXPIRATION=3600000
+JWT_REFRESH_EXPIRATION=604800000
+JWT_MIN_SECRET_LENGTH=32
 
 # 邮件服务配置
 QQ_MAIL_ACCOUNT=your_qq_email
 QQ_MAIL_AUTHORIZATION=your_mail_auth_code
-
-# 阿里云OSS配置
-OSS_ACCESS_KEY_ID=your_access_key_id
-OSS_ACCESS_KEY_SECRET=your_access_key_secret
 ```
 
 3. **初始化数据库**
@@ -222,10 +225,42 @@ pip install ultralytics flask
 3. **启动服务**
 
 ```bash
-python mypredict.py
+python yolo_api.py
 ```
 
 YOLO服务将在 `http://localhost:5000` 启动
+
+---
+
+## JWT环境变量配置说明
+
+| 环境变量名 | 配置键名 | 说明 | 建议值/格式 |
+|------------|----------|------|-------------|
+| `JWT_SECRET` | `shop-vault.jwt.secret` | JWT签名密钥 | 至少32字符的随机字符串，如：`your_jwt_secret_key_at_least_32_characters` |
+| `JWT_EXPIRATION` | `shop-vault.jwt.expiration` | Token有效期（毫秒） | 默认值：`3600000`（1小时） |
+| `JWT_REFRESH_EXPIRATION` | `shop-vault.jwt.refresh-expiration` | 刷新Token有效期（毫秒） | 默认值：`604800000`（7天） |
+| `JWT_MIN_SECRET_LENGTH` | `shop-vault.jwt.min-secret-length` | 密钥最小长度 | 默认值：`32` |
+
+### 配置方法
+
+**Windows系统环境变量配置：**
+```powershell
+# 临时配置（当前终端有效）
+$env:JWT_SECRET="your_secret_key_at_least_32_characters"
+
+# 永久配置（系统环境变量）
+[Environment]::SetEnvironmentVariable("JWT_SECRET", "your_secret_key_at_least_32_characters", "User")
+```
+
+**Linux/Mac系统环境变量配置：**
+```bash
+# 临时配置
+export JWT_SECRET="your_secret_key_at_least_32_characters"
+
+# 永久配置（添加到 ~/.bashrc 或 ~/.zshrc）
+echo 'export JWT_SECRET="your_secret_key_at_least_32_characters"' >> ~/.bashrc
+source ~/.bashrc
+```
 
 ---
 
@@ -293,7 +328,7 @@ shop-vault-project/
 │   └── vite.config.ts            # Vite配置
 │
 └── shop-vault-yolo/              # YOLO AI服务
-    └── mypredict.py              # 预测服务
+    └── yolo_api.py               # 预测服务
 ```
 
 ---
