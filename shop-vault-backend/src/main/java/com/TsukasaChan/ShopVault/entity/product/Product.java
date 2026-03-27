@@ -28,6 +28,9 @@ public class Product implements Serializable {
 
     private Long categoryId;
 
+    @TableField(exist = false)
+    private Long parentCategoryId;
+
     private String name;
 
     private String subTitle;
@@ -35,6 +38,8 @@ public class Product implements Serializable {
     private String mainImage;
 
     private BigDecimal price;
+
+    private BigDecimal originalPrice;
 
     private Integer stock;
 
@@ -47,12 +52,29 @@ public class Product implements Serializable {
 
     private Integer sales;
 
+    @TableField(exist = false)
+    private String description;
+
     /**
      * 商品详情(富文本)
      */
     private String detailHtml;
+    
+    /**
+     * 商品详情图片(JSON数组)
+     */
+    private String detailImages;
 
     private LocalDateTime createTime;
 
     private Integer version;
+
+    @TableField(exist = false)
+    private String categoryName;
+
+    @TableField(exist = false)
+    private Integer cocoId;
+
+    @TableField(exist = false)
+    private String yoloLabel;
 }

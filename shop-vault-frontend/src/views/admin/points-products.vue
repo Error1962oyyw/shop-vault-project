@@ -36,7 +36,7 @@ const productTypes = [
   { value: 1, label: '小商品' },
   { value: 2, label: '优惠券' },
   { value: 3, label: 'VIP月卡' },
-  { value: 4, label: 'VIP年卡' }
+  { value: 4, label: 'SVIP年卡' }
 ]
 
 const fetchProducts = async () => {

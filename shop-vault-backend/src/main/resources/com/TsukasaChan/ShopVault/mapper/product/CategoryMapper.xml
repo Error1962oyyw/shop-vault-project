@@ -11,9 +11,12 @@
             <result property="level" column="level" jdbcType="INTEGER"/>
             <result property="icon" column="icon" jdbcType="VARCHAR"/>
             <result property="sort" column="sort" jdbcType="INTEGER"/>
+            <result property="status" column="status" jdbcType="INTEGER"/>
+            <result property="yoloLabel" column="yolo_label" jdbcType="VARCHAR"/>
+            <result property="cocoId" column="coco_id" jdbcType="INTEGER"/>
     </resultMap>
 
     <sql id="Base_Column_List">
-        id,name,parent_id,level,icon,sort
+        id,name,parent_id,level,icon,sort,status,yolo_label,coco_id
     </sql>
 </mapper>

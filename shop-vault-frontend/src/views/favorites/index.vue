@@ -282,12 +282,15 @@ onMounted(() => {
   overflow: hidden;
   background: #ffffff;
   transition: all 0.3s ease;
+  position: relative;
+  z-index: 1;
 }
 
 .item-wrapper:hover {
   box-shadow: var(--shadow-md);
   transform: translateY(-4px);
   border-color: var(--primary-opacity-10);
+  z-index: 10;
 }
 
 .item-header {

@@ -13,4 +13,6 @@ public interface CategoryService extends IService<Category> {
     Category getCategoryById(Long id);
     
     Category getCategoryByYoloLabel(String yoloLabel);
+    
+    void clearCategoryCache();
 }

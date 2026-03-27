@@ -5,7 +5,7 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { 
   ArrowDown, User, List, Star, Coin, SwitchButton, 
   Shop, Search, ShoppingCart, Service, Camera, Menu,
-  HomeFilled, Goods, Calendar, Present
+  HomeFilled, Goods, Present
 } from '@element-plus/icons-vue'
 import { useUserStore } from '@/stores/user'
 import { useCartStore } from '@/stores/cart'
@@ -220,44 +220,6 @@ onMounted(() => {
     <nav class="header-nav hide-mobile">
       <div class="header-container">
         <div class="nav-content">
-          <el-dropdown 
-            trigger="hover" 
-            placement="bottom-start"
-            @visible-change="(val: boolean) => showCategories = val"
-          >
-            <div 
-              class="nav-category-btn"
-              :class="showCategories ? 'active' : ''"
-            >
-              <el-icon><Menu /></el-icon>
-              <span>全部分类</span>
-              <el-icon><ArrowDown /></el-icon>
-            </div>
-            <template #dropdown>
-              <div class="category-dropdown">
-                <template v-for="category in categoryStore.categories" :key="category.id">
-                  <router-link 
-                    :to="{ path: '/products', query: { categoryId: category.id } }"
-                    class="category-item"
-                  >
-                    <el-icon v-if="category.icon"><component :is="category.icon" /></el-icon>
-                    <span>{{ category.name }}</span>
-                  </router-link>
-                  <template v-if="category.children?.length">
-                    <router-link
-                      v-for="child in category.children"
-                      :key="child.id"
-                      :to="{ path: '/products', query: { categoryId: child.id } }"
-                      class="category-item category-child"
-                    >
-                      {{ child.name }}
-                    </router-link>
-                  </template>
-                </template>
-              </div>
-            </template>
-          </el-dropdown>
-
           <div class="nav-links">
             <router-link 
               to="/" 
@@ -274,11 +236,18 @@ onMounted(() => {
               全部商品
             </router-link>
             <span
-              class="nav-link highlight"
-              :class="{ active: route.path === '/member-day' }"
-              @click="goTo('/member-day')"
+              class="nav-link"
+              :class="{ active: route.path === '/points' }"
+              @click="goTo('/points')"
             >
-              会员日
+              会员中心
+            </span>
+            <span
+              class="nav-link"
+              :class="{ active: route.path === '/points-mall' }"
+              @click="goTo('/points-mall')"
+            >
+              积分商城
             </span>
           </div>
         </div>
@@ -339,9 +308,13 @@ onMounted(() => {
             <el-icon><Camera /></el-icon>
             <span>AI识图搜索</span>
           </div>
-          <div class="mobile-nav-item" @click="goTo('/member-day')">
-            <el-icon><Calendar /></el-icon>
-            <span>会员日</span>
+          <div class="mobile-nav-item" @click="goTo('/points')">
+            <el-icon><Coin /></el-icon>
+            <span>会员中心</span>
+          </div>
+          <div class="mobile-nav-item" @click="goTo('/points-mall')">
+            <el-icon><Present /></el-icon>
+            <span>积分商城</span>
           </div>
           <div class="mobile-nav-item" @click="goTo('/chat')">
             <el-icon><Service /></el-icon>

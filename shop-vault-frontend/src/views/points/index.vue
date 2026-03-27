@@ -33,15 +33,15 @@ const vipCards = [
     points: 1000,
     originalPrice: 99,
     duration: '30天',
-    benefits: ['全场商品98折', '专属会员日活动', '1.5倍积分特权', '优先客服通道']
+    benefits: ['全场商品98折', '专属会员日活动', '1.5倍积分特权', '优先客服通道'],
   },
   {
     type: 2,
-    name: 'VIP年卡',
-    points: 10000,
+    name: 'SVIP年卡',
+    points: 15000,
     originalPrice: 999,
     duration: '365天',
-    benefits: ['全场商品98折', '专属会员日活动', '1.5倍积分特权', '优先客服通道', '生日专属礼遇', '新品优先体验'],
+    benefits: ['全场商品95折', '专属会员日活动', '2倍积分特权', '优先客服通道', '生日专属礼遇', '新品优先体验'],
     recommended: true
   }
 ]
@@ -153,7 +153,7 @@ const handleExchangeVip = async (type: number) => {
   exchangeLoading.value = true
   try {
     await exchangeVip(type)
-    ElMessage.success('VIP开通成功，享受95折优惠！')
+    ElMessage.success('SVIP开通成功，享受95折优惠！')
     await fetchUserInfo()
     await fetchVipInfo()
     await fetchVipHistory()
@@ -256,6 +256,28 @@ onMounted(() => {
                 <div class="points-value">{{ userInfo.points }}</div>
                 <div class="points-label">可用积分</div>
               </div>
+              
+              <div v-if="isVip" class="member-day-card">
+                <div class="member-day-header">
+                  <span class="member-day-badge">VIP专属</span>
+                  <span class="member-day-title">会员日活动</span>
+                </div>
+                <div class="member-day-info">
+                  <div class="member-day-time">
+                    <span class="time-label">活动时间</span>
+                    <span class="time-value">每月28日</span>
+                  </div>
+                  <div class="member-day-benefits">
+                    <span class="benefit-item">双倍积分</span>
+                    <span class="benefit-item">专属折扣</span>
+                    <span class="benefit-item">限量好礼</span>
+                  </div>
+                </div>
+                <el-button type="warning" size="small" class="member-day-btn" @click="$router.push('/member-day')">
+                  立即参与
+                </el-button>
+              </div>
+              
               <el-button 
                 :type="hasSignedIn ? 'info' : 'primary'"
                 :loading="signInLoading"
@@ -583,6 +605,78 @@ onMounted(() => {
   margin-top: 8px;
 }
 
+.member-day-card {
+  background: rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 16px;
+  padding: 16px 20px;
+  min-width: 200px;
+}
+
+.member-day-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.member-day-badge {
+  background: linear-gradient(135deg, #ffd591 0%, #fa8c16 100%);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+
+.member-day-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #fff;
+}
+
+.member-day-info {
+  margin-bottom: 12px;
+}
+
+.member-day-time {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.time-label {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.time-value {
+  font-size: 14px;
+  font-weight: 600;
+  color: #ffd591;
+}
+
+.member-day-benefits {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.benefit-item {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.9);
+  background: rgba(255, 255, 255, 0.1);
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+
+.member-day-btn {
+  width: 100%;
+  border-radius: 8px;
+  font-weight: 600;
+}
+
 .sign-btn {
   height: 48px;
   padding: 0 28px;
@@ -908,11 +1002,13 @@ onMounted(() => {
   position: relative;
   transition: all 0.3s ease;
   border: 2px solid transparent;
+  z-index: 1;
 }
 
 .vip-card:hover {
   transform: translateY(-4px);
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  z-index: 10;
 }
 
 .vip-card.recommended {

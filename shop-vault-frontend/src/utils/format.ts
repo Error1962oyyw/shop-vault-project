@@ -39,14 +39,14 @@ export function formatMoney(price: number | string | null | undefined): string {
 export function getAvatarUrl(url: string | null | undefined): string {
   if (!url) return ''
   if (url.startsWith('http')) return url
-  const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080'
+  const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:9090'
   return baseUrl + url
 }
 
 export function getImageUrl(path: string | null | undefined): string {
   if (!path) return ''
   if (path.startsWith('http')) return path
-  const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080'
+  const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:9090'
   return baseUrl + path
 }
 

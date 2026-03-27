@@ -27,7 +27,7 @@ const productTypes = [
   { value: '1', label: '小商品', icon: Present },
   { value: '2', label: '优惠券', icon: Ticket },
   { value: '3', label: 'VIP月卡', icon: Medal },
-  { value: '4', label: 'VIP年卡', icon: Medal }
+  { value: '4', label: 'SVIP年卡', icon: Medal }
 ]
 
 const fetchUserInfo = async () => {
@@ -492,11 +492,14 @@ onMounted(() => {
   overflow: hidden;
   box-shadow: var(--shadow-sm);
   transition: all 0.3s ease;
+  position: relative;
+  z-index: 1;
 }
 
 .product-card:hover {
   transform: translateY(-4px);
   box-shadow: var(--shadow-lg);
+  z-index: 10;
 }
 
 .product-image {

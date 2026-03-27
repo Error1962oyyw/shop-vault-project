@@ -5,6 +5,7 @@ import com.TsukasaChan.ShopVault.mapper.product.CategoryMapper;
 import com.TsukasaChan.ShopVault.service.product.CategoryService;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 
@@ -20,7 +21,7 @@ public class CategoryServiceImpl extends ServiceImpl<CategoryMapper, Category> i
         List<Category> allCategories = this.list();
 
         return allCategories.stream()
-                .filter(category -> category.getParentId() == 0)
+                .filter(category -> category.getParentId() != null && category.getParentId() == 0)
                 .peek(category -> category.setChildren(getChildren(category, allCategories)))
                 .sorted((c1, c2) -> {
                     int sort1 = c1.getSort() == null ? 0 : c1.getSort();
@@ -35,7 +36,7 @@ public class CategoryServiceImpl extends ServiceImpl<CategoryMapper, Category> i
         List<Category> allCategories = this.list();
         
         return allCategories.stream()
-                .filter(category -> category.getLevel() == 2)
+                .filter(category -> category.getLevel() != null && category.getLevel() == 2)
                 .sorted((c1, c2) -> {
                     int sort1 = c1.getSort() == null ? 0 : c1.getSort();
                     int sort2 = c2.getSort() == null ? 0 : c2.getSort();
@@ -56,9 +57,14 @@ public class CategoryServiceImpl extends ServiceImpl<CategoryMapper, Category> i
                 .last("LIMIT 1"));
     }
     
+    @Override
+    @CacheEvict(value = "categoryCache", allEntries = true)
+    public void clearCategoryCache() {
+    }
+    
     private List<Category> getChildren(Category root, List<Category> allCategories) {
         return allCategories.stream()
-                .filter(category -> category.getParentId().equals(root.getId()))
+                .filter(category -> category.getParentId() != null && category.getParentId().equals(root.getId()))
                 .peek(category -> category.setChildren(getChildren(category, allCategories)))
                 .sorted((c1, c2) -> {
                     int sort1 = c1.getSort() == null ? 0 : c1.getSort();

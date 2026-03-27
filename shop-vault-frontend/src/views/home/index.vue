@@ -737,11 +737,14 @@ onMounted(() => {
   border-radius: 16px;
   box-shadow: var(--shadow-sm);
   transition: all 0.3s ease;
+  position: relative;
+  z-index: 1;
 }
 
 .feature-card:hover {
   transform: translateY(-4px);
   box-shadow: var(--shadow-lg);
+  z-index: 10;
 }
 
 .feature-icon {
@@ -831,13 +834,16 @@ onMounted(() => {
 }
 
 .view-more {
-  display: flex;
+  display: inline-flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
   align-items: center;
   gap: 4px;
   font-size: 14px;
   color: var(--text-secondary);
   text-decoration: none;
   transition: color 0.2s;
+  white-space: nowrap;
 }
 
 .view-more:hover {
@@ -868,12 +874,15 @@ onMounted(() => {
   cursor: pointer;
   transition: all 0.3s ease;
   box-shadow: var(--shadow-sm);
+  position: relative;
+  z-index: 1;
 }
 
 .category-card:hover {
   transform: translateY(-4px);
   box-shadow: var(--shadow-lg);
   border-color: var(--primary-color);
+  z-index: 10;
 }
 
 .category-icon-wrapper {

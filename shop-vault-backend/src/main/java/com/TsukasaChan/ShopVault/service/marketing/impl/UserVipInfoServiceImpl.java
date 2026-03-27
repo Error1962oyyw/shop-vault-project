@@ -17,8 +17,10 @@ import java.time.LocalDateTime;
 public class UserVipInfoServiceImpl extends ServiceImpl<UserVipInfoMapper, UserVipInfo> implements UserVipInfoService {
 
     private static final BigDecimal VIP_DISCOUNT_RATE = new BigDecimal("0.98");
+    private static final BigDecimal SVIP_DISCOUNT_RATE = new BigDecimal("0.95");
     private static final BigDecimal NORMAL_DISCOUNT_RATE = BigDecimal.ONE;
     private static final BigDecimal VIP_POINTS_MULTIPLIER = new BigDecimal("1.5");
+    private static final BigDecimal SVIP_POINTS_MULTIPLIER = new BigDecimal("2.0");
 
     @Override
     public UserVipInfo getByUserId(Long userId) {
@@ -45,6 +47,12 @@ public class UserVipInfoServiceImpl extends ServiceImpl<UserVipInfoMapper, UserV
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void activateVip(Long userId, int days) {
+        activateVipWithLevel(userId, days, UserVipInfo.LEVEL_VIP);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void activateSvip(Long userId, int days) {
         UserVipInfo vipInfo = getByUserId(userId);
         LocalDateTime now = LocalDateTime.now();
         LocalDateTime newExpireTime;
@@ -55,8 +63,36 @@ public class UserVipInfoServiceImpl extends ServiceImpl<UserVipInfoMapper, UserV
             newExpireTime = vipInfo.getVipExpireTime().plusDays(days);
         }
 
-        vipInfo.setVipLevel(UserVipInfo.LEVEL_VIP);
-        vipInfo.setDiscountRate(VIP_DISCOUNT_RATE);
+        vipInfo.setVipLevel(UserVipInfo.LEVEL_SVIP);
+        vipInfo.setDiscountRate(SVIP_DISCOUNT_RATE);
+        vipInfo.setVipExpireTime(newExpireTime);
+        vipInfo.setTotalVipDays(vipInfo.getTotalVipDays() + days);
+        vipInfo.setUpdateTime(now);
+        this.updateById(vipInfo);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void activateVipWithLevel(Long userId, int days, int vipLevel) {
+        UserVipInfo vipInfo = getByUserId(userId);
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime newExpireTime;
+
+        if (vipInfo.getVipExpireTime() == null || vipInfo.getVipExpireTime().isBefore(now)) {
+            newExpireTime = now.plusDays(days);
+        } else {
+            newExpireTime = vipInfo.getVipExpireTime().plusDays(days);
+        }
+
+        BigDecimal discountRate = NORMAL_DISCOUNT_RATE;
+        if (vipLevel == UserVipInfo.LEVEL_VIP) {
+            discountRate = VIP_DISCOUNT_RATE;
+        } else if (vipLevel == UserVipInfo.LEVEL_SVIP) {
+            discountRate = SVIP_DISCOUNT_RATE;
+        }
+
+        vipInfo.setVipLevel(vipLevel);
+        vipInfo.setDiscountRate(discountRate);
         vipInfo.setVipExpireTime(newExpireTime);
         vipInfo.setTotalVipDays(vipInfo.getTotalVipDays() + days);
         vipInfo.setUpdateTime(now);
@@ -66,10 +102,14 @@ public class UserVipInfoServiceImpl extends ServiceImpl<UserVipInfoMapper, UserV
     @Override
     public BigDecimal getDiscountRate(Long userId) {
         UserVipInfo vipInfo = getByUserId(userId);
-        if (vipInfo.getVipLevel() >= UserVipInfo.LEVEL_VIP && 
-            vipInfo.getVipExpireTime() != null && 
+        if (vipInfo.getVipExpireTime() != null && 
             vipInfo.getVipExpireTime().isAfter(LocalDateTime.now())) {
-            return vipInfo.getDiscountRate();
+            int level = vipInfo.getVipLevel();
+            if (level == UserVipInfo.LEVEL_SVIP) {
+                return SVIP_DISCOUNT_RATE;
+            } else if (level == UserVipInfo.LEVEL_VIP) {
+                return VIP_DISCOUNT_RATE;
+            }
         }
         return NORMAL_DISCOUNT_RATE;
     }
@@ -77,7 +117,20 @@ public class UserVipInfoServiceImpl extends ServiceImpl<UserVipInfoMapper, UserV
     @Override
     public boolean isVip(Long userId) {
         UserVipInfo vipInfo = getByUserId(userId);
-        return vipInfo.getVipLevel() >= UserVipInfo.LEVEL_VIP && 
+        return isVipOrSvip(vipInfo);
+    }
+
+    @Override
+    public boolean isSvip(Long userId) {
+        UserVipInfo vipInfo = getByUserId(userId);
+        return vipInfo.getVipLevel() == UserVipInfo.LEVEL_SVIP && 
+               vipInfo.getVipExpireTime() != null && 
+               vipInfo.getVipExpireTime().isAfter(LocalDateTime.now());
+    }
+
+    private boolean isVipOrSvip(UserVipInfo vipInfo) {
+        int level = vipInfo.getVipLevel();
+        return (level == UserVipInfo.LEVEL_VIP || level == UserVipInfo.LEVEL_SVIP) && 
                vipInfo.getVipExpireTime() != null && 
                vipInfo.getVipExpireTime().isAfter(LocalDateTime.now());
     }
@@ -89,9 +142,21 @@ public class UserVipInfoServiceImpl extends ServiceImpl<UserVipInfoMapper, UserV
     }
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void extendVipWithLevel(Long userId, int days, int vipLevel) {
+        activateVipWithLevel(userId, days, vipLevel);
+    }
+
+    @Override
     public BigDecimal getPointsMultiplier(Long userId) {
-        if (isVip(userId)) {
-            return VIP_POINTS_MULTIPLIER;
+        UserVipInfo vipInfo = getByUserId(userId);
+        if (vipInfo.getVipExpireTime() != null && vipInfo.getVipExpireTime().isAfter(LocalDateTime.now())) {
+            int level = vipInfo.getVipLevel();
+            if (level == UserVipInfo.LEVEL_SVIP) {
+                return SVIP_POINTS_MULTIPLIER;
+            } else if (level == UserVipInfo.LEVEL_VIP) {
+                return VIP_POINTS_MULTIPLIER;
+            }
         }
         return BigDecimal.ONE;
     }

@@ -365,7 +365,8 @@ DROP TABLE IF EXISTS `sms_vip_membership`;
 CREATE TABLE `sms_vip_membership` (
     `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '主键ID',
     `user_id` BIGINT NOT NULL COMMENT '用户ID',
-    `type` TINYINT NOT NULL COMMENT 'VIP类型: 1月卡 2年卡',
+    `type` TINYINT NOT NULL COMMENT 'VIP类型: 1月卡 2年卡 3SVIP年卡',
+    `vip_level` TINYINT DEFAULT 1 COMMENT 'VIP等级: 1VIP 2SVIP',
     `start_time` DATETIME NOT NULL COMMENT '开始时间',
     `end_time` DATETIME NOT NULL COMMENT '结束时间',
     `status` TINYINT DEFAULT 1 COMMENT '状态: 0未激活 1激活中 2已过期',
@@ -374,7 +375,8 @@ CREATE TABLE `sms_vip_membership` (
     `create_time` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     PRIMARY KEY (`id`),
     KEY `idx_user_id` (`user_id`),
-    KEY `idx_status_end_time` (`status`, `end_time`)
+    KEY `idx_status_end_time` (`status`, `end_time`),
+    KEY `idx_vip_level` (`vip_level`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='VIP会员记录表';
 
 -- ----------------------------
@@ -706,3 +708,7 @@ INSERT INTO `sys_yolo_mapping` (`yolo_label`, `category_id`, `confidence_thresho
 ('tennis racket', 502, 0.50, 1),
 ('skateboard', 503, 0.50, 1),
 ('bicycle', 504, 0.50, 1);
+
+
+
+SELECT COUNT(*) FROM pms_category;

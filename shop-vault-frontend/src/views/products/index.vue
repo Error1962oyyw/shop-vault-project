@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, reactive, computed, watch, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
-import { Filter, Sort, ArrowRight, Search, Refresh } from '@element-plus/icons-vue'
+import { Filter, Sort, ArrowRight, Search, Refresh, ArrowDown } from '@element-plus/icons-vue'
 import UserLayout from '@/components/layout/UserLayout.vue'
 import { ProductCard, Pagination } from '@/components/common'
 import { getProductList, getCategoryList } from '@/api/product'
@@ -19,13 +19,16 @@ const pagination = reactive({
 })
 
 const filters = reactive({
-  categoryId: undefined as number | undefined,
+  categoryIds: [] as number[],
   keyword: '',
   minPrice: undefined as number | undefined,
   maxPrice: undefined as number | undefined,
   sortBy: 'default',
   sortOrder: 'desc' as 'asc' | 'desc'
 })
+
+const categoryDropdownVisible = ref(false)
+const expandedCategories = ref<number[]>([])
 
 const sortOptions = [
   { label: '综合排序', value: 'default', order: 'desc' },
@@ -44,19 +47,29 @@ const currentSort = computed({
   }
 })
 
-const activeCategoryName = computed(() => {
-  if (!filters.categoryId) return '全部分类'
-  const findCategory = (cats: Category[]): Category | undefined => {
+const selectedCategoriesDisplay = computed(() => {
+  if (filters.categoryIds.length === 0) return []
+  
+  const result: { id: number; name: string; parentId?: number }[] = []
+  
+  const findCategory = (cats: Category[], targetId: number): Category | undefined => {
     for (const cat of cats) {
-      if (cat.id === filters.categoryId) return cat
+      if (cat.id === targetId) return cat
       if (cat.children?.length) {
-        const found = findCategory(cat.children)
+        const found = findCategory(cat.children, targetId)
         if (found) return found
       }
     }
   }
-  const found = findCategory(categories.value)
-  return found?.name || '全部分类'
+  
+  for (const id of filters.categoryIds) {
+    const cat = findCategory(categories.value, id)
+    if (cat) {
+      result.push({ id: cat.id, name: cat.name, parentId: cat.parentId })
+    }
+  }
+  
+  return result
 })
 
 const fetchCategories = async () => {
@@ -70,8 +83,10 @@ const fetchCategories = async () => {
 const fetchProducts = async () => {
   loading.value = true
   try {
+    const categoryId = filters.categoryIds.length > 0 ? filters.categoryIds[0] : undefined
+    
     const res: PageResult<Product> = await getProductList({
-      categoryId: filters.categoryId,
+      categoryId: categoryId,
       keyword: filters.keyword,
       minPrice: filters.minPrice,
       maxPrice: filters.maxPrice,
@@ -94,8 +109,70 @@ const handleSortChange = () => {
   fetchProducts()
 }
 
-const handleCategorySelect = (categoryId: number | undefined) => {
-  filters.categoryId = categoryId
+const toggleCategoryExpand = (categoryId: number) => {
+  const index = expandedCategories.value.indexOf(categoryId)
+  if (index > -1) {
+    expandedCategories.value.splice(index, 1)
+  } else {
+    expandedCategories.value.push(categoryId)
+  }
+}
+
+const isCategoryExpanded = (categoryId: number) => {
+  return expandedCategories.value.includes(categoryId)
+}
+
+const isCategorySelected = (categoryId: number) => {
+  return filters.categoryIds.includes(categoryId)
+}
+
+const handleCategoryToggle = (category: Category) => {
+  if (category.children?.length) {
+    toggleCategoryExpand(category.id)
+  }
+}
+
+const handleCategorySelect = (category: Category, isParent: boolean) => {
+  if (isParent) {
+    const allChildIds = category.children?.map(c => c.id) || []
+    const parentId = category.id
+    
+    if (filters.categoryIds.includes(parentId)) {
+      filters.categoryIds = filters.categoryIds.filter(id => id !== parentId && !allChildIds.includes(id))
+    } else {
+      filters.categoryIds = [parentId]
+    }
+  } else {
+    const index = filters.categoryIds.indexOf(category.id)
+    if (index > -1) {
+      filters.categoryIds.splice(index, 1)
+    } else {
+      const parentId = category.parentId
+      if (parentId && filters.categoryIds.includes(parentId)) {
+        filters.categoryIds = filters.categoryIds.filter(id => id !== parentId)
+      }
+      filters.categoryIds.push(category.id)
+    }
+  }
+  
+  pagination.current = 1
+  fetchProducts()
+}
+
+const selectAllCategories = () => {
+  filters.categoryIds = []
+  pagination.current = 1
+  fetchProducts()
+}
+
+const removeCategory = (categoryId: number) => {
+  filters.categoryIds = filters.categoryIds.filter(id => id !== categoryId)
+  pagination.current = 1
+  fetchProducts()
+}
+
+const clearAllCategories = () => {
+  filters.categoryIds = []
   pagination.current = 1
   fetchProducts()
 }
@@ -106,7 +183,7 @@ const handleSearch = () => {
 }
 
 const resetFilters = () => {
-  filters.categoryId = undefined
+  filters.categoryIds = []
   filters.keyword = ''
   filters.minPrice = undefined
   filters.maxPrice = undefined
@@ -118,7 +195,7 @@ const resetFilters = () => {
 
 watch(() => route.query, (query) => {
   if (query.categoryId) {
-    filters.categoryId = Number(query.categoryId)
+    filters.categoryIds = [Number(query.categoryId)]
   }
   if (query.keyword) {
     filters.keyword = String(query.keyword)
@@ -152,13 +229,6 @@ onMounted(() => {
             </h1>
             <p class="page-subtitle">发现您心仪的好物</p>
           </div>
-          <div class="header-right">
-            <div class="active-filter" v-if="filters.categoryId || filters.keyword">
-              <el-tag type="primary" size="large" closable @close="filters.categoryId = undefined; fetchProducts()">
-                {{ activeCategoryName }}
-              </el-tag>
-            </div>
-          </div>
         </div>
       </div>
 
@@ -173,40 +243,70 @@ onMounted(() => {
 
               <div class="filter-section">
                 <h4 class="filter-title">商品分类</h4>
-                <div class="category-list">
+                <div class="category-dropdown">
                   <div 
-                    class="category-item"
-                    :class="{ active: !filters.categoryId }"
-                    @click="handleCategorySelect(undefined)"
+                    class="category-dropdown-trigger"
+                    @click="categoryDropdownVisible = !categoryDropdownVisible"
                   >
-                    <span class="category-dot"></span>
-                    <span class="category-name">全部分类</span>
-                    <span class="category-count" v-if="!filters.categoryId">✓</span>
+                    <span>{{ filters.categoryIds.length === 0 ? '全部分类' : `已选 ${filters.categoryIds.length} 个分类` }}</span>
+                    <el-icon :class="{ 'is-rotate': categoryDropdownVisible }"><ArrowDown /></el-icon>
                   </div>
-                  <template v-for="category in categories" :key="category.id">
-                    <div 
-                      class="category-item"
-                      :class="{ active: filters.categoryId === category.id }"
-                      @click="handleCategorySelect(category.id)"
-                    >
-                      <span class="category-dot"></span>
-                      <span class="category-name">{{ category.name }}</span>
-                      <span class="category-count" v-if="filters.categoryId === category.id">✓</span>
-                    </div>
-                    <template v-if="category.children?.length">
+                  
+                  <Transition name="dropdown">
+                    <div v-show="categoryDropdownVisible" class="category-dropdown-menu">
                       <div 
-                        v-for="child in category.children" 
-                        :key="child.id"
-                        class="category-item category-child"
-                        :class="{ active: filters.categoryId === child.id }"
-                        @click="handleCategorySelect(child.id)"
+                        class="category-option all-option"
+                        :class="{ active: filters.categoryIds.length === 0 }"
+                        @click="selectAllCategories"
                       >
-                        <span class="category-dot"></span>
-                        <span class="category-name">{{ child.name }}</span>
-                        <span class="category-count" v-if="filters.categoryId === child.id">✓</span>
+                        <span class="option-checkbox" :class="{ checked: filters.categoryIds.length === 0 }">
+                          <span v-if="filters.categoryIds.length === 0" class="check-icon">✓</span>
+                        </span>
+                        <span class="option-label">全部分类</span>
                       </div>
-                    </template>
-                  </template>
+                      
+                      <div v-for="category in categories" :key="category.id" class="category-group">
+                        <div 
+                          class="category-option parent-option"
+                          :class="{ active: isCategorySelected(category.id), expanded: isCategoryExpanded(category.id) }"
+                        >
+                          <span 
+                            class="option-checkbox" 
+                            :class="{ checked: isCategorySelected(category.id) }"
+                            @click.stop="handleCategorySelect(category, true)"
+                          >
+                            <span v-if="isCategorySelected(category.id)" class="check-icon">✓</span>
+                          </span>
+                          <span class="option-label" @click="handleCategoryToggle(category)">{{ category.name }}</span>
+                          <el-icon 
+                            v-if="category.children?.length" 
+                            class="expand-icon" 
+                            :class="{ expanded: isCategoryExpanded(category.id) }"
+                            @click="handleCategoryToggle(category)"
+                          >
+                            <ArrowDown />
+                          </el-icon>
+                        </div>
+                        
+                        <Transition name="expand">
+                          <div v-show="isCategoryExpanded(category.id) && category.children?.length" class="category-children">
+                            <div 
+                              v-for="child in category.children" 
+                              :key="child.id"
+                              class="category-option child-option"
+                              :class="{ active: isCategorySelected(child.id) }"
+                              @click.stop="handleCategorySelect(child, false)"
+                            >
+                              <span class="option-checkbox" :class="{ checked: isCategorySelected(child.id) }">
+                                <span v-if="isCategorySelected(child.id)" class="check-icon">✓</span>
+                              </span>
+                              <span class="option-label">{{ child.name }}</span>
+                            </div>
+                          </div>
+                        </Transition>
+                      </div>
+                    </div>
+                  </Transition>
                 </div>
               </div>
 
@@ -276,6 +376,31 @@ onMounted(() => {
                   <span class="result-text">共</span>
                   <span class="result-count">{{ pagination.total }}</span>
                   <span class="result-text">件商品</span>
+                </div>
+              </div>
+              
+              <div v-if="selectedCategoriesDisplay.length > 0" class="selected-tags">
+                <span class="tags-label">已选分类：</span>
+                <div class="tags-container">
+                  <el-tag 
+                    v-for="cat in selectedCategoriesDisplay" 
+                    :key="cat.id"
+                    type="primary"
+                    size="large"
+                    closable
+                    @close="removeCategory(cat.id)"
+                  >
+                    {{ cat.name }}
+                  </el-tag>
+                  <el-button 
+                    v-if="selectedCategoriesDisplay.length > 1"
+                    type="primary" 
+                    link 
+                    size="small"
+                    @click="clearAllCategories"
+                  >
+                    清空全部
+                  </el-button>
                 </div>
               </div>
             </div>
@@ -369,24 +494,6 @@ onMounted(() => {
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
 }
 
-.header-right {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.active-filter :deep(.el-tag) {
-  background: rgba(255, 255, 255, 0.2);
-  border-color: rgba(255, 255, 255, 0.3);
-  color: #fff;
-  padding: 8px 16px;
-  font-size: 14px;
-}
-
-.active-filter :deep(.el-tag .el-tag__close) {
-  color: #fff;
-}
-
 .page-container {
   max-width: 1200px;
   margin: 0 auto;
@@ -452,79 +559,163 @@ onMounted(() => {
   border-radius: 2px;
 }
 
-.category-list {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  max-height: 320px;
-  overflow-y: auto;
-  padding-right: 8px;
+.category-dropdown {
+  position: relative;
 }
 
-.category-list::-webkit-scrollbar {
+.category-dropdown-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  background: #f7f8fa;
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  cursor: pointer;
+  font-size: 14px;
+  color: var(--text-primary);
+  transition: all 0.2s;
+}
+
+.category-dropdown-trigger:hover {
+  border-color: var(--primary-color);
+}
+
+.category-dropdown-trigger .is-rotate {
+  transform: rotate(180deg);
+}
+
+.category-dropdown-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  right: 0;
+  background: #fff;
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  max-height: 400px;
+  overflow-y: auto;
+  z-index: 100;
+  padding: 8px;
+}
+
+.category-dropdown-menu::-webkit-scrollbar {
   width: 4px;
 }
 
-.category-list::-webkit-scrollbar-thumb {
+.category-dropdown-menu::-webkit-scrollbar-thumb {
   background: var(--border-color);
   border-radius: 2px;
 }
 
-.category-item {
+.category-option {
   display: flex;
   align-items: center;
   gap: 10px;
   padding: 10px 12px;
-  border-radius: 10px;
+  border-radius: 8px;
   cursor: pointer;
   transition: all 0.2s;
   font-size: 14px;
   color: var(--text-regular);
 }
 
-.category-item:hover {
+.category-option:hover {
   background: var(--primary-50);
   color: var(--primary-color);
 }
 
-.category-item.active {
+.category-option.active {
   background: linear-gradient(135deg, var(--primary-50) 0%, #e6f4ff 100%);
   color: var(--primary-color);
-  font-weight: 500;
 }
 
-.category-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--border-color);
+.option-checkbox {
+  width: 18px;
+  height: 18px;
+  border: 2px solid var(--border-color);
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   flex-shrink: 0;
+  transition: all 0.2s;
 }
 
-.category-item.active .category-dot {
+.option-checkbox.checked {
   background: var(--primary-color);
+  border-color: var(--primary-color);
 }
 
-.category-name {
+.check-icon {
+  color: #fff;
+  font-size: 12px;
+  font-weight: bold;
+}
+
+.option-label {
   flex: 1;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.category-count {
+.expand-icon {
   font-size: 12px;
-  color: var(--primary-color);
+  color: var(--text-secondary);
+  transition: transform 0.3s;
 }
 
-.category-child {
-  padding-left: 28px;
+.expand-icon.expanded {
+  transform: rotate(180deg);
+}
+
+.category-children {
+  margin-left: 16px;
+  padding-left: 8px;
+  border-left: 2px solid var(--border-light);
+}
+
+.child-option {
   font-size: 13px;
   color: var(--text-secondary);
 }
 
-.category-child:hover {
-  color: var(--primary-color);
+.all-option {
+  font-weight: 500;
+  border-bottom: 1px solid var(--border-light);
+  margin-bottom: 8px;
+  padding-bottom: 12px;
+}
+
+.dropdown-enter-active,
+.dropdown-leave-active {
+  transition: all 0.2s ease;
+}
+
+.dropdown-enter-from,
+.dropdown-leave-to {
+  opacity: 0;
+  transform: translateY(-8px);
+}
+
+.expand-enter-active,
+.expand-leave-active {
+  transition: all 0.3s ease;
+  overflow: hidden;
+}
+
+.expand-enter-from,
+.expand-leave-to {
+  opacity: 0;
+  max-height: 0;
+}
+
+.expand-enter-to,
+.expand-leave-from {
+  opacity: 1;
+  max-height: 500px;
 }
 
 .price-inputs {
@@ -596,6 +787,7 @@ onMounted(() => {
 
 .toolbar-content {
   display: flex;
+  flex-direction: row;
   justify-content: space-between;
   align-items: center;
   gap: 20px;
@@ -603,12 +795,14 @@ onMounted(() => {
 
 .sort-section {
   display: flex;
+  flex-direction: row;
   align-items: center;
   gap: 16px;
 }
 
 .sort-label {
   display: flex;
+  flex-direction: row;
   align-items: center;
   gap: 6px;
   font-size: 14px;
@@ -634,9 +828,11 @@ onMounted(() => {
 }
 
 .result-info {
-  display: flex;
+  display: inline-flex;
+  flex-direction: row;
   align-items: center;
   gap: 4px;
+  white-space: nowrap;
 }
 
 .result-text {
@@ -649,6 +845,35 @@ onMounted(() => {
   font-weight: 700;
   color: var(--primary-color);
   margin: 0 4px;
+}
+
+.selected-tags {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 12px;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border-light);
+  flex-wrap: wrap;
+}
+
+.tags-label {
+  font-size: 14px;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+.tags-container {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.tags-container :deep(.el-tag) {
+  border-radius: 8px;
 }
 
 .products-container {
@@ -722,24 +947,13 @@ onMounted(() => {
     position: static;
   }
 
-  .category-list {
+  .category-dropdown-menu {
+    position: static;
     max-height: none;
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 8px;
-  }
-
-  .category-item {
-    justify-content: center;
-    text-align: center;
-  }
-
-  .category-dot {
-    display: none;
-  }
-
-  .category-child {
-    padding-left: 12px;
+    box-shadow: none;
+    border: none;
+    padding: 0;
+    margin-top: 8px;
   }
 }
 
@@ -786,10 +1000,6 @@ onMounted(() => {
 
   .products-container {
     padding: 16px;
-  }
-
-  .category-list {
-    grid-template-columns: repeat(2, 1fr);
   }
 }
 

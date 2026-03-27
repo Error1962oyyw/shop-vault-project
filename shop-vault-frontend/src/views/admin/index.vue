@@ -1,8 +1,11 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Shop, SwitchButton, Bell, User, List, Money, Goods, RefreshLeft, ChatDotRound, Present, Medal } from '@element-plus/icons-vue'
+import { 
+  Shop, SwitchButton, Bell, User, List, Money, Goods, RefreshLeft, ChatDotRound,
+  TrendCharts, DataAnalysis, Timer, ShoppingCart, CreditCard, Coin, Present
+} from '@element-plus/icons-vue'
 import { getDashboardStats } from '@/api/dashboard'
 import { useUserStore } from '@/stores/user'
 import type { DashboardStats } from '@/types/api'
@@ -13,6 +16,8 @@ const userStore = useUserStore()
 
 const loading = ref(false)
 const stats = ref<DashboardStats | null>(null)
+const realtimeTime = ref<string>('')
+const autoRefreshInterval = ref<number | null>(null)
 
 const isMainDashboard = computed(() => route.path === '/admin')
 
@@ -35,10 +40,30 @@ const activeMenu = computed(() => {
   return item ? item.path : menuItems[0].path
 })
 
+const orderTrendData = computed(() => {
+  if (!stats.value?.orderTrend) return { dates: [], counts: [], amounts: [] }
+  return {
+    dates: stats.value.orderTrend.map(t => t.date),
+    counts: stats.value.orderTrend.map(t => t.count),
+    amounts: stats.value.orderTrend.map(t => t.amount)
+  }
+})
+
+const conversionRate = computed(() => {
+  if (!stats.value?.totalUsers || !stats.value?.totalOrders) return 0
+  return ((stats.value.totalOrders / stats.value.totalUsers) * 100).toFixed(1)
+})
+
+const avgOrderAmount = computed(() => {
+  if (!stats.value?.totalAmount || !stats.value?.totalOrders) return 0
+  return (stats.value.totalAmount.toNumber() / stats.value.totalOrders).toFixed(2)
+})
+
 const fetchStats = async () => {
   loading.value = true
   try {
     stats.value = await getDashboardStats()
+    realtimeTime.value = new Date().toLocaleTimeString()
   } catch (error) {
     console.error('获取统计数据失败', error)
   } finally {
@@ -66,8 +91,33 @@ const handleMenuClick = (path: string, isMain: boolean) => {
   }
 }
 
+const startAutoRefresh = () => {
+  autoRefreshInterval.value = window.setInterval(() => {
+    fetchStats()
+  }, 30000)
+}
+
+const stopAutoRefresh = () => {
+  if (autoRefreshInterval.value) {
+    clearInterval(autoRefreshInterval.value)
+    autoRefreshInterval.value = null
+  }
+}
+
+const getBarHeight = (count: number, trend: any[] | undefined) => {
+  if (!trend || trend.length === 0) return 0
+  const maxCount = Math.max(...trend.map(t => t.count))
+  if (maxCount === 0) return 0
+  return (count / maxCount) * 100
+}
+
 onMounted(() => {
   fetchStats()
+  startAutoRefresh()
+})
+
+onUnmounted(() => {
+  stopAutoRefresh()
 })
 </script>
 
@@ -126,11 +176,31 @@ onMounted(() => {
         <router-view v-if="!isMainDashboard" />
 
         <div v-else v-loading="loading" class="dashboard-container">
+          <div class="dashboard-header">
+            <div class="header-left">
+              <h2 class="dashboard-title">实时数据监控</h2>
+              <p class="dashboard-subtitle">数据每30秒自动刷新</p>
+            </div>
+            <div class="header-right">
+              <span class="realtime-time">
+                <el-icon><Timer /></el-icon>
+                最后更新: {{ realtimeTime }}
+              </span>
+              <el-button type="primary" :loading="loading" @click="fetchStats">
+                <el-icon><RefreshLeft /></el-icon>
+                刷新数据
+              </el-button>
+            </div>
+          </div>
+
           <div class="stats-grid">
             <div class="stat-card stat-card-primary">
               <div class="stat-info">
                 <p class="stat-label">总用户数</p>
                 <p class="stat-value">{{ stats?.totalUsers || 0 }}</p>
+                <p class="stat-trend stat-trend-up">
+                  <span>今日新增 {{ stats?.todayNewUsers || 0 }}</span>
+                </p>
               </div>
               <div class="stat-icon stat-icon-primary">
                 <el-icon size="28"><User /></el-icon>
@@ -141,6 +211,9 @@ onMounted(() => {
               <div class="stat-info">
                 <p class="stat-label">总订单数</p>
                 <p class="stat-value">{{ stats?.totalOrders || 0 }}</p>
+                <p class="stat-trend stat-trend-up">
+                  <span>今日 {{ stats?.todayOrders || 0 }} 单</span>
+                </p>
               </div>
               <div class="stat-icon stat-icon-success">
                 <el-icon size="28"><List /></el-icon>
@@ -150,27 +223,112 @@ onMounted(() => {
             <div class="stat-card stat-card-warning">
               <div class="stat-info">
                 <p class="stat-label">总销售额</p>
-                <p class="stat-value">¥{{ (stats?.totalSales || 0).toFixed(0) }}</p>
+                <p class="stat-value">¥{{ (stats?.totalAmount || 0).toFixed(0) }}</p>
+                <p class="stat-trend stat-trend-up">
+                  <span>今日 ¥{{ (stats?.todayAmount || 0).toFixed(2) }}</span>
+                </p>
               </div>
               <div class="stat-icon stat-icon-warning">
                 <el-icon size="28"><Money /></el-icon>
               </div>
             </div>
 
-            <div class="stat-card stat-card-danger">
+            <div class="stat-card stat-card-info">
               <div class="stat-info">
-                <p class="stat-label">商品数量</p>
-                <p class="stat-value">{{ stats?.totalProducts || 0 }}</p>
+                <p class="stat-label">转化率</p>
+                <p class="stat-value">{{ conversionRate }}%</p>
+                <p class="stat-trend">
+                  <span>客单价 ¥{{ avgOrderAmount }}</span>
+                </p>
               </div>
-              <div class="stat-icon stat-icon-danger">
-                <el-icon size="28"><Goods /></el-icon>
+              <div class="stat-icon stat-icon-info">
+                <el-icon size="28"><TrendCharts /></el-icon>
+              </div>
+            </div>
+          </div>
+
+          <div class="metrics-row">
+            <div class="metric-card">
+              <div class="metric-icon metric-icon-dau">
+                <el-icon><User /></el-icon>
+              </div>
+              <div class="metric-info">
+                <span class="metric-value">{{ stats?.dau || 0 }}</span>
+                <span class="metric-label">日活用户(DAU)</span>
+              </div>
+            </div>
+            <div class="metric-card">
+              <div class="metric-icon metric-icon-wau">
+                <el-icon><User /></el-icon>
+              </div>
+              <div class="metric-info">
+                <span class="metric-value">{{ stats?.wau || 0 }}</span>
+                <span class="metric-label">周活用户(WAU)</span>
+              </div>
+            </div>
+            <div class="metric-card">
+              <div class="metric-icon metric-icon-mau">
+                <el-icon><User /></el-icon>
+              </div>
+              <div class="metric-info">
+                <span class="metric-value">{{ stats?.mau || 0 }}</span>
+                <span class="metric-label">月活用户(MAU)</span>
+              </div>
+            </div>
+            <div class="metric-card">
+              <div class="metric-icon metric-icon-points">
+                <el-icon><Coin /></el-icon>
+              </div>
+              <div class="metric-info">
+                <span class="metric-value">{{ stats?.totalPointsIssued || 0 }}</span>
+                <span class="metric-label">累计发放积分</span>
+              </div>
+            </div>
+            <div class="metric-card">
+              <div class="metric-icon metric-icon-used">
+                <el-icon><Present /></el-icon>
+              </div>
+              <div class="metric-info">
+                <span class="metric-value">{{ stats?.totalPointsUsed || 0 }}</span>
+                <span class="metric-label">累计消耗积分</span>
               </div>
             </div>
           </div>
 
           <div class="dashboard-grid">
+            <div class="dashboard-card dashboard-card-large">
+              <h3 class="card-title">
+                <el-icon><TrendCharts /></el-icon>
+                订单趋势（近7天）
+              </h3>
+              <div class="chart-container">
+                <div class="simple-chart">
+                  <div class="chart-bars">
+                    <div 
+                      v-for="(item, index) in stats?.orderTrend || []" 
+                      :key="index"
+                      class="chart-bar-wrapper"
+                    >
+                      <div class="chart-bar-container">
+                        <div 
+                          class="chart-bar" 
+                          :style="{ height: getBarHeight(item.count, stats?.orderTrend) + '%' }"
+                        >
+                          <span class="bar-tooltip">{{ item.count }}单</span>
+                        </div>
+                      </div>
+                      <span class="chart-label">{{ item.date }}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
             <div class="dashboard-card">
-              <h3 class="card-title">今日数据</h3>
+              <h3 class="card-title">
+                <el-icon><DataAnalysis /></el-icon>
+                今日数据
+              </h3>
               <div class="data-list">
                 <div class="data-item">
                   <span class="data-label">今日订单</span>
@@ -178,21 +336,45 @@ onMounted(() => {
                 </div>
                 <div class="data-item">
                   <span class="data-label">今日销售额</span>
-                  <span class="data-value data-value-highlight">¥{{ (stats?.todaySales || 0).toFixed(2) }}</span>
+                  <span class="data-value data-value-highlight">¥{{ (stats?.todayAmount || 0).toFixed(2) }}</span>
                 </div>
                 <div class="data-item">
-                  <span class="data-label">待处理订单</span>
-                  <el-tag type="warning">{{ stats?.pendingOrders || 0 }}</el-tag>
-                </div>
-                <div class="data-item">
-                  <span class="data-label">待处理售后</span>
-                  <el-tag type="danger">{{ stats?.pendingAfterSales || 0 }}</el-tag>
+                  <span class="data-label">今日新用户</span>
+                  <span class="data-value">{{ stats?.todayNewUsers || 0 }}</span>
                 </div>
               </div>
             </div>
 
             <div class="dashboard-card">
-              <h3 class="card-title">快捷操作</h3>
+              <h3 class="card-title">
+                <el-icon><ShoppingCart /></el-icon>
+                热销商品TOP5
+              </h3>
+              <div class="hot-products">
+                <div 
+                  v-for="(product, index) in (stats?.hotProducts || []).slice(0, 5)" 
+                  :key="product.productId"
+                  class="hot-product-item"
+                >
+                  <span class="product-rank" :class="'rank-' + (index + 1)">{{ index + 1 }}</span>
+                  <img v-if="product.productImage" :src="product.productImage" class="product-image" />
+                  <div class="product-info">
+                    <span class="product-name">{{ product.productName }}</span>
+                    <span class="product-sales">销量: {{ product.sales }}</span>
+                  </div>
+                  <span class="product-amount">¥{{ product.amount?.toFixed(0) || 0 }}</span>
+                </div>
+                <div v-if="!stats?.hotProducts?.length" class="empty-data">
+                  暂无热销商品数据
+                </div>
+              </div>
+            </div>
+
+            <div class="dashboard-card">
+              <h3 class="card-title">
+                <el-icon><CreditCard /></el-icon>
+                快捷操作
+              </h3>
               <div class="quick-actions">
                 <div class="quick-action-item" @click="router.push('/admin/products')">
                   <div class="quick-action-icon quick-action-icon-primary">
@@ -600,6 +782,320 @@ onMounted(() => {
   font-weight: 600;
   color: #1f2329;
   margin: 0;
+}
+
+.dashboard-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+  padding: 20px 24px;
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
+}
+
+.header-left {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.dashboard-title {
+  font-size: 24px;
+  font-weight: 700;
+  color: #1f2329;
+  margin: 0;
+}
+
+.dashboard-subtitle {
+  font-size: 14px;
+  color: #86909c;
+  margin: 0;
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.realtime-time {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  color: #86909c;
+}
+
+.stat-trend {
+  font-size: 12px;
+  color: #86909c;
+  margin-top: 4px;
+}
+
+.stat-trend-up {
+  color: #52c41a;
+}
+
+.stat-card-info {
+  border-left: 4px solid #1677ff;
+}
+
+.stat-icon-info {
+  background: linear-gradient(135deg, #e6f4ff 0%, #bae0ff 100%);
+  color: #1677ff;
+}
+
+.metrics-row {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+}
+
+.metric-card {
+  flex: 1;
+  min-width: 180px;
+  background: white;
+  border-radius: 12px;
+  padding: 16px 20px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  transition: all 0.3s ease;
+}
+
+.metric-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+}
+
+.metric-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+}
+
+.metric-icon-dau {
+  background: linear-gradient(135deg, #e6f4ff 0%, #bae0ff 100%);
+  color: #1677ff;
+}
+
+.metric-icon-wau {
+  background: linear-gradient(135deg, #f6ffed 0%, #d9f7be 100%);
+  color: #52c41a;
+}
+
+.metric-icon-mau {
+  background: linear-gradient(135deg, #fffbe6 0%, #ffe58f 100%);
+  color: #faad14;
+}
+
+.metric-icon-points {
+  background: linear-gradient(135deg, #fff1f0 0%, #ffccc7 100%);
+  color: #ff4d4f;
+}
+
+.metric-icon-used {
+  background: linear-gradient(135deg, #f9f0ff 0%, #efdbff 100%);
+  color: #722ed1;
+}
+
+.metric-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.metric-value {
+  font-size: 20px;
+  font-weight: 700;
+  color: #1f2329;
+}
+
+.metric-label {
+  font-size: 12px;
+  color: #86909c;
+}
+
+.dashboard-card-large {
+  grid-column: span 2;
+}
+
+.card-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.chart-container {
+  height: 200px;
+  padding: 16px 0;
+}
+
+.simple-chart {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.chart-bars {
+  flex: 1;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-around;
+  gap: 12px;
+}
+
+.chart-bar-wrapper {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  height: 100%;
+}
+
+.chart-bar-container {
+  flex: 1;
+  width: 100%;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+.chart-bar {
+  width: 60%;
+  max-width: 40px;
+  background: linear-gradient(180deg, #1677ff 0%, #4096ff 100%);
+  border-radius: 6px 6px 0 0;
+  position: relative;
+  transition: all 0.3s ease;
+  min-height: 4px;
+}
+
+.chart-bar:hover {
+  background: linear-gradient(180deg, #4096ff 0%, #69b1ff 100%);
+}
+
+.bar-tooltip {
+  position: absolute;
+  top: -28px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #1f2329;
+  color: white;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  white-space: nowrap;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.chart-bar:hover .bar-tooltip {
+  opacity: 1;
+}
+
+.chart-label {
+  font-size: 12px;
+  color: #86909c;
+  margin-top: 8px;
+}
+
+.hot-products {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.hot-product-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  background: #f7f8fa;
+  border-radius: 10px;
+  transition: all 0.2s;
+}
+
+.hot-product-item:hover {
+  background: #f0f5ff;
+}
+
+.product-rank {
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+  background: #e5e6eb;
+  color: #86909c;
+}
+
+.rank-1 {
+  background: linear-gradient(135deg, #ffd591 0%, #fa8c16 100%);
+  color: white;
+}
+
+.rank-2 {
+  background: linear-gradient(135deg, #bfbfbf 0%, #8c8c8c 100%);
+  color: white;
+}
+
+.rank-3 {
+  background: linear-gradient(135deg, #ffc069 0%, #d48806 100%);
+  color: white;
+}
+
+.product-image {
+  width: 48px;
+  height: 48px;
+  border-radius: 8px;
+  object-fit: cover;
+}
+
+.product-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.product-name {
+  font-size: 14px;
+  font-weight: 500;
+  color: #1f2329;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.product-sales {
+  font-size: 12px;
+  color: #86909c;
+}
+
+.product-amount {
+  font-size: 14px;
+  font-weight: 600;
+  color: #ff4d4f;
+}
+
+.empty-data {
+  text-align: center;
+  padding: 24px;
+  color: #86909c;
+  font-size: 14px;
 }
 
 @media (max-width: 1200px) {

@@ -83,6 +83,35 @@ public class ProductServiceImpl extends ServiceImpl<ProductMapper, Product> impl
     }
 
     @Override
+    public Page<Product> getProductPageWithCategory(Integer current, Integer size, String keyword, Long categoryId, String sortBy, String sortOrder) {
+        Page<Product> page = getProductPage(current, size, keyword, categoryId, sortBy, sortOrder);
+        
+        List<Long> categoryIds = page.getRecords().stream()
+                .map(Product::getCategoryId)
+                .distinct()
+                .collect(Collectors.toList());
+        
+        if (!categoryIds.isEmpty()) {
+            Map<Long, Category> categoryMap = categoryService.listByIds(categoryIds).stream()
+                    .collect(Collectors.toMap(Category::getId, c -> c));
+            
+            page.getRecords().forEach(product -> {
+                Category category = categoryMap.get(product.getCategoryId());
+                if (category != null) {
+                    product.setCategoryName(category.getName());
+                    product.setCocoId(category.getCocoId());
+                    product.setYoloLabel(category.getYoloLabel());
+                    if (category.getParentId() != null && category.getParentId() > 0) {
+                        product.setParentCategoryId(category.getParentId());
+                    }
+                }
+            });
+        }
+        
+        return page;
+    }
+
+    @Override
     public Product getProductDetailWithBehavior(Long id, String username) {
         Product product = this.getById(id);
         if (product == null || product.getStatus() == 0) {
@@ -96,6 +125,36 @@ public class ProductServiceImpl extends ServiceImpl<ProductMapper, Product> impl
             }
         }
         return product;
+    }
+
+    @Override
+    public Product getProductDetailWithCategory(Long id, String username) {
+        Product product = getProductDetailWithBehavior(id, username);
+        
+        if (product.getCategoryId() != null) {
+            Category category = categoryService.getById(product.getCategoryId());
+            if (category != null) {
+                product.setCategoryName(category.getName());
+                product.setCocoId(category.getCocoId());
+                product.setYoloLabel(category.getYoloLabel());
+                if (category.getParentId() != null && category.getParentId() > 0) {
+                    product.setParentCategoryId(category.getParentId());
+                }
+            }
+        }
+        
+        return product;
+    }
+
+    @Override
+    public void saveProductWithCategory(Product product) {
+        if (product.getCategoryId() != null) {
+            Category category = categoryService.getById(product.getCategoryId());
+            if (category != null) {
+                product.setCategoryName(category.getName());
+            }
+        }
+        this.save(product);
     }
 
     @Override

@@ -623,8 +623,10 @@ img {
 
 .hover-scale:hover { transform: scale(1.02); }
 .hover-scale-lg:hover { transform: scale(1.05); }
-.hover-lift:hover { transform: translateY(-4px); }
-.hover-lift-lg:hover { transform: translateY(-8px); }
+.hover-lift { position: relative; z-index: 1; }
+.hover-lift:hover { transform: translateY(-4px); z-index: 10; }
+.hover-lift-lg { position: relative; z-index: 1; }
+.hover-lift-lg:hover { transform: translateY(-8px); z-index: 10; }
 .hover-glow:hover { box-shadow: var(--shadow-hover); }
 
 .opacity-0 { opacity: 0; }

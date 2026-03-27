@@ -12,8 +12,11 @@ import com.TsukasaChan.ShopVault.manager.RecommendationEngine;
 import com.TsukasaChan.ShopVault.mapper.order.OrderMapper;
 import com.TsukasaChan.ShopVault.service.marketing.ActivityService;
 import com.TsukasaChan.ShopVault.service.marketing.MemberDayService;
+import com.TsukasaChan.ShopVault.service.marketing.PointsRecordService;
+import com.TsukasaChan.ShopVault.service.marketing.PointsRuleService;
 import com.TsukasaChan.ShopVault.service.marketing.UserCouponService;
 import com.TsukasaChan.ShopVault.service.marketing.UserVipInfoService;
+import com.TsukasaChan.ShopVault.entity.marketing.PointsRule;
 import com.TsukasaChan.ShopVault.service.order.CartItemService;
 import com.TsukasaChan.ShopVault.service.order.OrderItemService;
 import com.TsukasaChan.ShopVault.service.order.OrderService;
@@ -51,6 +54,8 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
     private final StockService stockService;
     private final RecommendationEngine recommendationEngine;
     private final WebSocketService webSocketService;
+    private final PointsRuleService pointsRuleService;
+    private final PointsRecordService pointsRecordService;
 
     public OrderServiceImpl(
             ProductService productService,
@@ -64,7 +69,9 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
             UserBehaviorService userBehaviorService,
             StockService stockService,
             @Lazy RecommendationEngine recommendationEngine,
-            WebSocketService webSocketService) {
+            WebSocketService webSocketService,
+            PointsRuleService pointsRuleService,
+            PointsRecordService pointsRecordService) {
         this.productService = productService;
         this.orderItemService = orderItemService;
         this.userService = userService;
@@ -77,6 +84,8 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
         this.stockService = stockService;
         this.recommendationEngine = recommendationEngine;
         this.webSocketService = webSocketService;
+        this.pointsRuleService = pointsRuleService;
+        this.pointsRecordService = pointsRecordService;
     }
 
     private void checkUnpaidLimit(Long userId) {
@@ -288,10 +297,7 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
         order.setReceiveTime(LocalDateTime.now());
         this.updateById(order);
 
-        BigDecimal memberDayMultiplier = memberDayService.getMemberDayPointsMultiplier();
-        BigDecimal vipMultiplier = userVipInfoService.getPointsMultiplier(userId);
-        BigDecimal totalMultiplier = memberDayMultiplier.multiply(vipMultiplier);
-        int rewardPoints = order.getPayAmount().multiply(new BigDecimal("100")).multiply(totalMultiplier).intValue();
+        int rewardPoints = calculatePurchaseRewardPoints(order, userId);
 
         User user = userService.getById(userId);
         if (rewardPoints > 0) {
@@ -305,6 +311,26 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
             webSocketService.notifyUser(userId, "RECEIVE", "确认收货成功", 
                     "您的订单 " + orderNo + " 已确认收货，获得 " + rewardPoints + " 积分", rewardPoints);
         }
+    }
+    
+    private int calculatePurchaseRewardPoints(Order order, Long userId) {
+        PointsRule purchaseRule = pointsRuleService.getOne(new LambdaQueryWrapper<PointsRule>()
+                .eq(PointsRule::getRuleType, PointsRule.TYPE_PURCHASE)
+                .eq(PointsRule::getIsActive, true)
+                .last("LIMIT 1"));
+        
+        BigDecimal baseRatio = BigDecimal.valueOf(100);
+        if (purchaseRule != null && purchaseRule.getPointsRatio() != null) {
+            baseRatio = purchaseRule.getPointsRatio();
+        }
+        
+        BigDecimal memberDayMultiplier = memberDayService.getMemberDayPointsMultiplier();
+        BigDecimal vipMultiplier = userVipInfoService.getPointsMultiplier(userId);
+        BigDecimal totalMultiplier = memberDayMultiplier.multiply(vipMultiplier);
+        
+        int rewardPoints = order.getPayAmount().multiply(baseRatio).multiply(totalMultiplier).intValue();
+        
+        return Math.max(rewardPoints, 0);
     }
 
     @Override

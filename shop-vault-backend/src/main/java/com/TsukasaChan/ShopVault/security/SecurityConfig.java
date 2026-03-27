@@ -29,7 +29,9 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(
                                 "/api/auth/**",
+                                "/api/category/**",
                                 "/api/product/list",
+                                "/api/product/detail/**",
                                 "/api/product/yolo-search",
                                 "/api/product/hot-categories",
                                 "/api/upload/image",

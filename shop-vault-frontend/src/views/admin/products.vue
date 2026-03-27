@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
-import { Search, Plus } from '@element-plus/icons-vue'
-import { getProductList, publishProduct, getCategoryList } from '@/api/product'
+import { Search, Plus, Upload, Delete } from '@element-plus/icons-vue'
+import { getProductList, publishProduct, getCategoryList, uploadImage } from '@/api/product'
 import { usePagination } from '@/composables'
 import { AdminPageLayout } from '@/components/admin'
 import { formatMoney } from '@/utils/format'
@@ -25,10 +25,13 @@ const publishForm = ref({
   originalPrice: 0,
   stock: 0,
   description: '',
-  mainImage: ''
+  mainImage: '',
+  detailImages: [] as string[]
 })
 
 const categorySearchKeyword = ref('')
+const mainImageUploading = ref(false)
+const detailImagesUploading = ref(false)
 
 const parentCategories = computed(() => {
   return categories.value.filter(cat => cat.level === 1)
@@ -60,7 +63,6 @@ const handleParentCategoryChange = () => {
 }
 
 const handleCategoryChange = () => {
-  // Category selected
 }
 
 const getCategoryDisplayName = (category: Category) => {
@@ -91,23 +93,80 @@ const fetchCategories = async () => {
   }
 }
 
+const handleMainImageUpload = async (options: { file: File }) => {
+  mainImageUploading.value = true
+  try {
+    const url = await uploadImage(options.file)
+    publishForm.value.mainImage = url
+    ElMessage.success('主图上传成功')
+  } catch (error) {
+    console.error('上传失败', error)
+    ElMessage.error('上传失败，请重试')
+  } finally {
+    mainImageUploading.value = false
+  }
+}
+
+const handleMainImageDelete = () => {
+  publishForm.value.mainImage = ''
+}
+
+const handleDetailImagesUpload = async (options: { file: File }) => {
+  detailImagesUploading.value = true
+  try {
+    const url = await uploadImage(options.file)
+    publishForm.value.detailImages.push(url)
+    ElMessage.success('详情图上传成功')
+  } catch (error) {
+    console.error('上传失败', error)
+    ElMessage.error('上传失败，请重试')
+  } finally {
+    detailImagesUploading.value = false
+  }
+}
+
+const handleDetailImageDelete = (index: number) => {
+  publishForm.value.detailImages.splice(index, 1)
+}
+
+const moveDetailImage = (index: number, direction: 'left' | 'right') => {
+  const images = publishForm.value.detailImages
+  if (direction === 'left' && index > 0) {
+    [images[index], images[index - 1]] = [images[index - 1], images[index]]
+  } else if (direction === 'right' && index < images.length - 1) {
+    [images[index], images[index + 1]] = [images[index + 1], images[index]]
+  }
+}
+
 const handlePublish = async () => {
+  if (!publishForm.value.name.trim()) {
+    ElMessage.warning('请输入商品名称')
+    return
+  }
   if (!publishForm.value.categoryId) {
     ElMessage.warning('请选择商品分类')
     return
   }
+  if (publishForm.value.price <= 0) {
+    ElMessage.warning('请输入有效的商品价格')
+    return
+  }
+  if (publishForm.value.stock < 0) {
+    ElMessage.warning('库存不能为负数')
+    return
+  }
   
   try {
-    const formData = new FormData()
-    formData.append('name', publishForm.value.name)
-    formData.append('categoryId', String(publishForm.value.categoryId))
-    formData.append('price', String(publishForm.value.price))
-    formData.append('originalPrice', String(publishForm.value.originalPrice))
-    formData.append('stock', String(publishForm.value.stock))
-    formData.append('description', publishForm.value.description)
-    formData.append('mainImage', publishForm.value.mainImage)
-    
-    await publishProduct(formData)
+    await publishProduct({
+      name: publishForm.value.name,
+      categoryId: publishForm.value.categoryId,
+      price: publishForm.value.price,
+      originalPrice: publishForm.value.originalPrice || undefined,
+      stock: publishForm.value.stock,
+      description: publishForm.value.description || undefined,
+      mainImage: publishForm.value.mainImage || undefined,
+      detailImages: publishForm.value.detailImages.length > 0 ? publishForm.value.detailImages : undefined
+    })
     ElMessage.success('发布成功')
     showPublishDialog.value = false
     resetForm()
@@ -127,7 +186,8 @@ const resetForm = () => {
     originalPrice: 0,
     stock: 0,
     description: '',
-    mainImage: ''
+    mainImage: '',
+    detailImages: []
   }
   categorySearchKeyword.value = ''
 }
@@ -292,6 +352,84 @@ onMounted(() => {
           placeholder="请输入商品描述"
         />
       </el-form-item>
+      
+      <el-form-item label="商品主图">
+        <div class="image-upload-section">
+          <div v-if="publishForm.mainImage" class="main-image-preview">
+            <img :src="publishForm.mainImage" alt="主图预览" />
+            <div class="image-actions">
+              <el-button type="danger" size="small" :icon="Delete" @click="handleMainImageDelete">
+                删除
+              </el-button>
+            </div>
+          </div>
+          <el-upload
+            v-else
+            class="main-image-uploader"
+            :show-file-list="false"
+            :before-upload="() => false"
+            :http-request="handleMainImageUpload"
+            accept="image/*"
+          >
+            <div class="upload-placeholder" :class="{ 'is-uploading': mainImageUploading }">
+              <el-icon v-if="!mainImageUploading" class="upload-icon"><Upload /></el-icon>
+              <span v-if="mainImageUploading">上传中...</span>
+              <span v-else>点击上传主图</span>
+            </div>
+          </el-upload>
+          <div class="upload-tip">建议尺寸: 800x800px，支持 JPG、PNG 格式</div>
+        </div>
+      </el-form-item>
+      
+      <el-form-item label="详情图片">
+        <div class="detail-images-section">
+          <div class="detail-images-list">
+            <div 
+              v-for="(img, index) in publishForm.detailImages" 
+              :key="index" 
+              class="detail-image-item"
+            >
+              <img :src="img" :alt="`详情图${index + 1}`" />
+              <div class="image-actions-overlay">
+                <el-button-group size="small">
+                  <el-button 
+                    :disabled="index === 0" 
+                    @click="moveDetailImage(index, 'left')"
+                  >
+                    ←
+                  </el-button>
+                  <el-button 
+                    :disabled="index === publishForm.detailImages.length - 1" 
+                    @click="moveDetailImage(index, 'right')"
+                  >
+                    →
+                  </el-button>
+                </el-button-group>
+                <el-button type="danger" size="small" :icon="Delete" @click="handleDetailImageDelete(index)">
+                  删除
+                </el-button>
+              </div>
+              <span class="image-index">{{ index + 1 }}</span>
+            </div>
+            
+            <el-upload
+              class="detail-image-uploader"
+              :show-file-list="false"
+              :before-upload="() => false"
+              :http-request="handleDetailImagesUpload"
+              accept="image/*"
+              multiple
+            >
+              <div class="add-detail-image" :class="{ 'is-uploading': detailImagesUploading }">
+                <el-icon v-if="!detailImagesUploading" class="add-icon"><Plus /></el-icon>
+                <span v-if="detailImagesUploading">上传中...</span>
+                <span v-else>添加图片</span>
+              </div>
+            </el-upload>
+          </div>
+          <div class="upload-tip">支持多张图片上传，可拖拽排序，建议尺寸: 750x750px</div>
+        </div>
+      </el-form-item>
     </el-form>
     <template #footer>
       <el-button @click="showPublishDialog = false">取消</el-button>
@@ -450,5 +588,168 @@ onMounted(() => {
 :deep(.custom-dialog .el-dialog__footer) {
   padding: 16px 24px;
   border-top: 1px solid #f2f3f5;
+}
+
+.image-upload-section {
+  width: 100%;
+}
+
+.main-image-preview {
+  position: relative;
+  width: 200px;
+  height: 200px;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid #e5e7eb;
+}
+
+.main-image-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.main-image-preview .image-actions {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 8px;
+  background: linear-gradient(transparent, rgba(0, 0, 0, 0.6));
+  display: flex;
+  justify-content: center;
+}
+
+.main-image-uploader {
+  width: 200px;
+  height: 200px;
+}
+
+.upload-placeholder {
+  width: 200px;
+  height: 200px;
+  border: 2px dashed #d9d9d9;
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.3s;
+  background: #fafafa;
+}
+
+.upload-placeholder:hover {
+  border-color: #1677ff;
+  background: #f0f7ff;
+}
+
+.upload-placeholder.is-uploading {
+  border-color: #1677ff;
+  background: #f0f7ff;
+  cursor: not-allowed;
+}
+
+.upload-icon {
+  font-size: 32px;
+  color: #909399;
+  margin-bottom: 8px;
+}
+
+.upload-tip {
+  margin-top: 8px;
+  font-size: 12px;
+  color: #909399;
+}
+
+.detail-images-section {
+  width: 100%;
+}
+
+.detail-images-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.detail-image-item {
+  position: relative;
+  width: 120px;
+  height: 120px;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid #e5e7eb;
+}
+
+.detail-image-item img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.detail-image-item .image-actions-overlay {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 4px;
+  background: linear-gradient(transparent, rgba(0, 0, 0, 0.7));
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+.detail-image-item:hover .image-actions-overlay {
+  opacity: 1;
+}
+
+.detail-image-item .image-index {
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  background: rgba(0, 0, 0, 0.6);
+  color: #fff;
+  font-size: 12px;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.detail-image-uploader {
+  width: 120px;
+  height: 120px;
+}
+
+.add-detail-image {
+  width: 120px;
+  height: 120px;
+  border: 2px dashed #d9d9d9;
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.3s;
+  background: #fafafa;
+}
+
+.add-detail-image:hover {
+  border-color: #1677ff;
+  background: #f0f7ff;
+}
+
+.add-detail-image.is-uploading {
+  border-color: #1677ff;
+  background: #f0f7ff;
+  cursor: not-allowed;
+}
+
+.add-icon {
+  font-size: 24px;
+  color: #909399;
+  margin-bottom: 4px;
 }
 </style>

@@ -11,6 +11,7 @@ export interface UserInfo {
   balance: number;
   creditScore: number;
   memberLevel: number;
+  vipType?: 'MONTHLY' | 'YEARLY' | 'SVIP' | 'NONE';
   createTime: string;
   role: string;
 }
@@ -31,6 +32,7 @@ export interface Product {
   id: number;
   name: string;
   categoryId: number;
+  parentCategoryId?: number;
   categoryName: string;
   mainImage: string;
   images: string[];
@@ -43,6 +45,8 @@ export interface Product {
   status: number;
   isFavorite: boolean;
   createTime: string;
+  cocoId?: number;
+  yoloLabel?: string;
 }
 
 export interface ProductListParams {

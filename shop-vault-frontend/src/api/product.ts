@@ -107,14 +107,31 @@ export const getRecommendations = () => {
   });
 };
 
-export const publishProduct = (data: FormData) => {
+export const uploadImage = (file: File) => {
+  const formData = new FormData();
+  formData.append('file', file);
+  return request<string>({
+    url: '/api/upload/image',
+    method: 'post',
+    data: formData,
+    headers: { 'Content-Type': 'multipart/form-data' }
+  });
+};
+
+export const publishProduct = (data: {
+  name: string;
+  categoryId: number;
+  price: number;
+  originalPrice?: number;
+  stock: number;
+  description?: string;
+  mainImage?: string;
+  detailImages?: string[];
+}) => {
   return request<void>({
     url: '/api/product/publish',
     method: 'post',
-    data,
-    headers: {
-      'Content-Type': 'multipart/form-data'
-    }
+    data
   });
 };
 

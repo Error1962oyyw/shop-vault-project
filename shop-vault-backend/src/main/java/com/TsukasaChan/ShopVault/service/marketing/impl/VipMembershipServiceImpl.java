@@ -28,6 +28,7 @@ public class VipMembershipServiceImpl extends ServiceImpl<VipMembershipMapper, V
 
     private static final int VIP_MONTHLY_POINTS = 1000;
     private static final int VIP_YEARLY_POINTS = 10000;
+    private static final int SVIP_YEARLY_POINTS = 15000;
 
     @Override
     public VipMembership getActiveVipByUserId(Long userId) {
@@ -52,18 +53,30 @@ public class VipMembershipServiceImpl extends ServiceImpl<VipMembershipMapper, V
 
         int pointsCost;
         int days;
+        int vipLevel;
+        String description;
+        
         if (vipType == VipMembership.TYPE_MONTHLY) {
             pointsCost = VIP_MONTHLY_POINTS;
             days = 30;
+            vipLevel = VipMembership.LEVEL_VIP;
+            description = "兑换VIP月卡";
         } else if (vipType == VipMembership.TYPE_YEARLY) {
             pointsCost = VIP_YEARLY_POINTS;
             days = 365;
+            vipLevel = VipMembership.LEVEL_VIP;
+            description = "兑换VIP年卡";
+        } else if (vipType == VipMembership.TYPE_SVIP_YEARLY) {
+            pointsCost = SVIP_YEARLY_POINTS;
+            days = 365;
+            vipLevel = VipMembership.LEVEL_SVIP;
+            description = "兑换SVIP年卡";
         } else {
             throw new RuntimeException("无效的VIP类型");
         }
 
         if (user.getPoints() < pointsCost) {
-            throw new RuntimeException("积分不足，兑换VIP需要 " + pointsCost + " 积分");
+            throw new RuntimeException("积分不足，兑换需要 " + pointsCost + " 积分");
         }
 
         user.setPoints(user.getPoints() - pointsCost);
@@ -73,12 +86,13 @@ public class VipMembershipServiceImpl extends ServiceImpl<VipMembershipMapper, V
         record.setUserId(userId);
         record.setPoints(-pointsCost);
         record.setType(PointsRecord.TYPE_EXCHANGE);
-        record.setDescription(vipType == VipMembership.TYPE_MONTHLY ? "兑换VIP月卡" : "兑换VIP年卡");
+        record.setDescription(description);
         pointsRecordService.save(record);
 
         VipMembership membership = new VipMembership();
         membership.setUserId(userId);
         membership.setType(vipType);
+        membership.setVipLevel(vipLevel);
         membership.setPointsCost(pointsCost);
         membership.setSource("POINTS_EXCHANGE");
         membership.setStatus(VipMembership.STATUS_ACTIVE);
@@ -94,7 +108,7 @@ public class VipMembershipServiceImpl extends ServiceImpl<VipMembershipMapper, V
         }
         this.save(membership);
 
-        userVipInfoService.extendVip(userId, days);
+        userVipInfoService.extendVipWithLevel(userId, days, vipLevel);
     }
 
     @Override
