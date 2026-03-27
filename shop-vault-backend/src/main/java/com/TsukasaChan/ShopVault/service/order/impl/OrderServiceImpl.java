@@ -16,6 +16,7 @@ import com.TsukasaChan.ShopVault.service.marketing.PointsRecordService;
 import com.TsukasaChan.ShopVault.service.marketing.PointsRuleService;
 import com.TsukasaChan.ShopVault.service.marketing.UserCouponService;
 import com.TsukasaChan.ShopVault.service.marketing.UserVipInfoService;
+import com.TsukasaChan.ShopVault.entity.marketing.PointsRecord;
 import com.TsukasaChan.ShopVault.entity.marketing.PointsRule;
 import com.TsukasaChan.ShopVault.service.order.CartItemService;
 import com.TsukasaChan.ShopVault.service.order.OrderItemService;
@@ -299,12 +300,13 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
 
         int rewardPoints = calculatePurchaseRewardPoints(order, userId);
 
-        User user = userService.getById(userId);
         if (rewardPoints > 0) {
-            user.setPoints(user.getPoints() + rewardPoints);
+            pointsRecordService.addPoints(userId, rewardPoints, PointsRecord.TYPE_PURCHASE, 
+                    "订单购买奖励", order.getId());
         }
-        user.setCreditScore(Math.min(100, user.getCreditScore() + 2));
 
+        User user = userService.getById(userId);
+        user.setCreditScore(Math.min(100, user.getCreditScore() + 2));
         userService.updateById(user);
 
         if (webSocketService.isUserOnline(userId)) {

@@ -117,20 +117,15 @@ public class UserVipInfoServiceImpl extends ServiceImpl<UserVipInfoMapper, UserV
     @Override
     public boolean isVip(Long userId) {
         UserVipInfo vipInfo = getByUserId(userId);
-        return isVipOrSvip(vipInfo);
+        return vipInfo.getVipLevel() >= UserVipInfo.LEVEL_VIP && 
+               vipInfo.getVipExpireTime() != null && 
+               vipInfo.getVipExpireTime().isAfter(LocalDateTime.now());
     }
 
     @Override
     public boolean isSvip(Long userId) {
         UserVipInfo vipInfo = getByUserId(userId);
         return vipInfo.getVipLevel() == UserVipInfo.LEVEL_SVIP && 
-               vipInfo.getVipExpireTime() != null && 
-               vipInfo.getVipExpireTime().isAfter(LocalDateTime.now());
-    }
-
-    private boolean isVipOrSvip(UserVipInfo vipInfo) {
-        int level = vipInfo.getVipLevel();
-        return (level == UserVipInfo.LEVEL_VIP || level == UserVipInfo.LEVEL_SVIP) && 
                vipInfo.getVipExpireTime() != null && 
                vipInfo.getVipExpireTime().isAfter(LocalDateTime.now());
     }

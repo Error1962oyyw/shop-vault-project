@@ -21,7 +21,7 @@ public class CategoryServiceImpl extends ServiceImpl<CategoryMapper, Category> i
         List<Category> allCategories = this.list();
 
         return allCategories.stream()
-                .filter(category -> category.getParentId() != null && category.getParentId() == 0)
+                .filter(category -> category.getParentId() == 0)
                 .peek(category -> category.setChildren(getChildren(category, allCategories)))
                 .sorted((c1, c2) -> {
                     int sort1 = c1.getSort() == null ? 0 : c1.getSort();
