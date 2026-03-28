@@ -3,7 +3,7 @@ package com.TsukasaChan.ShopVault.util;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 
 import java.util.Scanner;
-import java.util.Random;
+import java.security.SecureRandom;
 
 public class PasswordGenerator {
     
@@ -174,7 +174,7 @@ public class PasswordGenerator {
             return null;
         }
         
-        Random random = new Random();
+        SecureRandom random = new SecureRandom();
         StringBuilder password = new StringBuilder();
         
         for (int i = 0; i < length; i++) {
