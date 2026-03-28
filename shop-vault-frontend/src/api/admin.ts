@@ -434,3 +434,45 @@ export const updatePointsRatio = (id: number, ratio: number) => {
     params: { ratio }
   });
 };
+
+export interface VipUser {
+  id: number;
+  userId: number;
+  vipLevel: number;
+  discountRate: number;
+  vipExpireTime: string | null;
+  totalVipDays: number;
+  createTime: string;
+  updateTime: string;
+}
+
+export const getVipUsers = (params: { pageNum: number; pageSize: number; vipLevel?: number }) => {
+  return request<PageResult<VipUser>>({
+    url: '/api/admin/vip/users',
+    method: 'get',
+    params
+  });
+};
+
+export const getVipUserInfo = (userId: number) => {
+  return request<VipUser>({
+    url: `/api/admin/vip/users/${userId}`,
+    method: 'get'
+  });
+};
+
+export const extendVip = (userId: number, days: number) => {
+  return request<string>({
+    url: `/api/admin/vip/users/${userId}/extend`,
+    method: 'put',
+    params: { days }
+  });
+};
+
+export const updateVipLevel = (userId: number, level: number) => {
+  return request<string>({
+    url: `/api/admin/vip/users/${userId}/level`,
+    method: 'put',
+    params: { level }
+  });
+};

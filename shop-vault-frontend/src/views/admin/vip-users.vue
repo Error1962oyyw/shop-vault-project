@@ -3,23 +3,14 @@ import { ref, onMounted } from 'vue'
 import { Medal, Search } from '@element-plus/icons-vue'
 import { AdminPageLayout } from '@/components/admin'
 import { usePagination } from '@/composables'
-
-interface VipUser {
-  id: number
-  userId: number
-  username: string
-  vipLevel: number
-  discountRate: number
-  vipExpireTime: string
-  totalVipDays: number
-  createTime: string
-}
+import { getVipUsers, extendVip, updateVipLevel, type VipUser } from '@/api/admin'
+import { ElMessage, ElMessageBox } from 'element-plus'
 
 const loading = ref(false)
 const vipUsers = ref<VipUser[]>([])
 const searchKeyword = ref('')
 
-const { pagination, handleCurrentChange } = usePagination({
+const { pagination, handleCurrentChange, setTotal } = usePagination({
   onPageChange: () => fetchVipUsers()
 })
 
@@ -32,12 +23,15 @@ const vipLevels = [
 const fetchVipUsers = async () => {
   loading.value = true
   try {
-    // TODO: 调用API获取VIP用户列表
-    // const res = await getAdminVipUsers(getParams())
-    // vipUsers.value = res.records
-    // setTotal(res.total)
+    const res = await getVipUsers({
+      pageNum: pagination.current,
+      pageSize: pagination.size
+    })
+    vipUsers.value = res.records
+    setTotal(res.total)
   } catch (error) {
     console.error('获取VIP用户列表失败', error)
+    ElMessage.error('获取VIP用户列表失败')
   } finally {
     loading.value = false
   }
@@ -57,11 +51,12 @@ const getVipLevelColor = (level: number): 'info' | 'warning' | 'danger' => {
   return colors[level] || 'info'
 }
 
-const formatDate = (date: string) => {
-  return date ? date.split('T')[0] : '-'
+const formatDate = (date: string | null) => {
+  if (!date) return '-'
+  return date.split('T')[0]
 }
 
-const isExpired = (expireTime: string) => {
+const isExpired = (expireTime: string | null) => {
   if (!expireTime) return true
   return new Date(expireTime) < new Date()
 }
@@ -69,6 +64,38 @@ const isExpired = (expireTime: string) => {
 const handleSearch = () => {
   pagination.current = 1
   fetchVipUsers()
+}
+
+const handleExtend = async (row: VipUser) => {
+  try {
+    const { value: days } = await ElMessageBox.prompt('请输入延期天数', '延期VIP会员', {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      inputPattern: /^[1-9]\d*$/,
+      inputErrorMessage: '请输入有效的天数（正整数）'
+    })
+    await extendVip(row.userId, parseInt(days))
+    ElMessage.success('延期成功')
+    fetchVipUsers()
+  } catch {
+    // 用户取消
+  }
+}
+
+const handleAdjustLevel = async (row: VipUser) => {
+  try {
+    const { value: level } = await ElMessageBox.prompt('请输入会员等级（0-普通 1-VIP 2-SVIP）', '调整会员等级', {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      inputPattern: /^[0-2]$/,
+      inputErrorMessage: '请输入有效的等级（0、1或2）'
+    })
+    await updateVipLevel(row.userId, parseInt(level))
+    ElMessage.success('等级调整成功')
+    fetchVipUsers()
+  } catch {
+    // 用户取消
+  }
 }
 
 onMounted(() => {
@@ -135,9 +162,9 @@ onMounted(() => {
         </template>
       </el-table-column>
       <el-table-column label="操作" width="150" align="center">
-        <template #default>
-          <el-button type="primary" link size="small">延期</el-button>
-          <el-button type="warning" link size="small">调整</el-button>
+        <template #default="{ row }">
+          <el-button type="primary" link size="small" @click="handleExtend(row)">延期</el-button>
+          <el-button type="warning" link size="small" @click="handleAdjustLevel(row)">调整</el-button>
         </template>
       </el-table-column>
     </el-table>

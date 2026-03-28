@@ -112,6 +112,7 @@ CREATE TABLE `pms_product` (
     `status` TINYINT(1) DEFAULT 1 COMMENT '状态 1:上架 0:下架',
     `sales` INT DEFAULT 0 COMMENT '销量 (用于热销推荐)',
     `detail_html` TEXT COMMENT '商品详情(富文本)',
+    `detail_images` TEXT COMMENT '商品详情图片(JSON数组)',
     `create_time` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     `update_time` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
     `version` INT DEFAULT 0 COMMENT '版本号(乐观锁)',
@@ -708,7 +709,3 @@ INSERT INTO `sys_yolo_mapping` (`yolo_label`, `category_id`, `confidence_thresho
 ('tennis racket', 502, 0.50, 1),
 ('skateboard', 503, 0.50, 1),
 ('bicycle', 504, 0.50, 1);
-
-
-
-SELECT COUNT(*) FROM pms_category;

@@ -30,13 +30,13 @@ INSERT IGNORE INTO `sms_user_vip_info` (`user_id`, `vip_level`, `discount_rate`,
 SELECT `id`, 0, 1.00, 0 FROM `sys_user`;
 
 -- 4. 初始化积分规则数据
+-- 规则类型: 1签到 2消费 3评价 4分享 5首购
 INSERT INTO `sms_points_rule` (`rule_code`, `rule_name`, `description`, `points_value`, `points_ratio`, `rule_type`, `daily_limit`, `is_active`, `sort_order`) VALUES
-('SIGN_IN', '每日签到', '每日签到获得积分', 10, NULL, 1, 1, 1, 1),
-('PURCHASE_REWARD', '购物奖励', '购物消费获得积分,1元=100积分', NULL, 100.0000, 2, 0, 1, 2),
-('REWARD_REVIEW', '评价奖励', '完成商品评价获得积分', 20, NULL, 3, 5, 1, 3),
-('FIRST_PURCHASE', '首购奖励', '首次购物额外奖励', 100, NULL, 5, 0, 1, 4),
-('SHARE_REWARD', '分享奖励', '分享商品获得积分', 5, NULL, 4, 3, 1, 5)
-ON DUPLICATE KEY UPDATE `rule_name` = VALUES(`rule_name`);
+('SIGN_IN', '每日签到', '用户每日签到获得的积分奖励', 10, 1.00, 1, 1, 1, 1),
+('PURCHASE', '购物奖励', '用户购买商品获得的积分奖励', 0, 1.00, 2, 0, 1, 2),
+('REVIEW', '评价奖励', '用户评价商品获得的积分奖励', 5, 1.00, 3, 3, 1, 3),
+('SHARE', '分享奖励', '用户分享商品获得的积分奖励', 2, 1.00, 4, 5, 1, 4)
+ON DUPLICATE KEY UPDATE `points_value` = VALUES(`points_value`), `points_ratio` = VALUES(`points_ratio`), `daily_limit` = VALUES(`daily_limit`);
 
 -- 5. 初始化积分商城商品数据
 INSERT INTO `sms_points_product` (`name`, `description`, `type`, `points_cost`, `stock`, `daily_limit`, `original_price`, `sort_order`, `status`) VALUES
@@ -91,12 +91,3 @@ INSERT INTO `sms_coupon_template` (`name`, `type`, `value`, `discount`, `min_amo
 ('8折优惠券', 2, NULL, 0.80, 50.00, 200, 1, 1, 2, 14, 1),
 ('满500减100', 1, 100.00, NULL, 500.00, 100, 1, 1, 2, 7, 1)
 ON DUPLICATE KEY UPDATE `total_count` = VALUES(`total_count`);
-
-
-
-
-INSERT INTO `sys_user`
-(`username`, `password`, `nickname`, `avatar`, `phone`, `email`, `balance`, `points`, `status`, `role`, `create_time`, `credit_score`, `is_first_login`, `preference_set`)
-VALUES
-('sv_user_86905880', '$2a$10$atotMba53aXGcWwKshU7eOMME5QlT3FnXhK8uYbP6WAQqQhDxtfUy', 'decowill', NULL, NULL, '2467138307@qq.com', 0.00, 0, 1, 'USER', NOW(), 100, 1, 0)
-ON DUPLICATE KEY UPDATE `password` = '$2a$10$atotMba53aXGcWwKshU7eOMME5QlT3FnXhK8uYbP6WAQqQhDxtfUy';
