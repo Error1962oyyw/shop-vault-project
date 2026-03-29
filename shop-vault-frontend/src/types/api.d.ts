@@ -228,6 +228,22 @@ export interface DashboardStats {
   pendingAfterSales: number;
   salesTrend: { date: string; amount: number }[];
   categorySales: { name: string; value: number }[];
+  orderTrend?: { date: string; count: number; amount: number }[];
+  totalAmount?: number;
+  todayAmount?: number;
+  todayNewUsers?: number;
+  dau?: number;
+  wau?: number;
+  mau?: number;
+  totalPointsIssued?: number;
+  totalPointsUsed?: number;
+  hotProducts?: {
+    productId: number;
+    productName: string;
+    productImage?: string;
+    sales: number;
+    amount?: number;
+  }[];
 }
 
 export interface YoloSearchResult {

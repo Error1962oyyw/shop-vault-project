@@ -2,7 +2,7 @@
 import { ref, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus, Edit, Delete } from '@element-plus/icons-vue'
-import { getPointsRules, createPointsRule, updatePointsRule, deletePointsRule, togglePointsRuleStatus, updatePointsRatio } from '@/api/admin'
+import { getPointsRules, createPointsRule, updatePointsRule, deletePointsRule } from '@/api/admin'
 import type { PointsRule } from '@/api/admin'
 
 const loading = ref(false)
@@ -87,35 +87,6 @@ const handleDelete = async (row: PointsRule) => {
   }
 }
 
-const handleToggleStatus = async (row: PointsRule) => {
-  try {
-    await togglePointsRuleStatus(row.id)
-    ElMessage.success(row.isActive ? '规则已停用' : '规则已启用')
-    fetchRules()
-  } catch (error) {
-    ElMessage.error('状态更新失败')
-  }
-}
-
-const handleRatioChange = async (row: PointsRule) => {
-  try {
-    const { value } = await ElMessageBox.prompt('请输入新的积分倍率', '修改积分倍率', {
-      confirmButtonText: '确定',
-      cancelButtonText: '取消',
-      inputPattern: /^[0-9]+(\.[0-9]+)?$/,
-      inputErrorMessage: '请输入有效的数字',
-      inputValue: String(row.pointsRatio || 1)
-    })
-    await updatePointsRatio(row.id, parseFloat(value))
-    ElMessage.success('积分倍率更新成功')
-    fetchRules()
-  } catch (error: any) {
-    if (error !== 'cancel') {
-      ElMessage.error('更新失败')
-    }
-  }
-}
-
 const handleSubmit = async () => {
   await formRef.value?.validate(async (valid: boolean) => {
     if (valid) {
@@ -174,14 +145,9 @@ onMounted(() => {
             {{ row.pointsValue || '-' }}
           </template>
         </el-table-column>
-        <el-table-column prop="pointsRatio" label="积分倍率" width="120">
+        <el-table-column prop="pointsRatio" label="积分倍率" width="100">
           <template #default="{ row }">
-            <div class="ratio-cell">
-              <span>{{ row.pointsRatio || 1 }}倍</span>
-              <el-button type="primary" link size="small" @click="handleRatioChange(row)">
-                修改
-              </el-button>
-            </div>
+            <span>{{ row.pointsRatio || 1 }}倍</span>
           </template>
         </el-table-column>
         <el-table-column prop="dailyLimit" label="每日限制" width="100">
@@ -197,19 +163,11 @@ onMounted(() => {
           </template>
         </el-table-column>
         <el-table-column prop="sortOrder" label="排序" width="80" />
-        <el-table-column label="操作" width="200" fixed="right">
+        <el-table-column label="操作" width="120" fixed="right">
           <template #default="{ row }">
             <el-button type="primary" link size="small" @click="handleEdit(row)">
               <el-icon class="mr-1"><Edit /></el-icon>
               编辑
-            </el-button>
-            <el-button 
-              :type="row.isActive ? 'warning' : 'success'" 
-              link 
-              size="small" 
-              @click="handleToggleStatus(row)"
-            >
-              {{ row.isActive ? '停用' : '启用' }}
             </el-button>
             <el-button type="danger" link size="small" @click="handleDelete(row)">
               <el-icon class="mr-1"><Delete /></el-icon>

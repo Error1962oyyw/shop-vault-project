@@ -216,7 +216,7 @@ onUnmounted(() => {
               <ul class="rules-list">
                 <li class="rule-item">
                   <CircleCheck class="rule-icon" />
-                  <span>会员日期间，全场商品享受 {{ currentMemberDay.discountRate }} 折优惠</span>
+                  <span>会员日期间，商品享受{{ currentMemberDay.discountRate }}折优惠</span>
                 </li>
                 <li class="rule-item">
                   <CircleCheck class="rule-icon" />

@@ -101,34 +101,65 @@ public class MemberDayServiceImpl extends ServiceImpl<ActivityMapper, Activity> 
 
     private boolean isRuleMatch(Activity activity) {
         String rule = activity.getRuleExpression();
-        if (rule == null) {
+        if (rule == null || rule.isEmpty()) {
             return true;
         }
 
         LocalDate today = LocalDate.now();
         
-        if ("EVERYDAY".equalsIgnoreCase(rule)) {
-            return true;
-        }
-
-        if ("WEEKLY".equalsIgnoreCase(rule)) {
-            return true;
-        }
-
-        try {
-            int dayOfMonth = Integer.parseInt(rule);
-            return today.getDayOfMonth() == dayOfMonth;
-        } catch (NumberFormatException e) {
-            if (rule.startsWith("WEEK_")) {
-                String dayName = rule.substring(5);
-                try {
-                    DayOfWeek targetDay = DayOfWeek.valueOf(dayName.toUpperCase());
-                    return today.getDayOfWeek() == targetDay;
-                } catch (IllegalArgumentException ignored) {
+        String[] parts = rule.split(";");
+        boolean hasWeekRule = false;
+        boolean hasMonthRule = false;
+        boolean weekMatch = false;
+        boolean monthMatch = false;
+        
+        for (String part : parts) {
+            part = part.trim();
+            if (part.startsWith("week:")) {
+                hasWeekRule = true;
+                String daysStr = part.substring(5);
+                if (!daysStr.isEmpty()) {
+                    String[] days = daysStr.split(",");
+                    int todayDayOfWeek = today.getDayOfWeek().getValue();
+                    for (String day : days) {
+                        try {
+                            int targetDay = Integer.parseInt(day.trim());
+                            if (todayDayOfWeek == targetDay) {
+                                weekMatch = true;
+                                break;
+                            }
+                        } catch (NumberFormatException ignored) {
+                        }
+                    }
+                }
+            } else if (part.startsWith("month:")) {
+                hasMonthRule = true;
+                String daysStr = part.substring(6);
+                if (!daysStr.isEmpty()) {
+                    String[] days = daysStr.split(",");
+                    int todayDayOfMonth = today.getDayOfMonth();
+                    for (String day : days) {
+                        try {
+                            int targetDay = Integer.parseInt(day.trim());
+                            if (todayDayOfMonth == targetDay) {
+                                monthMatch = true;
+                                break;
+                            }
+                        } catch (NumberFormatException ignored) {
+                        }
+                    }
                 }
             }
         }
-
-        return false;
+        
+        if (hasWeekRule && hasMonthRule) {
+            return weekMatch || monthMatch;
+        } else if (hasWeekRule) {
+            return weekMatch;
+        } else if (hasMonthRule) {
+            return monthMatch;
+        }
+        
+        return true;
     }
 }

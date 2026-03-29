@@ -1,13 +1,16 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
+import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { Coin, Ticket, Present, Star, Medal, Timer, Check } from '@element-plus/icons-vue'
+import { Coin, Ticket, Present, Star, Medal, Timer, Check, Calendar } from '@element-plus/icons-vue'
 import UserLayout from '@/components/layout/UserLayout.vue'
 import { signIn, getPointsRecords, getAvailableCoupons, receiveCoupon, getMyCoupons, todaySigned } from '@/api/marketing'
 import { getProfile } from '@/api/user'
 import { getVipInfo, exchangeVip, getVipHistory } from '@/api/vip'
 import type { PointsRecord, CouponTemplate, UserCoupon } from '@/types/api'
 import type { VipInfo, VipMembership } from '@/api/vip'
+
+const router = useRouter()
 
 const activeTab = ref('points')
 const userInfo = ref({ points: 0, memberLevel: 1 })
@@ -24,7 +27,14 @@ const vipLoading = ref(false)
 const exchangeLoading = ref(false)
 
 const isVip = computed(() => vipInfo.value?.isVip ?? false)
+const isSvip = computed(() => vipInfo.value?.vipLevel === 2)
 const remainingDays = computed(() => vipInfo.value?.remainingDays ?? 0)
+
+const vipLevelText = computed(() => {
+  if (isSvip.value) return 'SVIP会员'
+  if (isVip.value) return 'VIP会员'
+  return '普通会员'
+})
 
 const vipCards = [
   {
@@ -33,7 +43,7 @@ const vipCards = [
     points: 1000,
     originalPrice: 99,
     duration: '30天',
-    benefits: ['全场商品98折', '专属会员日活动', '1.5倍积分特权', '优先客服通道'],
+    benefits: ['商品98折优惠', '专属会员日活动', '1.25倍积分特权', '优先客服通道'],
   },
   {
     type: 2,
@@ -41,7 +51,7 @@ const vipCards = [
     points: 15000,
     originalPrice: 999,
     duration: '365天',
-    benefits: ['全场商品95折', '专属会员日活动', '2倍积分特权', '优先客服通道', '生日专属礼遇', '新品优先体验'],
+    benefits: ['商品95折优惠', '专属会员日活动', '1.5倍积分特权', '优先客服通道', '生日专属礼遇', '新品优先体验'],
     recommended: true
   }
 ]
@@ -211,19 +221,46 @@ const getTypeText = (type: number) => {
   return type === 1 ? '月卡' : '年卡'
 }
 
+const goToMemberDay = () => {
+  router.push('/member-day')
+}
+
 const memberBenefits = [
-  { icon: Coin, title: '积分翻倍', desc: '会员日双倍积分', color: 'orange' },
-  { icon: Ticket, title: '专属优惠券', desc: '每月领取特权', color: 'blue' },
-  { icon: Present, title: '生日礼遇', desc: '生日专属惊喜', color: 'purple' },
-  { icon: Star, title: '优先发货', desc: '极速物流体验', color: 'green' }
+  { icon: Coin, title: '签到积分', desc: '每日签到获取积分', color: 'orange' },
+  { icon: Ticket, title: '优惠券', desc: '领取公开优惠券', color: 'blue' },
+  { icon: Star, title: '购物积分', desc: '消费获取积分', color: 'purple' },
+  { icon: Medal, title: '升级VIP', desc: '解锁更多权益', color: 'green' }
 ]
 
-const vipBenefits = [
-  { icon: Ticket, title: '全场98折', desc: '购物自动享受优惠', color: 'orange' },
-  { icon: Present, title: '会员日活动', desc: '专属折扣与福利', color: 'blue' },
-  { icon: Star, title: '1.5倍积分', desc: '消费积分翻倍', color: 'purple' },
-  { icon: Medal, title: '优先客服', desc: '专属服务通道', color: 'green' }
-]
+const vipBenefits = computed(() => {
+  if (isSvip.value) {
+    return [
+      { icon: Ticket, title: '95折优惠', desc: '购物自动享受优惠', color: 'orange' },
+      { icon: Present, title: '会员日活动', desc: '专属折扣与福利', color: 'blue' },
+      { icon: Star, title: '1.5倍积分', desc: '消费积分翻倍', color: 'purple' },
+      { icon: Medal, title: '优先客服', desc: '专属服务通道', color: 'green' }
+    ]
+  }
+  return [
+    { icon: Ticket, title: '98折优惠', desc: '购物自动享受优惠', color: 'orange' },
+    { icon: Present, title: '会员日活动', desc: '专属折扣与福利', color: 'blue' },
+    { icon: Star, title: '1.25倍积分', desc: '消费积分翻倍', color: 'purple' },
+    { icon: Medal, title: '优先客服', desc: '专属服务通道', color: 'green' }
+  ]
+})
+
+const currentBenefits = computed(() => {
+  if (isVip.value) {
+    return vipBenefits.value
+  }
+  return memberBenefits
+})
+
+const benefitsSectionTitle = computed(() => {
+  if (isSvip.value) return 'SVIP专属权益'
+  if (isVip.value) return 'VIP专属权益'
+  return '会员权益'
+})
 
 onMounted(() => {
   fetchUserInfo()
@@ -244,38 +281,18 @@ onMounted(() => {
           <div class="header-content">
             <div class="header-left">
               <div class="member-badge">
-                <Medal v-if="isVip" class="badge-icon vip" />
+                <Medal v-if="isSvip" class="badge-icon svip" />
+                <Medal v-else-if="isVip" class="badge-icon vip" />
                 <Star v-else class="badge-icon" />
-                <span>{{ isVip ? 'VIP会员' : '普通会员' }}</span>
+                <span>{{ vipLevelText }}</span>
               </div>
               <h1 class="header-title">会员中心</h1>
               <p class="header-subtitle">积分越多，福利越多</p>
             </div>
             <div class="header-right">
               <div class="points-display">
-                <div class="points-value">{{ userInfo.points }}</div>
-                <div class="points-label">可用积分</div>
-              </div>
-              
-              <div v-if="isVip" class="member-day-card">
-                <div class="member-day-header">
-                  <span class="member-day-badge">VIP专属</span>
-                  <span class="member-day-title">会员日活动</span>
-                </div>
-                <div class="member-day-info">
-                  <div class="member-day-time">
-                    <span class="time-label">活动时间</span>
-                    <span class="time-value">每月28日</span>
-                  </div>
-                  <div class="member-day-benefits">
-                    <span class="benefit-item">双倍积分</span>
-                    <span class="benefit-item">专属折扣</span>
-                    <span class="benefit-item">限量好礼</span>
-                  </div>
-                </div>
-                <el-button type="warning" size="small" class="member-day-btn" @click="$router.push('/member-day')">
-                  立即参与
-                </el-button>
+                <span class="points-label">可用积分</span>
+                <span class="points-value">{{ userInfo.points }}</span>
               </div>
               
               <el-button 
@@ -298,7 +315,7 @@ onMounted(() => {
               <Medal />
             </div>
             <div class="status-info">
-              <div class="status-title">VIP会员生效中</div>
+              <div class="status-title">{{ isSvip ? 'SVIP会员生效中' : 'VIP会员生效中' }}</div>
               <div class="status-desc">
                 剩余 <span class="highlight">{{ remainingDays }}</span> 天
                 <span v-if="vipInfo?.vipExpireTime">
@@ -311,18 +328,24 @@ onMounted(() => {
               <div class="discount-label">折</div>
             </div>
           </div>
+          <div class="status-footer">
+            <el-button class="member-day-btn" @click="goToMemberDay">
+              <Calendar class="btn-icon" />
+              会员日
+            </el-button>
+          </div>
         </div>
 
         <section class="benefits-section">
           <div class="section-header">
             <h2 class="section-title">
               <Present class="title-icon" />
-              {{ isVip ? 'VIP专属权益' : '会员权益' }}
+              {{ benefitsSectionTitle }}
             </h2>
           </div>
           <div class="benefits-grid">
             <div 
-              v-for="benefit in isVip ? vipBenefits : memberBenefits" 
+              v-for="benefit in currentBenefits" 
               :key="benefit.title"
               class="benefit-card"
             >
@@ -590,11 +613,16 @@ onMounted(() => {
 }
 
 .points-display {
-  text-align: center;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.15);
+  padding: 12px 20px;
+  border-radius: 12px;
 }
 
 .points-value {
-  font-size: 48px;
+  font-size: 32px;
   font-weight: 800;
   line-height: 1;
 }
@@ -602,7 +630,6 @@ onMounted(() => {
 .points-label {
   font-size: 14px;
   opacity: 0.9;
-  margin-top: 8px;
 }
 
 .member-day-card {
@@ -775,6 +802,31 @@ onMounted(() => {
 .discount-label {
   font-size: 14px;
   color: #6b7280;
+}
+
+.status-footer {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: 16px;
+  margin-top: 16px;
+  border-top: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.member-day-btn {
+  background: linear-gradient(135deg, #fa8c16 0%, #ffc53d 100%);
+  border: none;
+  color: #fff;
+  font-weight: 600;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 12px 20px;
+}
+
+.member-day-btn:hover {
+  background: linear-gradient(135deg, #d46b08 0%, #fa8c16 100%);
+  color: #fff;
 }
 
 .benefits-section {
@@ -1356,8 +1408,12 @@ onMounted(() => {
     gap: 20px;
   }
 
+  .points-display {
+    flex-direction: row;
+  }
+
   .points-value {
-    font-size: 36px;
+    font-size: 28px;
   }
 
   .benefits-grid {

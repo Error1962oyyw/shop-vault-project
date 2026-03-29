@@ -3,8 +3,9 @@ import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { 
-  Shop, SwitchButton, Bell, User, List, Money, Goods, RefreshLeft, ChatDotRound,
-  TrendCharts, DataAnalysis, Timer, ShoppingCart, CreditCard, Coin, Present
+  Shop, SwitchButton, Bell, User, List, Money, RefreshLeft,
+  TrendCharts, DataAnalysis, Timer, ShoppingCart, Coin, Present,
+  ArrowDown
 } from '@element-plus/icons-vue'
 import { getDashboardStats } from '@/api/dashboard'
 import { useUserStore } from '@/stores/user'
@@ -21,33 +22,81 @@ const autoRefreshInterval = ref<number | null>(null)
 
 const isMainDashboard = computed(() => route.path === '/admin')
 
-const menuItems: Array<{ path: string; icon: string; title: string; isMain?: boolean }> = [
-  { path: '/admin', icon: 'DataAnalysis', title: '数据大屏', isMain: true },
-  { path: '/admin/products', icon: 'Goods', title: '商品管理' },
-  { path: '/admin/orders', icon: 'List', title: '订单管理' },
-  { path: '/admin/after-sales', icon: 'RefreshLeft', title: '售后管理' },
-  { path: '/admin/comments', icon: 'ChatDotRound', title: '评价管理' },
-  { path: '/admin/users', icon: 'User', title: '用户管理' },
-  { path: '/admin/member-days', icon: 'Calendar', title: '会员日活动' },
-  { path: '/admin/points-rules', icon: 'Coin', title: '积分倍率' },
-  { path: '/admin/points-products', icon: 'Present', title: '积分商城' },
-  { path: '/admin/vip-users', icon: 'Medal', title: 'VIP会员' },
-  { path: '/admin/chat', icon: 'ChatDotRound', title: '客服消息' }
+interface MenuItem {
+  path: string;
+  icon: string;
+  title: string;
+  isMain?: boolean;
+}
+
+interface MenuGroup {
+  title: string;
+  icon: string;
+  items: MenuItem[];
+}
+
+const menuGroups: MenuGroup[] = [
+  {
+    title: '数据大屏',
+    icon: 'DataAnalysis',
+    items: [
+      { path: '/admin', icon: 'DataAnalysis', title: '数据大屏', isMain: true }
+    ]
+  },
+  {
+    title: '商品订单',
+    icon: 'Goods',
+    items: [
+      { path: '/admin/products', icon: 'Goods', title: '商品管理' },
+      { path: '/admin/orders', icon: 'List', title: '订单管理' }
+    ]
+  },
+  {
+    title: '售后服务',
+    icon: 'RefreshLeft',
+    items: [
+      { path: '/admin/after-sales', icon: 'RefreshLeft', title: '售后管理' },
+      { path: '/admin/comments', icon: 'ChatDotRound', title: '评价管理' },
+      { path: '/admin/chat', icon: 'ChatDotRound', title: '客服消息' }
+    ]
+  },
+  {
+    title: '会员营销',
+    icon: 'User',
+    items: [
+      { path: '/admin/users', icon: 'User', title: '用户管理' },
+      { path: '/admin/vip-users', icon: 'Medal', title: 'VIP会员' },
+      { path: '/admin/member-days', icon: 'Calendar', title: '会员日活动' },
+      { path: '/admin/points-rules', icon: 'Coin', title: '积分倍率' },
+      { path: '/admin/points-products', icon: 'Present', title: '积分商城' }
+    ]
+  }
 ]
 
-const activeMenu = computed(() => {
-  const item = menuItems.find(m => route.path === m.path)
-  return item ? item.path : menuItems[0].path
-})
+const expandedGroups = ref<string[]>(['数据监控'])
 
-const orderTrendData = computed(() => {
-  if (!stats.value?.orderTrend) return { dates: [], counts: [], amounts: [] }
-  return {
-    dates: stats.value.orderTrend.map(t => t.date),
-    counts: stats.value.orderTrend.map(t => t.count),
-    amounts: stats.value.orderTrend.map(t => t.amount)
+const toggleGroup = (title: string) => {
+  const index = expandedGroups.value.indexOf(title)
+  if (index > -1) {
+    expandedGroups.value.splice(index, 1)
+  } else {
+    expandedGroups.value.push(title)
   }
-})
+}
+
+const isGroupExpanded = (title: string) => expandedGroups.value.includes(title)
+
+const isItemActive = (path: string) => route.path === path
+
+const isGroupActive = (items: Array<{ path: string }>) => items.some(item => route.path === item.path)
+
+const getCurrentTitle = () => {
+  for (const group of menuGroups) {
+    const item = group.items.find(i => route.path === i.path)
+    if (item) return item.title
+  }
+  return '管理后台'
+}
 
 const conversionRate = computed(() => {
   if (!stats.value?.totalUsers || !stats.value?.totalOrders) return 0
@@ -55,8 +104,8 @@ const conversionRate = computed(() => {
 })
 
 const avgOrderAmount = computed(() => {
-  if (!stats.value?.totalAmount || !stats.value?.totalOrders) return 0
-  return (stats.value.totalAmount.toNumber() / stats.value.totalOrders).toFixed(2)
+  if (!stats.value?.totalSales || !stats.value?.totalOrders) return 0
+  return (stats.value.totalSales / stats.value.totalOrders).toFixed(2)
 })
 
 const fetchStats = async () => {
@@ -136,14 +185,33 @@ onUnmounted(() => {
 
       <nav class="sidebar-nav">
         <div
-          v-for="item in menuItems"
-          :key="item.path"
-          class="nav-item"
-          :class="{ 'nav-item-active': activeMenu === item.path }"
-          @click="handleMenuClick(item.path, !!item.isMain)"
+          v-for="group in menuGroups"
+          :key="group.title"
+          class="nav-group"
         >
-          <el-icon class="nav-icon"><component :is="item.icon" /></el-icon>
-          <span class="nav-text">{{ item.title }}</span>
+          <div 
+            class="nav-group-header"
+            :class="{ 'nav-group-active': isGroupActive(group.items) }"
+            @click="toggleGroup(group.title)"
+          >
+            <el-icon class="nav-group-icon"><component :is="group.icon" /></el-icon>
+            <span class="nav-group-title">{{ group.title }}</span>
+            <el-icon class="nav-arrow" :class="{ 'nav-arrow-expanded': isGroupExpanded(group.title) }">
+              <ArrowDown />
+            </el-icon>
+          </div>
+          <div v-show="isGroupExpanded(group.title)" class="nav-group-items">
+            <div
+              v-for="item in group.items"
+              :key="item.path"
+              class="nav-item"
+              :class="{ 'nav-item-active': isItemActive(item.path) }"
+              @click="handleMenuClick(item.path, !!item.isMain)"
+            >
+              <el-icon class="nav-icon"><component :is="item.icon" /></el-icon>
+              <span class="nav-text">{{ item.title }}</span>
+            </div>
+          </div>
         </div>
       </nav>
 
@@ -158,11 +226,11 @@ onUnmounted(() => {
     <main class="admin-main">
       <header class="admin-header">
         <h2 class="header-title">
-          {{ menuItems.find(m => m.path === activeMenu)?.title || '管理后台' }}
+          {{ getCurrentTitle() }}
         </h2>
         <div class="header-actions">
           <el-badge :value="stats?.pendingOrders || 0" :hidden="!stats?.pendingOrders">
-            <el-button circle>
+            <el-button circle @click="router.push('/admin/orders')">
               <el-icon><Bell /></el-icon>
             </el-button>
           </el-badge>
@@ -223,9 +291,9 @@ onUnmounted(() => {
             <div class="stat-card stat-card-warning">
               <div class="stat-info">
                 <p class="stat-label">总销售额</p>
-                <p class="stat-value">¥{{ (stats?.totalAmount || 0).toFixed(0) }}</p>
+                <p class="stat-value">¥{{ (stats?.totalSales || 0).toFixed(0) }}</p>
                 <p class="stat-trend stat-trend-up">
-                  <span>今日 ¥{{ (stats?.todayAmount || 0).toFixed(2) }}</span>
+                  <span>今日 ¥{{ (stats?.todaySales || 0).toFixed(2) }}</span>
                 </p>
               </div>
               <div class="stat-icon stat-icon-warning">
@@ -336,7 +404,7 @@ onUnmounted(() => {
                 </div>
                 <div class="data-item">
                   <span class="data-label">今日销售额</span>
-                  <span class="data-value data-value-highlight">¥{{ (stats?.todayAmount || 0).toFixed(2) }}</span>
+                  <span class="data-value data-value-highlight">¥{{ (stats?.todaySales || 0).toFixed(2) }}</span>
                 </div>
                 <div class="data-item">
                   <span class="data-label">今日新用户</span>
@@ -366,39 +434,6 @@ onUnmounted(() => {
                 </div>
                 <div v-if="!stats?.hotProducts?.length" class="empty-data">
                   暂无热销商品数据
-                </div>
-              </div>
-            </div>
-
-            <div class="dashboard-card">
-              <h3 class="card-title">
-                <el-icon><CreditCard /></el-icon>
-                快捷操作
-              </h3>
-              <div class="quick-actions">
-                <div class="quick-action-item" @click="router.push('/admin/products')">
-                  <div class="quick-action-icon quick-action-icon-primary">
-                    <el-icon size="24"><Goods /></el-icon>
-                  </div>
-                  <p class="quick-action-text">商品管理</p>
-                </div>
-                <div class="quick-action-item" @click="router.push('/admin/orders')">
-                  <div class="quick-action-icon quick-action-icon-success">
-                    <el-icon size="24"><List /></el-icon>
-                  </div>
-                  <p class="quick-action-text">订单管理</p>
-                </div>
-                <div class="quick-action-item" @click="router.push('/admin/after-sales')">
-                  <div class="quick-action-icon quick-action-icon-warning">
-                    <el-icon size="24"><RefreshLeft /></el-icon>
-                  </div>
-                  <p class="quick-action-text">售后处理</p>
-                </div>
-                <div class="quick-action-item" @click="router.push('/admin/comments')">
-                  <div class="quick-action-icon quick-action-icon-danger">
-                    <el-icon size="24"><ChatDotRound /></el-icon>
-                  </div>
-                  <p class="quick-action-text">评价审核</p>
                 </div>
               </div>
             </div>
@@ -471,8 +506,58 @@ onUnmounted(() => {
 
 .sidebar-nav {
   flex: 1;
-  padding: 20px 12px;
+  padding: 16px 12px;
   overflow-y: auto;
+}
+
+.nav-group {
+  margin-bottom: 8px;
+}
+
+.nav-group-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.nav-group-header:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: white;
+}
+
+.nav-group-active {
+  color: white;
+  background: rgba(22, 119, 255, 0.2);
+}
+
+.nav-group-icon {
+  font-size: 18px;
+  flex-shrink: 0;
+}
+
+.nav-group-title {
+  flex: 1;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.nav-arrow {
+  font-size: 12px;
+  transition: transform 0.3s ease;
+}
+
+.nav-arrow-expanded {
+  transform: rotate(180deg);
+}
+
+.nav-group-items {
+  margin-top: 4px;
+  padding-left: 12px;
 }
 
 .nav-item {
@@ -848,15 +933,13 @@ onUnmounted(() => {
 }
 
 .metrics-row {
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
   gap: 16px;
   margin-bottom: 24px;
-  flex-wrap: wrap;
 }
 
 .metric-card {
-  flex: 1;
-  min-width: 180px;
   background: white;
   border-radius: 12px;
   padding: 16px 20px;
@@ -1102,6 +1185,10 @@ onUnmounted(() => {
   .stats-grid {
     grid-template-columns: repeat(2, 1fr);
   }
+
+  .metrics-row {
+    grid-template-columns: repeat(3, 1fr);
+  }
 }
 
 @media (max-width: 768px) {
@@ -1152,6 +1239,10 @@ onUnmounted(() => {
 
   .stats-grid {
     grid-template-columns: 1fr;
+  }
+
+  .metrics-row {
+    grid-template-columns: repeat(2, 1fr);
   }
 
   .dashboard-grid {

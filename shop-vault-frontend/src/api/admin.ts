@@ -444,6 +444,9 @@ export interface VipUser {
   totalVipDays: number;
   createTime: string;
   updateTime: string;
+  username?: string;
+  nickname?: string;
+  avatar?: string;
 }
 
 export const getVipUsers = (params: { pageNum: number; pageSize: number; vipLevel?: number }) => {
@@ -469,10 +472,10 @@ export const extendVip = (userId: number, days: number) => {
   });
 };
 
-export const updateVipLevel = (userId: number, level: number) => {
+export const updateVipLevel = (userId: number, level: number, days: number = 0) => {
   return request<string>({
     url: `/api/admin/vip/users/${userId}/level`,
     method: 'put',
-    params: { level }
+    params: { level, days }
   });
 };

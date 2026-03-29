@@ -19,8 +19,8 @@ public class UserVipInfoServiceImpl extends ServiceImpl<UserVipInfoMapper, UserV
     private static final BigDecimal VIP_DISCOUNT_RATE = new BigDecimal("0.98");
     private static final BigDecimal SVIP_DISCOUNT_RATE = new BigDecimal("0.95");
     private static final BigDecimal NORMAL_DISCOUNT_RATE = BigDecimal.ONE;
-    private static final BigDecimal VIP_POINTS_MULTIPLIER = new BigDecimal("1.5");
-    private static final BigDecimal SVIP_POINTS_MULTIPLIER = new BigDecimal("2.0");
+    private static final BigDecimal VIP_POINTS_MULTIPLIER = new BigDecimal("1.25");
+    private static final BigDecimal SVIP_POINTS_MULTIPLIER = new BigDecimal("1.5");
 
     @Override
     public UserVipInfo getByUserId(Long userId) {
@@ -154,5 +154,38 @@ public class UserVipInfoServiceImpl extends ServiceImpl<UserVipInfoMapper, UserV
             }
         }
         return BigDecimal.ONE;
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void updateVipLevel(Long userId, Integer level, Integer days) {
+        if (level == null) {
+            throw new IllegalArgumentException("会员等级不能为空");
+        }
+        
+        UserVipInfo vipInfo = getByUserId(userId);
+        LocalDateTime now = LocalDateTime.now();
+        
+        vipInfo.setVipLevel(level);
+        
+        if (level == UserVipInfo.LEVEL_NORMAL) {
+            vipInfo.setDiscountRate(NORMAL_DISCOUNT_RATE);
+            vipInfo.setVipExpireTime(null);
+        } else if (level == UserVipInfo.LEVEL_VIP) {
+            vipInfo.setDiscountRate(VIP_DISCOUNT_RATE);
+            if (days != null && days > 0) {
+                vipInfo.setVipExpireTime(now.plusDays(days));
+                vipInfo.setTotalVipDays(vipInfo.getTotalVipDays() + days);
+            }
+        } else if (level == UserVipInfo.LEVEL_SVIP) {
+            vipInfo.setDiscountRate(SVIP_DISCOUNT_RATE);
+            if (days != null && days > 0) {
+                vipInfo.setVipExpireTime(now.plusDays(days));
+                vipInfo.setTotalVipDays(vipInfo.getTotalVipDays() + days);
+            }
+        }
+        
+        vipInfo.setUpdateTime(now);
+        this.updateById(vipInfo);
     }
 }

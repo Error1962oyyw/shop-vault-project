@@ -39,4 +39,13 @@ public class UserVipInfo implements Serializable {
     private LocalDateTime createTime;
 
     private LocalDateTime updateTime;
+
+    @TableField(exist = false)
+    private String username;
+
+    @TableField(exist = false)
+    private String nickname;
+
+    @TableField(exist = false)
+    private String avatar;
 }

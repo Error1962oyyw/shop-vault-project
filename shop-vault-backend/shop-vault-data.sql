@@ -31,12 +31,16 @@ SELECT `id`, 0, 1.00, 0 FROM `sys_user`;
 
 -- 4. 初始化积分规则数据
 -- 规则类型: 1签到 2消费 3评价 4分享 5首购
+-- 购物积分计算: 消费金额 × 100 × 会员倍率(VIP:1.25 SVIP:1.5) × 会员日倍率
 INSERT INTO `sms_points_rule` (`rule_code`, `rule_name`, `description`, `points_value`, `points_ratio`, `rule_type`, `daily_limit`, `is_active`, `sort_order`) VALUES
 ('SIGN_IN', '每日签到', '用户每日签到获得的积分奖励', 10, 1.00, 1, 1, 1, 1),
-('PURCHASE', '购物奖励', '用户购买商品获得的积分奖励', 0, 1.00, 2, 0, 1, 2),
+('PURCHASE', '购物奖励', '用户购买商品获得的积分奖励，1元=100积分', 0, 100.00, 2, 0, 1, 2),
 ('REVIEW', '评价奖励', '用户评价商品获得的积分奖励', 5, 1.00, 3, 3, 1, 3),
 ('SHARE', '分享奖励', '用户分享商品获得的积分奖励', 2, 1.00, 4, 5, 1, 4)
-ON DUPLICATE KEY UPDATE `points_value` = VALUES(`points_value`), `points_ratio` = VALUES(`points_ratio`), `daily_limit` = VALUES(`daily_limit`);
+ON DUPLICATE KEY UPDATE `points_value` = VALUES(`points_value`), `points_ratio` = VALUES(`points_ratio`), `daily_limit` = VALUES(`daily_limit`), `description` = VALUES(`description`);
+
+-- 更新购物奖励积分倍率为100倍（确保旧数据也被更新）
+UPDATE `sms_points_rule` SET `points_ratio` = 100.00, `description` = '用户购买商品获得的积分奖励，1元=100积分' WHERE `rule_code` = 'PURCHASE';
 
 -- 5. 初始化积分商城商品数据
 INSERT INTO `sms_points_product` (`name`, `description`, `type`, `points_cost`, `stock`, `daily_limit`, `original_price`, `sort_order`, `status`) VALUES

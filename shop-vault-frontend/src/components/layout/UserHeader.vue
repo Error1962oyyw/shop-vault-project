@@ -18,7 +18,6 @@ const cartStore = useCartStore()
 const categoryStore = useCategoryStore()
 
 const searchKeyword = ref('')
-const showCategories = ref(false)
 const showMobileMenu = ref(false)
 const isMobile = ref(false)
 
@@ -235,20 +234,22 @@ onMounted(() => {
             >
               全部商品
             </router-link>
-            <span
+            <router-link
+              to="/points"
               class="nav-link"
               :class="{ active: route.path === '/points' }"
-              @click="goTo('/points')"
+              @click.prevent="requireLogin('/points') || null"
             >
               会员中心
-            </span>
-            <span
+            </router-link>
+            <router-link
+              to="/points-mall"
               class="nav-link"
               :class="{ active: route.path === '/points-mall' }"
-              @click="goTo('/points-mall')"
+              @click.prevent="requireLogin('/points-mall') || null"
             >
               积分商城
-            </span>
+            </router-link>
           </div>
         </div>
       </div>

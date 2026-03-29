@@ -5,12 +5,17 @@ import com.TsukasaChan.ShopVault.common.Result;
 import com.TsukasaChan.ShopVault.common.ServiceUtils;
 import com.TsukasaChan.ShopVault.entity.marketing.UserVipInfo;
 import com.TsukasaChan.ShopVault.entity.marketing.VipMembership;
+import com.TsukasaChan.ShopVault.entity.system.User;
 import com.TsukasaChan.ShopVault.service.marketing.UserVipInfoService;
 import com.TsukasaChan.ShopVault.service.marketing.VipMembershipService;
+import com.TsukasaChan.ShopVault.service.system.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/admin/vip")
@@ -19,18 +24,40 @@ public class AdminVipController {
 
     private final UserVipInfoService userVipInfoService;
     private final VipMembershipService vipMembershipService;
+    private final UserService userService;
 
     @GetMapping("/users")
     public Result<PageResult<UserVipInfo>> getVipUsers(
             @RequestParam(defaultValue = "1") Integer pageNum,
             @RequestParam(defaultValue = "10") Integer pageSize,
             @RequestParam(required = false) Integer vipLevel) {
-        return Result.success(ServiceUtils.queryPage(userVipInfoService, pageNum, pageSize, wrapper -> {
+        PageResult<UserVipInfo> result = ServiceUtils.queryPage(userVipInfoService, pageNum, pageSize, wrapper -> {
             if (vipLevel != null) {
                 wrapper.eq(UserVipInfo::getVipLevel, vipLevel);
             }
             wrapper.orderByDesc(UserVipInfo::getVipLevel);
-        }));
+        });
+        
+        Set<Long> userIds = result.getRecords().stream()
+                .map(UserVipInfo::getUserId)
+                .collect(Collectors.toSet());
+        
+        if (!userIds.isEmpty()) {
+            List<User> users = userService.listByIds(userIds);
+            Map<Long, User> userMap = users.stream()
+                    .collect(Collectors.toMap(User::getId, u -> u));
+            
+            result.getRecords().forEach(vipInfo -> {
+                User user = userMap.get(vipInfo.getUserId());
+                if (user != null) {
+                    vipInfo.setUsername(user.getUsername());
+                    vipInfo.setNickname(user.getNickname());
+                    vipInfo.setAvatar(user.getAvatar());
+                }
+            });
+        }
+        
+        return Result.success(result);
     }
 
     @GetMapping("/users/{userId}")
@@ -45,12 +72,11 @@ public class AdminVipController {
     }
 
     @PutMapping("/users/{userId}/level")
-    public Result<String> updateVipLevel(@PathVariable Long userId, @RequestParam Integer level) {
-        UserVipInfo vipInfo = userVipInfoService.getByUserId(userId);
-        if (vipInfo != null) {
-            vipInfo.setVipLevel(level);
-            userVipInfoService.updateById(vipInfo);
-        }
+    public Result<String> updateVipLevel(
+            @PathVariable Long userId, 
+            @RequestParam Integer level,
+            @RequestParam(required = false, defaultValue = "0") Integer days) {
+        userVipInfoService.updateVipLevel(userId, level, days);
         return Result.success("等级更新成功");
     }
 

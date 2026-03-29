@@ -1,16 +1,20 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus, Edit, Delete } from '@element-plus/icons-vue'
 import { getMemberDayActivities, createActivity, updateActivity, deleteActivity, updateActivityStatus } from '@/api/admin'
 import type { Activity } from '@/api/admin'
+
+interface ActivityForm extends Partial<Activity> {
+  ruleType?: 'none' | 'weekly' | 'monthly' | 'both'
+}
 
 const loading = ref(false)
 const activities = ref<Activity[]>([])
 const dialogVisible = ref(false)
 const dialogTitle = ref('')
 const formRef = ref()
-const form = ref<Partial<Activity>>({
+const form = ref<ActivityForm>({
   name: '',
   type: 1,
   status: 1,
@@ -19,13 +23,97 @@ const form = ref<Partial<Activity>>({
   startTime: '',
   endTime: '',
   description: '',
-  ruleExpression: ''
+  ruleExpression: '',
+  ruleType: 'none'
 })
 
 const rules = {
   name: [{ required: true, message: '请输入活动名称', trigger: 'blur' }],
   startTime: [{ required: true, message: '请选择开始时间', trigger: 'change' }],
   endTime: [{ required: true, message: '请选择结束时间', trigger: 'change' }]
+}
+
+const weekDays = [
+  { value: '1', label: '周一' },
+  { value: '2', label: '周二' },
+  { value: '3', label: '周三' },
+  { value: '4', label: '周四' },
+  { value: '5', label: '周五' },
+  { value: '6', label: '周六' },
+  { value: '7', label: '周日' }
+]
+
+const monthDays = Array.from({ length: 31 }, (_, i) => ({
+  value: String(i + 1),
+  label: `${i + 1}号`
+}))
+
+const selectedWeekDays = ref<string[]>([])
+const selectedMonthDays = ref<string[]>([])
+
+watch(() => form.value.ruleType, (newType, oldType) => {
+  if (oldType === 'weekly' && newType === 'monthly') {
+    selectedWeekDays.value = []
+  } else if (oldType === 'monthly' && newType === 'weekly') {
+    selectedMonthDays.value = []
+  } else if (newType === 'none') {
+    selectedWeekDays.value = []
+    selectedMonthDays.value = []
+  }
+})
+
+const ruleExpressionDisplay = computed(() => {
+  const parts: string[] = []
+  if (selectedWeekDays.value.length > 0) {
+    const days = selectedWeekDays.value.map(v => weekDays.find(d => d.value === v)?.label).join('、')
+    parts.push(`每${days}`)
+  }
+  if (selectedMonthDays.value.length > 0) {
+    const days = selectedMonthDays.value.map(v => `${v}号`).join('、')
+    parts.push(`每月${days}`)
+  }
+  return parts.join('；') || '无固定规则'
+})
+
+const parseRuleExpression = (expr: string) => {
+  selectedWeekDays.value = []
+  selectedMonthDays.value = []
+  
+  if (!expr) {
+    form.value.ruleType = 'none'
+    return
+  }
+  
+  const parts = expr.split(';')
+  parts.forEach(part => {
+    part = part.trim()
+    if (part.startsWith('week:')) {
+      selectedWeekDays.value = part.replace('week:', '').split(',').filter(Boolean)
+    } else if (part.startsWith('month:')) {
+      selectedMonthDays.value = part.replace('month:', '').split(',').filter(Boolean)
+    }
+  })
+  
+  if (selectedWeekDays.value.length > 0 && selectedMonthDays.value.length > 0) {
+    form.value.ruleType = 'both'
+  } else if (selectedWeekDays.value.length > 0) {
+    form.value.ruleType = 'weekly'
+  } else if (selectedMonthDays.value.length > 0) {
+    form.value.ruleType = 'monthly'
+  } else {
+    form.value.ruleType = 'none'
+  }
+}
+
+const buildRuleExpression = () => {
+  const parts: string[] = []
+  if (selectedWeekDays.value.length > 0) {
+    parts.push(`week:${selectedWeekDays.value.join(',')}`)
+  }
+  if (selectedMonthDays.value.length > 0) {
+    parts.push(`month:${selectedMonthDays.value.join(',')}`)
+  }
+  return parts.join(';')
 }
 
 const fetchActivities = async () => {
@@ -51,14 +139,18 @@ const handleAdd = () => {
     startTime: '',
     endTime: '',
     description: '',
-    ruleExpression: ''
+    ruleExpression: '',
+    ruleType: 'none'
   }
+  selectedWeekDays.value = []
+  selectedMonthDays.value = []
   dialogVisible.value = true
 }
 
 const handleEdit = (row: Activity) => {
   dialogTitle.value = '编辑会员日活动'
-  form.value = { ...row }
+  form.value = { ...row, ruleType: 'none' }
+  parseRuleExpression(row.ruleExpression || '')
   dialogVisible.value = true
 }
 
@@ -94,6 +186,7 @@ const handleSubmit = async () => {
   await formRef.value?.validate(async (valid: boolean) => {
     if (valid) {
       try {
+        form.value.ruleExpression = buildRuleExpression()
         if (form.value.id) {
           await updateActivity(form.value.id, form.value)
           ElMessage.success('更新成功')
@@ -113,6 +206,23 @@ const handleSubmit = async () => {
 const formatTime = (time: string) => {
   if (!time) return ''
   return time.replace('T', ' ').substring(0, 16)
+}
+
+const formatRuleExpression = (expr: string) => {
+  if (!expr) return '-'
+  const parts: string[] = []
+  const segments = expr.split(';')
+  segments.forEach(segment => {
+    segment = segment.trim()
+    if (segment.startsWith('week:')) {
+      const days = segment.replace('week:', '').split(',').map(v => weekDays.find(d => d.value === v)?.label).filter(Boolean).join('、')
+      if (days) parts.push(`每${days}`)
+    } else if (segment.startsWith('month:')) {
+      const days = segment.replace('month:', '').split(',').map(v => `${v}号`).join('、')
+      if (days) parts.push(`每月${days}`)
+    }
+  })
+  return parts.join('；') || expr
 }
 
 onMounted(() => {
@@ -153,7 +263,11 @@ onMounted(() => {
             {{ row.pointsMultiplier ? `${row.pointsMultiplier}倍` : '-' }}
           </template>
         </el-table-column>
-        <el-table-column prop="ruleExpression" label="规则表达式" width="120" />
+        <el-table-column prop="ruleExpression" label="规则表达式" width="180">
+          <template #default="{ row }">
+            {{ formatRuleExpression(row.ruleExpression) }}
+          </template>
+        </el-table-column>
         <el-table-column prop="status" label="状态" width="100">
           <template #default="{ row }">
             <el-tag :type="row.status === 1 ? 'success' : 'info'">
@@ -215,8 +329,28 @@ onMounted(() => {
           <el-input-number v-model="form.pointsMultiplier" :min="1" :max="10" :step="0.5" :precision="1" />
           <span class="ml-2 text-gray-500">{{ form.pointsMultiplier ? `${form.pointsMultiplier}倍积分` : '' }}</span>
         </el-form-item>
-        <el-form-item label="规则表达式">
-          <el-input v-model="form.ruleExpression" placeholder="如: 8代表每月8号, 4代表周四" />
+        <el-form-item label="规则类型">
+          <el-radio-group v-model="form.ruleType">
+            <el-radio value="none">无固定规则</el-radio>
+            <el-radio value="weekly">每周特定日期</el-radio>
+            <el-radio value="monthly">每月特定日期</el-radio>
+            <el-radio value="both">周和月组合</el-radio>
+          </el-radio-group>
+        </el-form-item>
+        <el-form-item v-if="form.ruleType === 'weekly' || form.ruleType === 'both'" label="每周日期">
+          <el-checkbox-group v-model="selectedWeekDays">
+            <el-checkbox v-for="day in weekDays" :key="day.value" :value="day.value">
+              {{ day.label }}
+            </el-checkbox>
+          </el-checkbox-group>
+        </el-form-item>
+        <el-form-item v-if="form.ruleType === 'monthly' || form.ruleType === 'both'" label="每月日期">
+          <el-select v-model="selectedMonthDays" multiple placeholder="选择每月特定日期" style="width: 100%">
+            <el-option v-for="day in monthDays" :key="day.value" :label="day.label" :value="day.value" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="规则预览">
+          <span class="rule-preview">{{ ruleExpressionDisplay }}</span>
         </el-form-item>
         <el-form-item label="活动描述">
           <el-input v-model="form.description" type="textarea" :rows="3" placeholder="请输入活动描述" />
@@ -320,5 +454,10 @@ onMounted(() => {
 
 .text-gray-500 {
   color: #6b7280;
+}
+
+.rule-preview {
+  color: #1677ff;
+  font-weight: 500;
 }
 </style>

@@ -25,4 +25,6 @@ public interface UserVipInfoService extends IService<UserVipInfo> {
     void extendVipWithLevel(Long userId, int days, int vipLevel);
     
     BigDecimal getPointsMultiplier(Long userId);
+    
+    void updateVipLevel(Long userId, Integer level, Integer days);
 }

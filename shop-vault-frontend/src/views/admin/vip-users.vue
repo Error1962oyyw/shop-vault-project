@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { Medal, Search } from '@element-plus/icons-vue'
+import { Search, User } from '@element-plus/icons-vue'
 import { AdminPageLayout } from '@/components/admin'
 import { usePagination } from '@/composables'
-import { getVipUsers, extendVip, updateVipLevel, type VipUser } from '@/api/admin'
-import { ElMessage, ElMessageBox } from 'element-plus'
+import { getVipUsers, updateVipLevel, type VipUser } from '@/api/admin'
+import { ElMessage } from 'element-plus'
 
 const loading = ref(false)
 const vipUsers = ref<VipUser[]>([])
@@ -19,6 +19,13 @@ const vipLevels = [
   { value: 1, label: 'VIP会员', color: 'warning' },
   { value: 2, label: 'SVIP会员', color: 'danger' }
 ]
+
+const adjustDialogVisible = ref(false)
+const adjustForm = ref({
+  userId: 0,
+  vipLevel: 0,
+  days: 1
+})
 
 const fetchVipUsers = async () => {
   loading.value = true
@@ -61,41 +68,48 @@ const isExpired = (expireTime: string | null) => {
   return new Date(expireTime) < new Date()
 }
 
+const getStatusInfo = (row: VipUser) => {
+  if (row.vipLevel === 0) {
+    return { text: '已过期', type: 'info' as const }
+  }
+  if (isExpired(row.vipExpireTime)) {
+    return { text: '已过期', type: 'info' as const }
+  }
+  return { text: '生效中', type: 'success' as const }
+}
+
 const handleSearch = () => {
   pagination.current = 1
   fetchVipUsers()
 }
 
-const handleExtend = async (row: VipUser) => {
+const openAdjustDialog = (row: VipUser) => {
+  adjustForm.value = {
+    userId: row.userId,
+    vipLevel: row.vipLevel,
+    days: 1
+  }
+  adjustDialogVisible.value = true
+}
+
+const handleAdjustConfirm = async () => {
   try {
-    const { value: days } = await ElMessageBox.prompt('请输入延期天数', '延期VIP会员', {
-      confirmButtonText: '确定',
-      cancelButtonText: '取消',
-      inputPattern: /^[1-9]\d*$/,
-      inputErrorMessage: '请输入有效的天数（正整数）'
-    })
-    await extendVip(row.userId, parseInt(days))
-    ElMessage.success('延期成功')
+    await updateVipLevel(adjustForm.value.userId, adjustForm.value.vipLevel, adjustForm.value.days)
+    ElMessage.success('调整成功')
+    adjustDialogVisible.value = false
     fetchVipUsers()
-  } catch {
-    // 用户取消
+  } catch (error) {
+    ElMessage.error('调整失败')
   }
 }
 
-const handleAdjustLevel = async (row: VipUser) => {
-  try {
-    const { value: level } = await ElMessageBox.prompt('请输入会员等级（0-普通 1-VIP 2-SVIP）', '调整会员等级', {
-      confirmButtonText: '确定',
-      cancelButtonText: '取消',
-      inputPattern: /^[0-2]$/,
-      inputErrorMessage: '请输入有效的等级（0、1或2）'
-    })
-    await updateVipLevel(row.userId, parseInt(level))
-    ElMessage.success('等级调整成功')
-    fetchVipUsers()
-  } catch {
-    // 用户取消
-  }
+const getAvatarUrl = (row: VipUser) => {
+  if (row.avatar) return row.avatar
+  return null
+}
+
+const getDisplayName = (row: VipUser) => {
+  return row.nickname || row.username || `用户${row.userId}`
 }
 
 onMounted(() => {
@@ -125,10 +139,11 @@ onMounted(() => {
         <template #default="{ row }">
           <div class="user-info">
             <div class="user-avatar">
-              <Medal class="avatar-icon" />
+              <img v-if="getAvatarUrl(row)" :src="getAvatarUrl(row)!" class="avatar-img" />
+              <el-icon v-else class="avatar-icon"><User /></el-icon>
             </div>
             <div class="user-details">
-              <h4 class="user-name">{{ row.username }}</h4>
+              <h4 class="user-name">{{ getDisplayName(row) }}</h4>
               <p class="user-id">ID: {{ row.userId }}</p>
             </div>
           </div>
@@ -153,21 +168,46 @@ onMounted(() => {
           </span>
         </template>
       </el-table-column>
-      <el-table-column prop="totalVipDays" label="累计天数" width="100" align="center" />
       <el-table-column label="状态" width="100" align="center">
         <template #default="{ row }">
-          <el-tag :type="isExpired(row.vipExpireTime) ? 'info' : 'success'" size="small">
-            {{ isExpired(row.vipExpireTime) ? '已过期' : '生效中' }}
+          <el-tag :type="getStatusInfo(row).type" size="small">
+            {{ getStatusInfo(row).text }}
           </el-tag>
         </template>
       </el-table-column>
-      <el-table-column label="操作" width="150" align="center">
+      <el-table-column label="操作" width="100" align="center">
         <template #default="{ row }">
-          <el-button type="primary" link size="small" @click="handleExtend(row)">延期</el-button>
-          <el-button type="warning" link size="small" @click="handleAdjustLevel(row)">调整</el-button>
+          <el-button type="primary" link size="small" @click="openAdjustDialog(row)">调整</el-button>
         </template>
       </el-table-column>
     </el-table>
+
+    <el-dialog v-model="adjustDialogVisible" title="调整会员权益" width="400px">
+      <el-form :model="adjustForm" label-width="100px">
+        <el-form-item label="会员等级">
+          <el-select v-model="adjustForm.vipLevel" placeholder="请选择会员等级">
+            <el-option
+              v-for="level in vipLevels"
+              :key="level.value"
+              :label="level.label"
+              :value="level.value"
+            />
+          </el-select>
+        </el-form-item>
+        <el-form-item v-if="adjustForm.vipLevel > 0" label="会员天数">
+          <el-input-number 
+            v-model="adjustForm.days" 
+            :min="1" 
+            :max="10000" 
+            :step="30"
+          />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="adjustDialogVisible = false">取消</el-button>
+        <el-button type="primary" @click="handleAdjustConfirm">确认</el-button>
+      </template>
+    </el-dialog>
 
     <div class="pagination-wrapper">
       <el-pagination
@@ -201,6 +241,13 @@ onMounted(() => {
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  overflow: hidden;
+}
+
+.avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .avatar-icon {
