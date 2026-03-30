@@ -131,6 +131,8 @@ public class VipMembershipServiceImpl extends ServiceImpl<VipMembershipMapper, V
         int vipLevel;
         int pointsCost = 0;
         BigDecimal balanceCost = BigDecimal.ZERO;
+        BigDecimal balanceBefore = BigDecimal.ZERO;
+        BigDecimal balanceAfter = BigDecimal.ZERO;
         String description;
 
         if (vipType == VipMembership.TYPE_MONTHLY) {
@@ -181,19 +183,9 @@ public class VipMembershipServiceImpl extends ServiceImpl<VipMembershipMapper, V
             if (userBalance.compareTo(balanceCost) < 0) {
                 throw new RuntimeException("余额不足，需要 ¥" + balanceCost);
             }
-            BigDecimal balanceBefore = userBalance;
-            BigDecimal balanceAfter = userBalance.subtract(balanceCost);
+            balanceBefore = userBalance;
+            balanceAfter = userBalance.subtract(balanceCost);
             user.setBalance(balanceAfter);
-            
-            balanceRecordService.recordBalanceChange(
-                    userId,
-                    balanceCost.negate(),
-                    balanceBefore,
-                    balanceAfter,
-                    BalanceRecord.TYPE_VIP_PURCHASE,
-                    description,
-                    null
-            );
         } else {
             throw new RuntimeException("无效的支付方式");
         }
@@ -218,6 +210,18 @@ public class VipMembershipServiceImpl extends ServiceImpl<VipMembershipMapper, V
             membership.setEndTime(LocalDateTime.now().plusDays(days));
         }
         this.save(membership);
+
+        if ("balance".equals(paymentMethod)) {
+            balanceRecordService.recordBalanceChange(
+                    userId,
+                    balanceCost.negate(),
+                    balanceBefore,
+                    balanceAfter,
+                    BalanceRecord.TYPE_VIP_PURCHASE,
+                    description,
+                    membership.getId()
+            );
+        }
 
         userVipInfoService.extendVipWithLevel(userId, days, vipLevel);
     }
