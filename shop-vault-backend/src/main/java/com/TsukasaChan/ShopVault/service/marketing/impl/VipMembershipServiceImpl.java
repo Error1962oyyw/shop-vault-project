@@ -214,7 +214,12 @@ public class VipMembershipServiceImpl extends ServiceImpl<VipMembershipMapper, V
             throw new RuntimeException("VIP会员记录保存失败");
         }
 
-        if ("balance".equals(paymentMethod) && membership.getId() != null) {
+        Long membershipId = membership.getId();
+        if (membershipId == null) {
+            throw new RuntimeException("VIP会员记录ID获取失败，数据异常");
+        }
+
+        if ("balance".equals(paymentMethod)) {
             balanceRecordService.recordBalanceChange(
                     userId,
                     balanceCost.negate(),
@@ -222,7 +227,7 @@ public class VipMembershipServiceImpl extends ServiceImpl<VipMembershipMapper, V
                     balanceAfter,
                     BalanceRecord.TYPE_VIP_PURCHASE,
                     description,
-                    membership.getId()
+                    membershipId
             );
         }
 
