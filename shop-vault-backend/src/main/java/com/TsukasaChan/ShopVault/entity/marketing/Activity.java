@@ -30,6 +30,12 @@ public class Activity implements Serializable {
     public static final int STATUS_DISABLED = 0;
     public static final int STATUS_ENABLED = 1;
 
+    public static final int ACTIVITY_TYPE_DISCOUNT = 1;
+    public static final int ACTIVITY_TYPE_COUPON = 2;
+
+    public static final int COUPON_TYPE_THRESHOLD = 1;
+    public static final int COUPON_TYPE_NO_THRESHOLD = 2;
+
     /**
      * 主键ID
      */
@@ -85,6 +91,36 @@ public class Activity implements Serializable {
      * 积分获取倍率(如 2.0 代表双倍积分)
      */
     private BigDecimal pointsMultiplier;
+
+    /**
+     * 活动类别: 1全场折扣 2优惠券
+     */
+    private Integer activityType;
+
+    /**
+     * 优惠券类型: 1满减券 2无门槛券
+     */
+    private Integer couponType;
+
+    /**
+     * 优惠券门槛金额(满X元)
+     */
+    private BigDecimal couponThreshold;
+
+    /**
+     * 优惠券减免金额
+     */
+    private BigDecimal couponAmount;
+
+    /**
+     * 优惠券发行总量
+     */
+    private Integer couponTotal;
+
+    /**
+     * 优惠券已领取数量
+     */
+    private Integer couponReceived;
 
     /**
      * 活动描述

@@ -91,7 +91,7 @@ onMounted(() => {
 
 <template>
   <UserLayout>
-    <div class="favorites-page">
+    <div class="favorites-page animate-fade-in">
       <div class="page-container">
         <div class="favorites-card">
           <div class="card-header">
@@ -346,6 +346,7 @@ onMounted(() => {
   line-height: 1.5;
   display: -webkit-box;
   -webkit-line-clamp: 2;
+  line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
   cursor: pointer;

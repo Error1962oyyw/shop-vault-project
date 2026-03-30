@@ -7,12 +7,15 @@ import 'element-plus/dist/index.css'
 import './style.css'
 import App from './App.vue'
 import router from './router'
+import { LazyLoadDirective } from './directives'
 
 const app = createApp(App)
 
 app.use(createPinia())
 app.use(router)
 app.use(ElementPlus, { locale: zhCn })
+
+app.directive('lazy', LazyLoadDirective)
 
 for (const [key, component] of Object.entries(ElementPlusIconsVue)) {
   app.component(key, component)

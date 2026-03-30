@@ -858,9 +858,14 @@ onMounted(() => {
   max-width: 1200px;
   margin: 0 auto;
   padding: 0 24px;
-  display: grid;
-  grid-template-columns: repeat(8, 1fr);
+  display: flex;
+  justify-content: center;
   gap: 16px;
+}
+
+.categories-grid .category-card {
+  flex: 1;
+  max-width: 200px;
 }
 
 .category-card {
@@ -1113,7 +1118,12 @@ onMounted(() => {
 
 @media (max-width: 1200px) {
   .categories-grid {
-    grid-template-columns: repeat(4, 1fr);
+    flex-wrap: wrap;
+  }
+  
+  .categories-grid .category-card {
+    flex: 0 0 calc(25% - 12px);
+    max-width: none;
   }
 }
 
@@ -1206,8 +1216,12 @@ onMounted(() => {
   }
 
   .categories-grid {
-    grid-template-columns: repeat(4, 1fr);
-    gap: 12px;
+    flex-wrap: wrap;
+  }
+  
+  .categories-grid .category-card {
+    flex: 0 0 calc(25% - 12px);
+    max-width: none;
   }
 
   .category-card {

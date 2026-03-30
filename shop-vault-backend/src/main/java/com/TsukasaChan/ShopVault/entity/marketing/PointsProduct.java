@@ -64,6 +64,14 @@ public class PointsProduct implements Serializable {
 
     private LocalDateTime updateTime;
 
+    private Integer couponType;
+
+    private BigDecimal couponThreshold;
+
+    private BigDecimal couponAmount;
+
+    private Integer vipDays;
+
     @TableField(exist = false)
     private Integer remainStock;
 }

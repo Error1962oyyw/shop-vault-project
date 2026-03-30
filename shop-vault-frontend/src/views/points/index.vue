@@ -1,19 +1,19 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import { Coin, Ticket, Present, Star, Medal, Timer, Check, Calendar } from '@element-plus/icons-vue'
 import UserLayout from '@/components/layout/UserLayout.vue'
 import { signIn, getPointsRecords, getAvailableCoupons, receiveCoupon, getMyCoupons, todaySigned } from '@/api/marketing'
 import { getProfile } from '@/api/user'
-import { getVipInfo, exchangeVip, getVipHistory } from '@/api/vip'
+import { getVipInfo, getVipHistory, purchaseVip } from '@/api/vip'
 import type { PointsRecord, CouponTemplate, UserCoupon } from '@/types/api'
 import type { VipInfo, VipMembership } from '@/api/vip'
 
 const router = useRouter()
 
 const activeTab = ref('points')
-const userInfo = ref({ points: 0, memberLevel: 1 })
+const userInfo = ref({ points: 0, memberLevel: 1, balance: 0 })
 const pointsRecords = ref<PointsRecord[]>([])
 const availableCoupons = ref<CouponTemplate[]>([])
 const myCoupons = ref<UserCoupon[]>([])
@@ -61,7 +61,8 @@ const fetchUserInfo = async () => {
     const res = await getProfile()
     userInfo.value = {
       points: res.points || 0,
-      memberLevel: res.memberLevel || 1
+      memberLevel: res.memberLevel || 1,
+      balance: res.balance || 0
     }
   } catch (error) {
     console.error('获取用户信息失败', error)
@@ -155,15 +156,43 @@ const handleExchangeVip = async (type: number) => {
   const card = vipCards.find(c => c.type === type)
   if (!card) return
   
-  if (userInfo.value.points < card.points) {
-    ElMessage.warning(`积分不足，需要${card.points}积分`)
+  const canUsePoints = userInfo.value.points >= card.points
+  const canUseBalance = (userInfo.value.balance || 0) >= card.originalPrice
+  
+  if (!canUsePoints && !canUseBalance) {
+    ElMessage.warning('积分和余额均不足')
     return
+  }
+  
+  let paymentMethod: 'points' | 'balance' = 'points'
+  
+  if (canUsePoints && canUseBalance) {
+    try {
+      await ElMessageBox.confirm(
+        `请选择支付方式：\n积分兑换需要 ${card.points} 积分\n余额购买需要 ¥${card.originalPrice}`,
+        '开通' + card.name,
+        {
+          confirmButtonText: '积分兑换',
+          cancelButtonText: '余额购买',
+          distinguishCancelAndClose: true
+        }
+      )
+      paymentMethod = 'points'
+    } catch (action: any) {
+      if (action === 'cancel') {
+        paymentMethod = 'balance'
+      } else {
+        return
+      }
+    }
+  } else if (canUseBalance) {
+    paymentMethod = 'balance'
   }
   
   exchangeLoading.value = true
   try {
-    await exchangeVip(type)
-    ElMessage.success('SVIP开通成功，享受95折优惠！')
+    await purchaseVip(type, paymentMethod)
+    ElMessage.success('VIP开通成功！')
     await fetchUserInfo()
     await fetchVipInfo()
     await fetchVipHistory()
@@ -274,7 +303,7 @@ onMounted(() => {
 
 <template>
   <UserLayout>
-    <div class="points-page">
+    <div class="points-page animate-fade-in">
       <div class="page-container">
         <div class="member-header">
           <div class="header-bg"></div>
@@ -614,15 +643,19 @@ onMounted(() => {
 
 .points-display {
   display: flex;
+  flex-direction: column;
   align-items: center;
   gap: 8px;
   background: rgba(255, 255, 255, 0.15);
-  padding: 12px 20px;
-  border-radius: 12px;
+  backdrop-filter: blur(10px);
+  padding: 20px 32px;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  min-width: 160px;
 }
 
 .points-value {
-  font-size: 32px;
+  font-size: 36px;
   font-weight: 800;
   line-height: 1;
 }

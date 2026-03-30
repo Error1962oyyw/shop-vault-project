@@ -41,6 +41,9 @@ public class ProductController extends BaseController {
         if (category == null || category.getLevel() != 2) {
             return Result.error(400, "请选择有效的商品小类");
         }
+        if (!StringUtils.hasText(product.getMainImage())) {
+            product.setMainImage("/images/default-product.png");
+        }
         product.setStatus(1);
         product.setSales(0);
         productService.saveProductWithCategory(product);

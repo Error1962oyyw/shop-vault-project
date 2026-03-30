@@ -305,7 +305,8 @@ export interface Activity {
   startTime: string;
   endTime: string;
   type: number;
-  discountRate: number | null;
+  activityType: number;
+  discountRate: number;
   pointCost: number | null;
   productId: number | null;
   status: number;
@@ -313,6 +314,11 @@ export interface Activity {
   pointsMultiplier: number | null;
   description: string | null;
   createTime: string | null;
+  couponType: number;
+  couponThreshold: number;
+  couponAmount: number;
+  couponTotal: number;
+  couponReceived: number | null;
 }
 
 export interface PointsRule {
@@ -472,10 +478,56 @@ export const extendVip = (userId: number, days: number) => {
   });
 };
 
-export const updateVipLevel = (userId: number, level: number, days: number = 0) => {
+export const updateVipLevel = (userId: number, level: number, days?: number | null) => {
+  const params: Record<string, any> = { level }
+  if (days !== null && days !== undefined) {
+    params.days = days
+  }
   return request<string>({
     url: `/api/admin/vip/users/${userId}/level`,
     method: 'put',
-    params: { level, days }
+    params
+  });
+};
+
+export interface AdminMessage {
+  id: number;
+  type: string;
+  title: string;
+  content: string;
+  targetRole: string;
+  status: number;
+  sendTime: string;
+  readTime: string | null;
+  linkUrl: string | null;
+  relatedId: number | null;
+  createTime: string;
+}
+
+export const getAdminMessages = () => {
+  return request<AdminMessage[]>({
+    url: '/api/admin/messages',
+    method: 'get'
+  });
+};
+
+export const getAdminUnreadCount = () => {
+  return request<{ count: number }>({
+    url: '/api/admin/messages/unread-count',
+    method: 'get'
+  });
+};
+
+export const markMessageAsRead = (id: number) => {
+  return request<string>({
+    url: `/api/admin/messages/read/${id}`,
+    method: 'post'
+  });
+};
+
+export const markAllMessagesAsRead = () => {
+  return request<string>({
+    url: '/api/admin/messages/read-all',
+    method: 'post'
   });
 };

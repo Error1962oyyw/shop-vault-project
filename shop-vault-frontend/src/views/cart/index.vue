@@ -63,7 +63,7 @@ onMounted(() => {
 
 <template>
   <UserLayout>
-    <div class="cart-container">
+    <div class="cart-container animate-fade-in">
       <div class="page-container py-8">
         <div class="cart-card">
           <div class="cart-header">
@@ -393,6 +393,7 @@ onMounted(() => {
   line-height: 1.5;
   display: -webkit-box;
   -webkit-line-clamp: 2;
+  line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
   text-decoration: none;

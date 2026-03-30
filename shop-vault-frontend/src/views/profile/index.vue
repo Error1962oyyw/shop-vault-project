@@ -387,7 +387,7 @@ onMounted(() => {
 
 <template>
   <UserLayout>
-    <div class="profile-page">
+    <div class="profile-page animate-fade-in">
       <div class="page-container">
         <div class="profile-layout">
           <aside class="profile-sidebar">
@@ -793,6 +793,9 @@ onMounted(() => {
 }
 
 .user-avatar {
+  background: linear-gradient(135deg, #1677ff 0%, #4096ff 100%);
+  color: white;
+  font-weight: 600;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 

@@ -113,7 +113,7 @@ onMounted(() => {
 
 <template>
   <UserLayout>
-    <div class="bg-gray-50 min-h-screen py-6">
+    <div class="bg-gray-50 min-h-screen py-6 animate-fade-in">
       <div class="page-container">
         <div class="bg-white rounded-lg shadow-sm">
           <div class="p-6 border-b flex items-center justify-between">
@@ -211,6 +211,7 @@ onMounted(() => {
 .line-clamp-2 {
   display: -webkit-box;
   -webkit-line-clamp: 2;
+  line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }

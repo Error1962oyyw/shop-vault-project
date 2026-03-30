@@ -5,11 +5,13 @@ import com.TsukasaChan.ShopVault.dto.AfterSalesHandleDto;
 import com.TsukasaChan.ShopVault.dto.ReturnLogisticsDto;
 import com.TsukasaChan.ShopVault.entity.order.AfterSales;
 import com.TsukasaChan.ShopVault.entity.order.Order;
+import com.TsukasaChan.ShopVault.entity.system.MessagePush;
 import com.TsukasaChan.ShopVault.entity.system.User;
 import com.TsukasaChan.ShopVault.mapper.order.AfterSalesMapper;
 import com.TsukasaChan.ShopVault.service.order.AfterSalesService;
 import com.TsukasaChan.ShopVault.service.order.OrderItemService;
 import com.TsukasaChan.ShopVault.service.order.OrderService;
+import com.TsukasaChan.ShopVault.service.system.MessagePushService;
 import com.TsukasaChan.ShopVault.service.system.UserService;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
@@ -23,6 +25,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 
 @Slf4j
@@ -34,6 +37,7 @@ public class AfterSalesServiceImpl extends ServiceImpl<AfterSalesMapper, AfterSa
     private final UserService userService;
     private final OrderItemService orderItemService;
     private final ObjectMapper objectMapper;
+    private final MessagePushService messagePushService;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -85,6 +89,15 @@ public class AfterSalesServiceImpl extends ServiceImpl<AfterSalesMapper, AfterSa
 
         order.setStatus(5);
         orderService.updateById(order);
+
+        String timeStr = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
+        messagePushService.pushToAdmin(
+                MessagePush.TYPE_ADMIN_AFTER_SALES,
+                "售后申请通知",
+                "[" + timeStr + "] 收到一条售后申请通知消息",
+                "/admin/after-sales",
+                afterSales.getId()
+        );
     }
 
     private AfterSales createAfterSales(AfterSalesApplyDto dto, Order order, Long userId) {

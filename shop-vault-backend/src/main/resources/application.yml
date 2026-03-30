@@ -40,7 +40,7 @@ spring:
           auth: true
 
 mybatis-plus:
-  mapper-locations: classpath*:/mapper/**/*.xml
+  mapper-locations: classpath*:/com/TsukasaChan/ShopVault/mapper/**/*.xml
   type-aliases-package: com.TsukasaChan.ShopVault.entity
   configuration:
     log-impl: org.apache.ibatis.logging.stdout.StdOutImpl

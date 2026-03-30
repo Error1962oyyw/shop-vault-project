@@ -102,7 +102,7 @@ const goToLogin = () => {
 </script>
 
 <template>
-  <div class="register-page">
+  <div class="register-page animate-fade-in">
     <div class="page-wrapper">
       <div class="register-card">
         <div class="card-header">

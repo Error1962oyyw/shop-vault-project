@@ -422,11 +422,17 @@ onMounted(() => {
   margin-right: 16px;
 }
 
+.user-dropdown .el-avatar {
+  background: linear-gradient(135deg, #1677ff 0%, #4096ff 100%);
+  color: white;
+  font-weight: 600;
+}
+
 .guest-info .el-avatar {
-  background: linear-gradient(135deg, #e6f4ff 0%, #bae0ff 100%);
-  color: var(--primary-color);
+  background: linear-gradient(135deg, #1677ff 0%, #4096ff 100%);
+  color: white;
   font-size: 12px;
-  font-weight: 500;
+  font-weight: 600;
 }
 
 .guest-name {
@@ -707,6 +713,12 @@ onMounted(() => {
   background: linear-gradient(135deg, #1677ff 0%, #4096ff 100%);
   border-radius: 16px;
   color: #fff;
+}
+
+.mobile-user-card .el-avatar {
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+  font-weight: 600;
 }
 
 .mobile-user-info {

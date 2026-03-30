@@ -18,4 +18,14 @@ public interface MessagePushService extends IService<MessagePush> {
     void markAsRead(Long messageId);
 
     void retryFailedMessages();
+
+    void pushToAdmin(String type, String title, String content, String linkUrl, Long relatedId);
+
+    List<MessagePush> getAdminMessages();
+
+    int getAdminUnreadCount();
+
+    void markAllAsReadForAdmin();
+
+    void markAsReadByRelatedId(String type, Long relatedId);
 }

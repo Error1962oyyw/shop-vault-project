@@ -432,6 +432,12 @@ onMounted(() => {
   flex-shrink: 0;
 }
 
+.user-avatar .el-avatar {
+  background: linear-gradient(135deg, #1677ff 0%, #4096ff 100%);
+  color: white;
+  font-weight: 600;
+}
+
 .online-dot {
   position: absolute;
   bottom: 2px;
@@ -511,6 +517,12 @@ onMounted(() => {
   background: linear-gradient(135deg, #1677ff 0%, #4096ff 100%);
 }
 
+.header-avatar .el-avatar {
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+  font-weight: 600;
+}
+
 .header-info h3 {
   margin: 0;
   font-size: 16px;
@@ -568,13 +580,15 @@ onMounted(() => {
 }
 
 .avatar-user {
-  background: linear-gradient(135deg, #52c41a 0%, #73d13d 100%);
-  color: #fff;
+  background: linear-gradient(135deg, #1677ff 0%, #4096ff 100%);
+  color: white;
+  font-weight: 600;
 }
 
 .avatar-admin {
   background: linear-gradient(135deg, #1677ff 0%, #4096ff 100%);
-  color: #fff;
+  color: white;
+  font-weight: 600;
 }
 
 .message-body {

@@ -111,6 +111,12 @@ onMounted(() => {
   gap: 10px;
 }
 
+.user-info .el-avatar {
+  background: linear-gradient(135deg, #1677ff 0%, #4096ff 100%);
+  color: white;
+  font-weight: 600;
+}
+
 .user-name {
   font-size: 14px;
   font-weight: 500;

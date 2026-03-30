@@ -1,0 +1,277 @@
+:root {
+  --color-primary: #1677ff;
+  --color-primary-light: #4096ff;
+  --color-primary-dark: #0958d9;
+  --color-primary-50: #e6f4ff;
+  --color-primary-100: #bae0ff;
+  --color-primary-200: #91caff;
+  --color-primary-300: #69b1ff;
+  --color-primary-400: #4096ff;
+  --color-primary-500: #1677ff;
+  --color-primary-600: #0958d9;
+  --color-primary-700: #003eb3;
+  --color-primary-800: #061178;
+  --color-primary-900: #030852;
+
+  --color-secondary: #2d3748;
+  --color-secondary-light: #4a5568;
+  --color-secondary-dark: #1a202c;
+
+  --color-accent: #4096ff;
+
+  --color-success: #52c41a;
+  --color-success-50: #f6ffed;
+  --color-success-100: #d9f7be;
+  --color-success-200: #b7eb8f;
+  --color-success-300: #95de64;
+  --color-success-400: #73d13d;
+  --color-success-500: #52c41a;
+  --color-success-600: #389e0d;
+  --color-success-700: #237804;
+  --color-success-800: #135200;
+  --color-success-900: #092b00;
+
+  --color-warning: #faad14;
+  --color-warning-50: #fffbe6;
+  --color-warning-100: #ffe58f;
+  --color-warning-200: #ffd591;
+  --color-warning-300: #ffc53d;
+  --color-warning-400: #faad14;
+  --color-warning-500: #d48806;
+  --color-warning-600: #ad6800;
+  --color-warning-700: #874d00;
+  --color-warning-800: #613400;
+  --color-warning-900: #3b1f00;
+
+  --color-danger: #ff4d4f;
+  --color-danger-50: #fff1f0;
+  --color-danger-100: #ffccc7;
+  --color-danger-200: #ffa39e;
+  --color-danger-300: #ff7875;
+  --color-danger-400: #ff4d4f;
+  --color-danger-500: #f5222d;
+  --color-danger-600: #cf1322;
+  --color-danger-700: #a8071a;
+  --color-danger-800: #820014;
+  --color-danger-900: #5c0011;
+
+  --color-info: #1890ff;
+  --color-info-50: #e6f7ff;
+  --color-info-100: #bae7ff;
+  --color-info-200: #91d5ff;
+  --color-info-300: #69c0ff;
+  --color-info-400: #40a9ff;
+  --color-info-500: #1890ff;
+  --color-info-600: #096dd9;
+  --color-info-700: #0050b3;
+  --color-info-800: #003a8c;
+  --color-info-900: #002766;
+
+  --color-orange: #fa8c16;
+  --color-orange-50: #fff7e6;
+  --color-orange-100: #ffe7ba;
+  --color-orange-200: #ffd591;
+  --color-orange-300: #ffbb38;
+  --color-orange-400: #faad14;
+  --color-orange-500: #fa8c16;
+  --color-orange-600: #d46b08;
+  --color-orange-700: #ad4e00;
+  --color-orange-800: #873800;
+  --color-orange-900: #612500;
+
+  --color-purple: #722ed1;
+  --color-purple-50: #f9f0ff;
+  --color-purple-100: #efdbff;
+  --color-purple-200: #d3adf7;
+  --color-purple-300: #b37feb;
+  --color-purple-400: #9254de;
+  --color-purple-500: #722ed1;
+  --color-purple-600: #531dab;
+  --color-purple-700: #391085;
+  --color-purple-800: #22075e;
+  --color-purple-900: #120338;
+
+  --color-cyan: #13c2c2;
+  --color-cyan-50: #e6fffb;
+  --color-cyan-100: #b5f5ec;
+  --color-cyan-200: #87e8de;
+  --color-cyan-300: #5cdbd3;
+  --color-cyan-400: #36cfc9;
+  --color-cyan-500: #13c2c2;
+  --color-cyan-600: #08979c;
+  --color-cyan-700: #006d75;
+  --color-cyan-800: #00474f;
+  --color-cyan-900: #002329;
+
+  --color-pink: #eb2f96;
+  --color-pink-50: #fff0f6;
+  --color-pink-100: #ffd6e7;
+  --color-pink-200: #ffadd2;
+  --color-pink-300: #ff85c0;
+  --color-pink-400: #f759ab;
+  --color-pink-500: #eb2f96;
+  --color-pink-600: #c41d7f;
+  --color-pink-700: #9e1068;
+  --color-pink-800: #780650;
+  --color-pink-900: #520339;
+
+  --color-neutral-50: #f7f8fa;
+  --color-neutral-100: #f2f3f5;
+  --color-neutral-200: #e5e6eb;
+  --color-neutral-300: #d0d3d9;
+  --color-neutral-400: #86909c;
+  --color-neutral-500: #4e5969;
+  --color-neutral-600: #272e3b;
+  --color-neutral-700: #1d2129;
+  --color-neutral-800: #0f1419;
+  --color-neutral-900: #06080a;
+
+  --text-color-primary: #1d2129;
+  --text-color-regular: #4e5969;
+  --text-color-secondary: #86909c;
+  --text-color-placeholder: #86909c;
+  --text-color-disabled: #c9cdd4;
+  --text-color-on-primary: #ffffff;
+  --text-color-on-success: #ffffff;
+  --text-color-on-warning: #1d2129;
+  --text-color-on-danger: #ffffff;
+
+  --border-color-default: #e5e6eb;
+  --border-color-light: #f2f3f5;
+  --border-color-dark: #d0d3d9;
+  --border-color-focus: #4096ff;
+
+  --background-color-page: #f7f8fa;
+  --background-color-secondary: #f2f3f5;
+  --background-color-tertiary: #e5e6eb;
+  --background-color-card: #ffffff;
+  --background-color-overlay: rgba(0, 0, 0, 0.45);
+
+  --gradient-primary: linear-gradient(135deg, #1677ff 0%, #4096ff 100%);
+  --gradient-primary-reverse: linear-gradient(135deg, #4096ff 0%, #1677ff 100%);
+  --gradient-success: linear-gradient(135deg, #52c41a 0%, #73d13d 100%);
+  --gradient-warning: linear-gradient(135deg, #faad14 0%, #ffc53d 100%);
+  --gradient-danger: linear-gradient(135deg, #ff4d4f 0%, #ff7875 100%);
+  --gradient-orange: linear-gradient(135deg, #fa8c16 0%, #ffc53d 100%);
+  --gradient-purple: linear-gradient(135deg, #722ed1 0%, #9c27b0 100%);
+  --gradient-page: linear-gradient(135deg, #f7f8fa 0%, #e6f4ff 50%, #f0f5ff 100%);
+
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.04);
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.06);
+  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.08);
+  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.12);
+  --shadow-xl: 0 12px 32px rgba(0, 0, 0, 0.15);
+  --shadow-2xl: 0 20px 48px rgba(0, 0, 0, 0.18);
+  --shadow-primary: 0 8px 24px rgba(22, 119, 255, 0.15);
+  --shadow-success: 0 8px 24px rgba(82, 196, 26, 0.15);
+  --shadow-warning: 0 8px 24px rgba(250, 173, 20, 0.15);
+  --shadow-danger: 0 8px 24px rgba(255, 77, 79, 0.15);
+  --shadow-inset: inset 0 1px 2px rgba(0, 0, 0, 0.06);
+
+  --radius-xs: 4px;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 20px;
+  --radius-2xl: 28px;
+  --radius-full: 9999px;
+
+  --spacing-0: 0;
+  --spacing-1: 4px;
+  --spacing-2: 8px;
+  --spacing-3: 12px;
+  --spacing-4: 16px;
+  --spacing-5: 20px;
+  --spacing-6: 24px;
+  --spacing-8: 32px;
+  --spacing-10: 40px;
+  --spacing-12: 48px;
+  --spacing-16: 64px;
+  --spacing-20: 80px;
+  --spacing-24: 96px;
+
+  --font-family-base: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  --font-family-mono: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
+
+  --font-size-xs: 12px;
+  --font-size-sm: 14px;
+  --font-size-base: 16px;
+  --font-size-lg: 18px;
+  --font-size-xl: 20px;
+  --font-size-2xl: 24px;
+  --font-size-3xl: 28px;
+  --font-size-4xl: 32px;
+  --font-size-5xl: 40px;
+  --font-size-6xl: 48px;
+
+  --font-weight-thin: 100;
+  --font-weight-light: 300;
+  --font-weight-normal: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+  --font-weight-extrabold: 800;
+
+  --line-height-tight: 1.25;
+  --line-height-normal: 1.5;
+  --line-height-relaxed: 1.75;
+  --line-height-loose: 2;
+
+  --letter-spacing-tighter: -0.05em;
+  --letter-spacing-tight: -0.025em;
+  --letter-spacing-normal: 0;
+  --letter-spacing-wide: 0.025em;
+  --letter-spacing-wider: 0.05em;
+
+  --transition-fast: 150ms ease;
+  --transition-base: 200ms ease;
+  --transition-normal: 300ms ease;
+  --transition-slow: 500ms ease;
+
+  --ease-linear: linear;
+  --ease-in: cubic-bezier(0.4, 0, 1, 1);
+  --ease-out: cubic-bezier(0, 0, 0.2, 1);
+  --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-bounce: cubic-bezier(0.68, -0.55, 0.265, 1.55);
+
+  --z-index-dropdown: 1000;
+  --z-index-sticky: 1020;
+  --z-index-fixed: 1030;
+  --z-index-modal-backdrop: 1040;
+  --z-index-modal: 1050;
+  --z-index-popover: 1060;
+  --z-index-tooltip: 1070;
+
+  --breakpoint-xs: 480px;
+  --breakpoint-sm: 640px;
+  --breakpoint-md: 768px;
+  --breakpoint-lg: 1024px;
+  --breakpoint-xl: 1280px;
+  --breakpoint-2xl: 1536px;
+
+  --container-xs: 480px;
+  --container-sm: 640px;
+  --container-md: 768px;
+  --container-lg: 1024px;
+  --container-xl: 1200px;
+  --container-2xl: 1536px;
+
+  --button-height-sm: 32px;
+  --button-height-base: 40px;
+  --button-height-lg: 48px;
+  --button-height-xl: 56px;
+
+  --input-height-sm: 32px;
+  --input-height-base: 40px;
+  --input-height-lg: 48px;
+
+  --card-padding-sm: 12px;
+  --card-padding-base: 16px;
+  --card-padding-lg: 24px;
+  --card-padding-xl: 32px;
+
+  --header-height: 64px;
+  --footer-height: 80px;
+  --sidebar-width: 240px;
+  --sidebar-collapsed-width: 64px;
+}

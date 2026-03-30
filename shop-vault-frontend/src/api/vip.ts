@@ -37,6 +37,10 @@ export interface PointsProduct {
   relatedId: number | null
   sortOrder: number
   status: number
+  couponType: number
+  couponThreshold: number
+  couponAmount: number
+  vipDays: number
   createTime: string
   updateTime: string
   remainStock: number
@@ -54,6 +58,14 @@ export function exchangeVip(vipType: number) {
     url: '/api/vip/exchange',
     method: 'post',
     data: { vipType }
+  })
+}
+
+export function purchaseVip(vipType: number, paymentMethod: 'points' | 'balance') {
+  return request<string>({
+    url: '/api/vip/purchase',
+    method: 'post',
+    data: { vipType, paymentMethod }
   })
 }
 

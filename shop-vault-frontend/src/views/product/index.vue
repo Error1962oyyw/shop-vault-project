@@ -252,7 +252,7 @@ onMounted(() => {
 
 <template>
   <UserLayout>
-    <div v-loading="loading" class="product-detail-page">
+    <div v-loading="loading" class="product-detail-page animate-fade-in">
       <template v-if="product">
         <div class="page-container">
           <div class="product-card">

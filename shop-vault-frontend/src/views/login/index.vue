@@ -91,7 +91,7 @@ const clearError = () => {
 </script>
 
 <template>
-  <div class="login-container">
+  <div class="login-container animate-fade-in">
     <div class="login-left">
       <div class="background-decoration">
         <div class="decoration-circle circle-1"></div>

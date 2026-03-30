@@ -386,14 +386,16 @@ onMounted(() => {
 
 .avatar-service {
   background: linear-gradient(135deg, #1677ff 0%, #4096ff 100%);
-  color: #fff;
+  color: white;
   font-size: 14px;
+  font-weight: 600;
 }
 
 .avatar-user {
-  background: linear-gradient(135deg, #52c41a 0%, #73d13d 100%);
-  color: #fff;
+  background: linear-gradient(135deg, #1677ff 0%, #4096ff 100%);
+  color: white;
   font-size: 14px;
+  font-weight: 600;
 }
 
 .message-body {

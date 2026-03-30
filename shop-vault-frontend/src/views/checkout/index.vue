@@ -200,7 +200,7 @@ onMounted(async () => {
 
 <template>
   <UserLayout>
-    <div class="bg-gray-50 min-h-screen">
+    <div class="bg-gray-50 min-h-screen animate-fade-in">
       <div class="page-container py-6">
         <h1 class="text-xl font-bold mb-6">确认订单</h1>
 
@@ -422,6 +422,7 @@ onMounted(async () => {
 .line-clamp-2 {
   display: -webkit-box;
   -webkit-line-clamp: 2;
+  line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }

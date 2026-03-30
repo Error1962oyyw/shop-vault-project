@@ -123,7 +123,7 @@ onMounted(() => {
 
 <template>
   <UserLayout>
-    <div class="orders-page">
+    <div class="orders-page animate-fade-in">
       <div class="page-container">
         <div class="orders-card">
           <el-tabs v-model="activeTab" class="orders-tabs" @tab-change="handleTabChange">

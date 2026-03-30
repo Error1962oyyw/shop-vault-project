@@ -61,6 +61,15 @@ public class VipController {
         return Result.success("VIP兑换成功");
     }
 
+    @PostMapping("/purchase")
+    public Result<String> purchaseVip(
+            @AuthenticationPrincipal UserDetails userDetails,
+            @RequestBody ExchangeVipDto dto) {
+        User user = userService.getByUsername(userDetails.getUsername());
+        vipMembershipService.purchaseVip(user.getId(), dto.getVipType(), dto.getPaymentMethod());
+        return Result.success("VIP购买成功");
+    }
+
     @GetMapping("/history")
     public Result<List<VipMembership>> getVipHistory(@AuthenticationPrincipal UserDetails userDetails) {
         User user = userService.getByUsername(userDetails.getUsername());

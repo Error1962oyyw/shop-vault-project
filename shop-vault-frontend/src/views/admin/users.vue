@@ -2,7 +2,7 @@
 import { ref, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { getUserList, updateUserStatus } from '@/api/admin'
-import { Search, Lock, Unlock } from '@element-plus/icons-vue'
+import { Search, Lock, Unlock, Edit } from '@element-plus/icons-vue'
 import { usePagination } from '@/composables'
 import { AdminPageLayout } from '@/components/admin'
 import { getAvatarUrl } from '@/utils/format'
@@ -17,12 +17,21 @@ interface UserItem {
   role: string
   status: number
   points: number
+  balance: number
   createTime: string
 }
 
 const loading = ref(false)
 const users = ref<UserItem[]>([])
 const searchKeyword = ref('')
+const adjustDialogVisible = ref(false)
+const adjustForm = ref({
+  userId: 0,
+  points: 0,
+  balance: 0,
+  pointsChange: 0,
+  balanceChange: 0
+})
 
 const { pagination, handleCurrentChange, setTotal, getParams } = usePagination({
   onPageChange: () => fetchUsers()
@@ -89,6 +98,43 @@ const getRoleType = (role: string): 'warning' | 'info' => {
   return role === 'ADMIN' ? 'warning' : 'info'
 }
 
+const openAdjustDialog = (user: UserItem) => {
+  adjustForm.value = {
+    userId: user.id,
+    points: user.points,
+    balance: user.balance,
+    pointsChange: 0,
+    balanceChange: 0
+  }
+  adjustDialogVisible.value = true
+}
+
+const handleAdjustConfirm = async () => {
+  try {
+    const res = await fetch('/api/admin/users/' + adjustForm.value.userId + '/adjust', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + localStorage.getItem('token')
+      },
+      body: JSON.stringify({
+        pointsChange: adjustForm.value.pointsChange,
+        balanceChange: adjustForm.value.balanceChange
+      })
+    })
+    if (res.ok) {
+      ElMessage.success('调整成功')
+      adjustDialogVisible.value = false
+      fetchUsers()
+    } else {
+      const data = await res.json()
+      ElMessage.error(data.message || '调整失败')
+    }
+  } catch (error) {
+    ElMessage.error('调整失败')
+  }
+}
+
 onMounted(() => {
   fetchUsers()
 })
@@ -141,9 +187,23 @@ onMounted(() => {
         </template>
       </el-table-column>
       <el-table-column prop="points" label="积分" width="80" align="center" />
-      <el-table-column prop="createTime" label="注册时间" width="180" />
-      <el-table-column label="操作" width="120" align="center">
+      <el-table-column label="余额" width="100" align="center">
         <template #default="{ row }">
+          <span class="balance-text">¥{{ row.balance?.toFixed(2) || '0.00' }}</span>
+        </template>
+      </el-table-column>
+      <el-table-column prop="createTime" label="注册时间" width="180" />
+      <el-table-column label="操作" width="160" align="center">
+        <template #default="{ row }">
+          <el-button
+            type="primary"
+            link
+            size="small"
+            @click="openAdjustDialog(row)"
+          >
+            <el-icon class="mr-1"><Edit /></el-icon>
+            调整
+          </el-button>
           <el-button
             v-if="row.role !== 'ADMIN'"
             :type="row.status === 1 ? 'danger' : 'success'"
@@ -157,7 +217,6 @@ onMounted(() => {
             </el-icon>
             {{ row.status === 1 ? '暂停' : '启用' }}
           </el-button>
-          <span v-else class="text-gray-400">-</span>
         </template>
       </el-table-column>
     </el-table>
@@ -171,6 +230,29 @@ onMounted(() => {
         @current-change="handleCurrentChange"
       />
     </div>
+
+    <el-dialog v-model="adjustDialogVisible" title="调整用户数据" width="400px">
+      <el-form label-width="80px">
+        <el-form-item label="当前积分">
+          <span>{{ adjustForm.points }}</span>
+        </el-form-item>
+        <el-form-item label="积分调整">
+          <el-input-number v-model="adjustForm.pointsChange" :min="-10000" :max="10000" :step="10" />
+          <span class="ml-2 text-gray-500">正数增加，负数减少</span>
+        </el-form-item>
+        <el-form-item label="当前余额">
+          <span>¥{{ adjustForm.balance?.toFixed(2) || '0.00' }}</span>
+        </el-form-item>
+        <el-form-item label="余额调整">
+          <el-input-number v-model="adjustForm.balanceChange" :min="-10000" :max="10000" :step="10" :precision="2" />
+          <span class="ml-2 text-gray-500">正数增加，负数减少</span>
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="adjustDialogVisible = false">取消</el-button>
+        <el-button type="primary" @click="handleAdjustConfirm">确认</el-button>
+      </template>
+    </el-dialog>
   </AdminPageLayout>
 </template>
 

@@ -13,6 +13,8 @@ public interface VipMembershipService extends IService<VipMembership> {
 
     void exchangeVip(Long userId, int vipType);
 
+    void purchaseVip(Long userId, int vipType, String paymentMethod);
+
     void checkAndExpireVip();
 
     List<VipMembership> getVipHistory(Long userId);

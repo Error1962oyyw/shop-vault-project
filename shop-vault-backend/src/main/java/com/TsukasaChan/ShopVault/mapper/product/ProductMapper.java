@@ -9,7 +9,7 @@ import java.util.Map;
 
 public interface ProductMapper extends BaseMapper<Product> {
 
-    @Select("SELECT category_id, COUNT(*) as count FROM product WHERE status = 1 GROUP BY category_id")
+    @Select("SELECT category_id, COUNT(*) as count FROM pms_product WHERE status = 1 GROUP BY category_id")
     List<Map<String, Object>> countProductsByCategory();
 }
 

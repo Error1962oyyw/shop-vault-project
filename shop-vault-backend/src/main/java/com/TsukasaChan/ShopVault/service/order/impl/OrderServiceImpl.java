@@ -7,6 +7,7 @@ import com.TsukasaChan.ShopVault.entity.order.CartItem;
 import com.TsukasaChan.ShopVault.entity.order.Order;
 import com.TsukasaChan.ShopVault.entity.order.OrderItem;
 import com.TsukasaChan.ShopVault.entity.product.Product;
+import com.TsukasaChan.ShopVault.entity.system.MessagePush;
 import com.TsukasaChan.ShopVault.entity.system.User;
 import com.TsukasaChan.ShopVault.manager.RecommendationEngine;
 import com.TsukasaChan.ShopVault.mapper.order.OrderMapper;
@@ -23,6 +24,7 @@ import com.TsukasaChan.ShopVault.service.order.OrderItemService;
 import com.TsukasaChan.ShopVault.service.order.OrderService;
 import com.TsukasaChan.ShopVault.service.product.ProductService;
 import com.TsukasaChan.ShopVault.service.product.StockService;
+import com.TsukasaChan.ShopVault.service.system.MessagePushService;
 import com.TsukasaChan.ShopVault.service.system.UserBehaviorService;
 import com.TsukasaChan.ShopVault.service.system.UserService;
 import com.TsukasaChan.ShopVault.websocket.WebSocketService;
@@ -35,6 +37,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -57,6 +60,7 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
     private final WebSocketService webSocketService;
     private final PointsRuleService pointsRuleService;
     private final PointsRecordService pointsRecordService;
+    private final MessagePushService messagePushService;
 
     public OrderServiceImpl(
             ProductService productService,
@@ -72,7 +76,8 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
             @Lazy RecommendationEngine recommendationEngine,
             WebSocketService webSocketService,
             PointsRuleService pointsRuleService,
-            PointsRecordService pointsRecordService) {
+            PointsRecordService pointsRecordService,
+            MessagePushService messagePushService) {
         this.productService = productService;
         this.orderItemService = orderItemService;
         this.userService = userService;
@@ -87,6 +92,7 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
         this.webSocketService = webSocketService;
         this.pointsRuleService = pointsRuleService;
         this.pointsRecordService = pointsRecordService;
+        this.messagePushService = messagePushService;
     }
 
     private void checkUnpaidLimit(Long userId) {
@@ -270,6 +276,15 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
             webSocketService.notifyUser(userId, "PAYMENT", "支付成功", 
                     "您的订单 " + orderNo + " 已支付成功，商家将尽快发货", orderNo);
         }
+
+        String timeStr = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
+        messagePushService.pushToAdmin(
+                MessagePush.TYPE_ADMIN_PURCHASE,
+                "商品购买通知",
+                "[" + timeStr + "] 收到一条商品购买通知消息",
+                "/admin/orders",
+                order.getId()
+        );
     }
 
     @Override

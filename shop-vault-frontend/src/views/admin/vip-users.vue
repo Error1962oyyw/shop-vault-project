@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { Search, User } from '@element-plus/icons-vue'
+import { Search } from '@element-plus/icons-vue'
 import { AdminPageLayout } from '@/components/admin'
 import { usePagination } from '@/composables'
 import { getVipUsers, updateVipLevel, type VipUser } from '@/api/admin'
@@ -94,7 +94,8 @@ const openAdjustDialog = (row: VipUser) => {
 
 const handleAdjustConfirm = async () => {
   try {
-    await updateVipLevel(adjustForm.value.userId, adjustForm.value.vipLevel, adjustForm.value.days)
+    const days = adjustForm.value.vipLevel === 0 ? null : adjustForm.value.days
+    await updateVipLevel(adjustForm.value.userId, adjustForm.value.vipLevel, days)
     ElMessage.success('调整成功')
     adjustDialogVisible.value = false
     fetchVipUsers()
@@ -105,7 +106,7 @@ const handleAdjustConfirm = async () => {
 
 const getAvatarUrl = (row: VipUser) => {
   if (row.avatar) return row.avatar
-  return null
+  return undefined
 }
 
 const getDisplayName = (row: VipUser) => {
@@ -138,10 +139,9 @@ onMounted(() => {
       <el-table-column label="用户信息" min-width="200">
         <template #default="{ row }">
           <div class="user-info">
-            <div class="user-avatar">
-              <img v-if="getAvatarUrl(row)" :src="getAvatarUrl(row)!" class="avatar-img" />
-              <el-icon v-else class="avatar-icon"><User /></el-icon>
-            </div>
+            <el-avatar :size="40" :src="getAvatarUrl(row)">
+              {{ getDisplayName(row).charAt(0) }}
+            </el-avatar>
             <div class="user-details">
               <h4 class="user-name">{{ getDisplayName(row) }}</h4>
               <p class="user-id">ID: {{ row.userId }}</p>
@@ -164,7 +164,7 @@ onMounted(() => {
       <el-table-column label="到期时间" width="140" align="center">
         <template #default="{ row }">
           <span :class="['expire-time', { expired: isExpired(row.vipExpireTime) }]">
-            {{ formatDate(row.vipExpireTime) }}
+            {{ row.vipLevel === 0 ? '-' : formatDate(row.vipExpireTime) }}
           </span>
         </template>
       </el-table-column>
@@ -199,7 +199,7 @@ onMounted(() => {
             v-model="adjustForm.days" 
             :min="1" 
             :max="10000" 
-            :step="30"
+            :step="1"
           />
         </el-form-item>
       </el-form>
@@ -232,27 +232,11 @@ onMounted(() => {
   gap: 12px;
 }
 
-.user-avatar {
-  width: 44px;
-  height: 44px;
-  border-radius: 10px;
-  background: linear-gradient(135deg, #f0e6ff 0%, #d3adf7 100%);
-  display: flex;
-  align-items: center;
-  justify-content: center;
+.user-info .el-avatar {
+  background: linear-gradient(135deg, #1677ff 0%, #4096ff 100%);
+  color: white;
+  font-weight: 600;
   flex-shrink: 0;
-  overflow: hidden;
-}
-
-.avatar-img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.avatar-icon {
-  font-size: 20px;
-  color: #722ed1;
 }
 
 .user-details {

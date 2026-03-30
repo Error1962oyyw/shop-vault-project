@@ -129,7 +129,7 @@ onUnmounted(() => {
 
 <template>
   <UserLayout>
-    <div class="member-day-page">
+    <div class="member-day-page animate-fade-in">
       <div class="page-container">
         <div v-if="isMemberDay && currentMemberDay" class="active-event">
           <div class="event-banner">
@@ -574,23 +574,27 @@ onUnmounted(() => {
   padding: 0;
   margin: 0;
   display: flex;
-  flex-direction: column;
-  gap: 16px;
+  flex-wrap: wrap;
+  gap: 24px;
 }
 
 .rule-item {
   display: flex;
-  align-items: flex-start;
-  gap: 12px;
-  font-size: 15px;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
   color: #4b5563;
+  background: #f9fafb;
+  padding: 12px 16px;
+  border-radius: 8px;
+  flex: 1;
+  min-width: 200px;
 }
 
 .rule-icon {
-  font-size: 20px;
+  font-size: 16px;
   color: #52c41a;
   flex-shrink: 0;
-  margin-top: 2px;
 }
 
 .no-event {

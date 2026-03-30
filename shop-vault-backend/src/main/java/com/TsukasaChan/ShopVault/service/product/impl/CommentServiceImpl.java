@@ -4,9 +4,11 @@ import com.TsukasaChan.ShopVault.common.EntityConstants;
 import com.TsukasaChan.ShopVault.common.QueryHelper;
 import com.TsukasaChan.ShopVault.entity.order.Order;
 import com.TsukasaChan.ShopVault.entity.product.Comment;
+import com.TsukasaChan.ShopVault.entity.system.MessagePush;
 import com.TsukasaChan.ShopVault.mapper.product.CommentMapper;
 import com.TsukasaChan.ShopVault.service.order.OrderService;
 import com.TsukasaChan.ShopVault.service.product.CommentService;
+import com.TsukasaChan.ShopVault.service.system.MessagePushService;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -15,6 +17,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 
 @Service
@@ -22,6 +26,7 @@ import java.util.List;
 public class CommentServiceImpl extends ServiceImpl<CommentMapper, Comment> implements CommentService {
 
     private final OrderService orderService;
+    private final MessagePushService messagePushService;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -47,6 +52,15 @@ public class CommentServiceImpl extends ServiceImpl<CommentMapper, Comment> impl
         comment.setUserId(userId);
         comment.setAuditStatus(0);
         this.save(comment);
+
+        String timeStr = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
+        messagePushService.pushToAdmin(
+                MessagePush.TYPE_ADMIN_COMMENT,
+                "商品评价通知",
+                "[" + timeStr + "] 收到一条商品评价通知消息",
+                "/admin/comments",
+                comment.getId()
+        );
     }
 
     @Override

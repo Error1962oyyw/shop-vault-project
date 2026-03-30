@@ -59,6 +59,7 @@ public class AdminController extends BaseController {
             map.put("role", user.getRole());
             map.put("status", user.getStatus());
             map.put("points", user.getPoints());
+            map.put("balance", user.getBalance());
             map.put("createTime", user.getCreateTime());
             return map;
         }).toList());
@@ -87,5 +88,39 @@ public class AdminController extends BaseController {
         user.setStatus(status);
         userService.updateById(user);
         return Result.success(status == 1 ? "用户已启用" : "用户已暂停");
+    }
+
+    @PostMapping("/users/{userId}/adjust")
+    @PreAuthorize("hasRole('ADMIN')")
+    public Result<String> adjustUserData(
+            @PathVariable Long userId,
+            @RequestBody Map<String, Object> params
+    ) {
+        User user = userService.getById(userId);
+        if (user == null) {
+            return Result.error("用户不存在");
+        }
+
+        Integer pointsChange = params.get("pointsChange") != null 
+            ? ((Number) params.get("pointsChange")).intValue() : 0;
+        Double balanceChange = params.get("balanceChange") != null 
+            ? ((Number) params.get("balanceChange")).doubleValue() : 0.0;
+
+        if (pointsChange != 0) {
+            int newPoints = Math.max(0, (user.getPoints() != null ? user.getPoints() : 0) + pointsChange);
+            user.setPoints(newPoints);
+        }
+
+        if (balanceChange != 0) {
+            java.math.BigDecimal currentBalance = user.getBalance() != null ? user.getBalance() : java.math.BigDecimal.ZERO;
+            java.math.BigDecimal newBalance = currentBalance.add(java.math.BigDecimal.valueOf(balanceChange));
+            if (newBalance.compareTo(java.math.BigDecimal.ZERO) < 0) {
+                newBalance = java.math.BigDecimal.ZERO;
+            }
+            user.setBalance(newBalance);
+        }
+
+        userService.updateById(user);
+        return Result.success("调整成功");
     }
 }

@@ -75,7 +75,7 @@ public class AdminVipController {
     public Result<String> updateVipLevel(
             @PathVariable Long userId, 
             @RequestParam Integer level,
-            @RequestParam(required = false, defaultValue = "0") Integer days) {
+            @RequestParam(required = false) Integer days) {
         userVipInfoService.updateVipLevel(userId, level, days);
         return Result.success("等级更新成功");
     }

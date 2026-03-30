@@ -186,7 +186,7 @@ const triggerUpload = () => {
 
 <template>
   <UserLayout>
-    <div class="ai-search-page">
+    <div class="ai-search-page animate-fade-in">
       <div class="page-container">
         <div class="page-header">
           <h1 class="page-title">

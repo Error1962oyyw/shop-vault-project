@@ -39,34 +39,27 @@ INSERT INTO `sms_points_rule` (`rule_code`, `rule_name`, `description`, `points_
 ('SHARE', '分享奖励', '用户分享商品获得的积分奖励', 2, 1.00, 4, 5, 1, 4)
 ON DUPLICATE KEY UPDATE `points_value` = VALUES(`points_value`), `points_ratio` = VALUES(`points_ratio`), `daily_limit` = VALUES(`daily_limit`), `description` = VALUES(`description`);
 
--- 更新购物奖励积分倍率为100倍（确保旧数据也被更新）
-UPDATE `sms_points_rule` SET `points_ratio` = 100.00, `description` = '用户购买商品获得的积分奖励，1元=100积分' WHERE `rule_code` = 'PURCHASE';
-
--- 5. 初始化积分商城商品数据
-INSERT INTO `sms_points_product` (`name`, `description`, `type`, `points_cost`, `stock`, `daily_limit`, `original_price`, `sort_order`, `status`) VALUES
-('精美手机支架', '小巧便携，稳固耐用', 1, 500, 100, 1, 29.00, 1, 1),
-('创意马克杯', '高品质陶瓷，精美印花', 1, 800, 50, 1, 49.00, 2, 1),
-('满50减10优惠券', '全场通用，无门槛限制', 2, 300, 200, 2, 10.00, 3, 1),
-('满100减25优惠券', '全场通用，满100可用', 2, 600, 150, 1, 25.00, 4, 1),
-('VIP月卡', '享受95折优惠，专属会员日活动', 3, 1000, 999, 0, 99.00, 5, 1),
-('VIP年卡', '享受95折优惠，专属会员日活动，更多特权', 4, 10000, 999, 0, 999.00, 6, 1)
-ON DUPLICATE KEY UPDATE `stock` = VALUES(`stock`);
-
--- 6. 初始化YOLO标签映射数据
+-- 5. 初始化YOLO标签映射数据
+-- 注意：这些映射与pms_category表中的二级分类ID对应
 INSERT INTO `sys_yolo_mapping` (`yolo_label`, `category_id`, `confidence_threshold`, `is_active`) VALUES
-('cup', 1, 0.50, 1),
-('bottle', 1, 0.50, 1),
-('backpack', 2, 0.50, 1),
-('handbag', 2, 0.50, 1),
-('cell phone', 3, 0.50, 1),
-('laptop', 3, 0.50, 1),
-('tv', 3, 0.50, 1),
-('book', 4, 0.50, 1),
-('chair', 5, 0.50, 1),
-('couch', 5, 0.50, 1)
+-- 超市/食品区
+('banana', 101, 0.50, 1),
+('apple', 102, 0.50, 1),
+('bottle', 110, 0.50, 1),
+-- 家居百货/日用品
+('cup', 201, 0.50, 1),
+('bowl', 202, 0.50, 1),
+('book', 203, 0.50, 1),
+-- 服饰箱包
+('backpack', 301, 0.50, 1),
+('handbag', 302, 0.50, 1),
+-- 数码电器
+('cell phone', 404, 0.50, 1),
+('laptop', 401, 0.50, 1),
+('tv', 406, 0.50, 1)
 ON DUPLICATE KEY UPDATE `category_id` = VALUES(`category_id`);
 
--- 7. 初始化规格数据
+-- 6. 初始化规格数据
 INSERT INTO `pms_spec` (`name`, `sort_order`) VALUES
 ('颜色', 1),
 ('尺寸', 2),
@@ -87,7 +80,7 @@ INSERT INTO `pms_spec_value` (`spec_id`, `value`, `sort_order`) VALUES
 (3, '旗舰版', 3)
 ON DUPLICATE KEY UPDATE `sort_order` = VALUES(`sort_order`);
 
--- 8. 初始化优惠券模板数据
+-- 7. 初始化优惠券模板数据
 INSERT INTO `sms_coupon_template` (`name`, `type`, `value`, `discount`, `min_amount`, `total_count`, `per_limit`, `scope_type`, `valid_type`, `valid_days`, `status`) VALUES
 ('新人专享券', 3, 10.00, NULL, 0, 1000, 1, 1, 2, 30, 1),
 ('满100减20', 1, 20.00, NULL, 100.00, 500, 2, 1, 2, 7, 1),

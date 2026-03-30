@@ -15,6 +15,7 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -28,7 +29,11 @@ public class VipMembershipServiceImpl extends ServiceImpl<VipMembershipMapper, V
 
     private static final int VIP_MONTHLY_POINTS = 1000;
     private static final int VIP_YEARLY_POINTS = 10000;
-    private static final int SVIP_YEARLY_POINTS = 15000;
+    private static final int SVIP_YEARLY_POINTS = 20000;
+    
+    private static final BigDecimal VIP_MONTHLY_PRICE = new BigDecimal("99.00");
+    private static final BigDecimal VIP_YEARLY_PRICE = new BigDecimal("999.00");
+    private static final BigDecimal SVIP_YEARLY_PRICE = new BigDecimal("1499.00");
 
     @Override
     public VipMembership getActiveVipByUserId(Long userId) {
@@ -95,6 +100,97 @@ public class VipMembershipServiceImpl extends ServiceImpl<VipMembershipMapper, V
         membership.setVipLevel(vipLevel);
         membership.setPointsCost(pointsCost);
         membership.setSource("POINTS_EXCHANGE");
+        membership.setStatus(VipMembership.STATUS_ACTIVE);
+        membership.setCreateTime(LocalDateTime.now());
+
+        VipMembership existingVip = getActiveVipByUserId(userId);
+        if (existingVip != null) {
+            membership.setStartTime(existingVip.getEndTime());
+            membership.setEndTime(existingVip.getEndTime().plusDays(days));
+        } else {
+            membership.setStartTime(LocalDateTime.now());
+            membership.setEndTime(LocalDateTime.now().plusDays(days));
+        }
+        this.save(membership);
+
+        userVipInfoService.extendVipWithLevel(userId, days, vipLevel);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void purchaseVip(Long userId, int vipType, String paymentMethod) {
+        User user = userService.getById(userId);
+        if (user == null) {
+            throw new RuntimeException("用户不存在");
+        }
+
+        int days;
+        int vipLevel;
+        int pointsCost = 0;
+        BigDecimal balanceCost = BigDecimal.ZERO;
+        String description;
+
+        if (vipType == VipMembership.TYPE_MONTHLY) {
+            days = 30;
+            vipLevel = VipMembership.LEVEL_VIP;
+            description = "购买VIP月卡";
+            if ("points".equals(paymentMethod)) {
+                pointsCost = VIP_MONTHLY_POINTS;
+            } else {
+                balanceCost = VIP_MONTHLY_PRICE;
+            }
+        } else if (vipType == VipMembership.TYPE_YEARLY) {
+            days = 365;
+            vipLevel = VipMembership.LEVEL_VIP;
+            description = "购买VIP年卡";
+            if ("points".equals(paymentMethod)) {
+                pointsCost = VIP_YEARLY_POINTS;
+            } else {
+                balanceCost = VIP_YEARLY_PRICE;
+            }
+        } else if (vipType == VipMembership.TYPE_SVIP_YEARLY) {
+            days = 365;
+            vipLevel = VipMembership.LEVEL_SVIP;
+            description = "购买SVIP年卡";
+            if ("points".equals(paymentMethod)) {
+                pointsCost = SVIP_YEARLY_POINTS;
+            } else {
+                balanceCost = SVIP_YEARLY_PRICE;
+            }
+        } else {
+            throw new RuntimeException("无效的VIP类型");
+        }
+
+        if ("points".equals(paymentMethod)) {
+            if (user.getPoints() < pointsCost) {
+                throw new RuntimeException("积分不足，需要 " + pointsCost + " 积分");
+            }
+            user.setPoints(user.getPoints() - pointsCost);
+            
+            PointsRecord record = new PointsRecord();
+            record.setUserId(userId);
+            record.setPoints(-pointsCost);
+            record.setType(PointsRecord.TYPE_EXCHANGE);
+            record.setDescription(description);
+            pointsRecordService.save(record);
+        } else if ("balance".equals(paymentMethod)) {
+            BigDecimal userBalance = user.getBalance() != null ? user.getBalance() : BigDecimal.ZERO;
+            if (userBalance.compareTo(balanceCost) < 0) {
+                throw new RuntimeException("余额不足，需要 ¥" + balanceCost);
+            }
+            user.setBalance(userBalance.subtract(balanceCost));
+        } else {
+            throw new RuntimeException("无效的支付方式");
+        }
+
+        userService.updateById(user);
+
+        VipMembership membership = new VipMembership();
+        membership.setUserId(userId);
+        membership.setType(vipType);
+        membership.setVipLevel(vipLevel);
+        membership.setPointsCost(pointsCost);
+        membership.setSource("points".equals(paymentMethod) ? "POINTS_EXCHANGE" : "BALANCE_PURCHASE");
         membership.setStatus(VipMembership.STATUS_ACTIVE);
         membership.setCreateTime(LocalDateTime.now());
 

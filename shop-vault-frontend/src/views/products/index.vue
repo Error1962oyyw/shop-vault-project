@@ -219,7 +219,7 @@ onMounted(() => {
 
 <template>
   <UserLayout>
-    <div class="products-page">
+    <div class="products-page animate-fade-in">
       <div class="page-header">
         <div class="header-content">
           <div class="header-left">

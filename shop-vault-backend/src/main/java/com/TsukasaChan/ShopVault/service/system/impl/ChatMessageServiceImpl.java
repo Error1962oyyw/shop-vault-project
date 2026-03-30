@@ -1,6 +1,8 @@
 package com.TsukasaChan.ShopVault.service.system.impl;
 
+import com.TsukasaChan.ShopVault.entity.system.MessagePush;
 import com.TsukasaChan.ShopVault.entity.system.User;
+import com.TsukasaChan.ShopVault.service.system.MessagePushService;
 import com.TsukasaChan.ShopVault.service.system.UserService;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
@@ -11,6 +13,8 @@ import com.TsukasaChan.ShopVault.mapper.system.ChatMessageMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -19,6 +23,7 @@ import java.util.stream.Collectors;
 public class ChatMessageServiceImpl extends ServiceImpl<ChatMessageMapper, ChatMessage> implements ChatMessageService {
 
     private final UserService userService;
+    private final MessagePushService messagePushService;
 
     public List<ChatMessage> fetchHistoryAndMarkRead(Long myId, Long peerId, Long unreadSenderId, Long unreadReceiverId) {
         List<ChatMessage> history = list(new LambdaQueryWrapper<ChatMessage>()
@@ -62,6 +67,15 @@ public class ChatMessageServiceImpl extends ServiceImpl<ChatMessageMapper, ChatM
         msg.setIsRead(0);
         if (msg.getMsgType() == null) msg.setMsgType(1);
         this.save(msg);
+
+        String timeStr = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
+        messagePushService.pushToAdmin(
+                MessagePush.TYPE_ADMIN_CHAT,
+                "客服消息",
+                "[" + timeStr + "] 收到一条客服消息",
+                "/admin/chat",
+                msg.getId()
+        );
     }
 
     @Override

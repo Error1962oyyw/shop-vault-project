@@ -3,12 +3,13 @@ import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { 
-  Shop, SwitchButton, Bell, User, List, Money, RefreshLeft,
+  Shop, SwitchButton, User, List, Money, RefreshLeft,
   TrendCharts, DataAnalysis, Timer, ShoppingCart, Coin, Present,
   ArrowDown
 } from '@element-plus/icons-vue'
 import { getDashboardStats } from '@/api/dashboard'
 import { useUserStore } from '@/stores/user'
+import { MessageCenter } from '@/components/admin'
 import type { DashboardStats } from '@/types/api'
 
 const router = useRouter()
@@ -18,6 +19,7 @@ const userStore = useUserStore()
 const loading = ref(false)
 const stats = ref<DashboardStats | null>(null)
 const realtimeTime = ref<string>('')
+const messageCenterVisible = ref(false)
 const autoRefreshInterval = ref<number | null>(null)
 
 const isMainDashboard = computed(() => route.path === '/admin')
@@ -229,11 +231,7 @@ onUnmounted(() => {
           {{ getCurrentTitle() }}
         </h2>
         <div class="header-actions">
-          <el-badge :value="stats?.pendingOrders || 0" :hidden="!stats?.pendingOrders">
-            <el-button circle @click="router.push('/admin/orders')">
-              <el-icon><Bell /></el-icon>
-            </el-button>
-          </el-badge>
+          <MessageCenter v-model:visible="messageCenterVisible" />
           <el-avatar :size="36" class="user-avatar">
             {{ userStore.userInfo?.username?.charAt(0) || 'A' }}
           </el-avatar>

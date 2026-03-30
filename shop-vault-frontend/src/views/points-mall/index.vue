@@ -157,7 +157,7 @@ onMounted(() => {
 
 <template>
   <UserLayout>
-    <div class="points-mall-page">
+    <div class="points-mall-page animate-fade-in">
       <div class="page-container">
         <div class="page-header">
           <div class="header-bg"></div>
@@ -173,7 +173,7 @@ onMounted(() => {
               <div class="points-display">
                 <div class="points-value">
                   <Coin class="coin-icon" />
-                  {{ userInfo.points }}
+                  <span class="points-number">{{ userInfo.points }}</span>
                 </div>
                 <div class="points-label">可用积分</div>
               </div>
@@ -379,8 +379,11 @@ onMounted(() => {
 .points-display {
   text-align: center;
   background: rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(10px);
   padding: 20px 32px;
   border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  min-width: 160px;
 }
 
 .points-value {
@@ -391,6 +394,12 @@ onMounted(() => {
   align-items: center;
   justify-content: center;
   gap: 8px;
+}
+
+.points-number {
+  font-size: 36px;
+  font-weight: 800;
+  line-height: 1;
 }
 
 .coin-icon {
@@ -407,7 +416,7 @@ onMounted(() => {
 .points-label {
   font-size: 14px;
   opacity: 0.9;
-  margin-top: 4px;
+  margin-top: 8px;
 }
 
 .notice-banner {

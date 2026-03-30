@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
-import { Search, Plus, Edit, Delete } from '@element-plus/icons-vue'
+import { Search, Plus, Edit, Delete, Upload } from '@element-plus/icons-vue'
 import { AdminPageLayout } from '@/components/admin'
 import { usePagination } from '@/composables'
 import type { PageResult } from '@/types/api'
 import { getPointsProducts } from '@/api/vip'
+import { uploadImage } from '@/api/product'
 import type { PointsProduct } from '@/api/vip'
 import request from '@/utils/request'
 
@@ -13,6 +14,7 @@ const loading = ref(false)
 const products = ref<PointsProduct[]>([])
 const showDialog = ref(false)
 const dialogType = ref<'add' | 'edit'>('add')
+const imageUploading = ref(false)
 const productForm = ref({
   id: 0,
   name: '',
@@ -25,7 +27,11 @@ const productForm = ref({
   originalPrice: 0,
   relatedId: null as number | null,
   sortOrder: 0,
-  status: 1
+  status: 1,
+  couponType: 1,
+  couponThreshold: 0,
+  couponAmount: 0,
+  vipDays: 30
 })
 
 const { pagination, handleCurrentChange, setTotal, getParams } = usePagination({
@@ -88,7 +94,11 @@ const handleAdd = () => {
     originalPrice: 0,
     relatedId: null,
     sortOrder: 0,
-    status: 1
+    status: 1,
+    couponType: 1,
+    couponThreshold: 0,
+    couponAmount: 0,
+    vipDays: 30
   }
   showDialog.value = true
 }
@@ -107,7 +117,11 @@ const handleEdit = (row: PointsProduct) => {
     originalPrice: row.originalPrice || 0,
     relatedId: row.relatedId,
     sortOrder: row.sortOrder || 0,
-    status: row.status
+    status: row.status,
+    couponType: row.couponType || 1,
+    couponThreshold: row.couponThreshold || 0,
+    couponAmount: row.couponAmount || 0,
+    vipDays: row.vipDays || 30
   }
   showDialog.value = true
 }
@@ -169,6 +183,24 @@ const getTypeLabel = (type: number) => {
 
 const formatPrice = (price: number) => {
   return price ? `¥${price.toFixed(2)}` : '-'
+}
+
+const handleImageUpload = async (options: { file: File }) => {
+  imageUploading.value = true
+  try {
+    const url = await uploadImage(options.file)
+    productForm.value.image = url
+    ElMessage.success('图片上传成功')
+  } catch (error) {
+    console.error('上传失败', error)
+    ElMessage.error('上传失败，请重试')
+  } finally {
+    imageUploading.value = false
+  }
+}
+
+const handleImageDelete = () => {
+  productForm.value.image = ''
 }
 </script>
 
@@ -273,11 +305,60 @@ const formatPrice = (price: number) => {
       <el-form-item label="商品描述">
         <el-input v-model="productForm.description" type="textarea" :rows="2" placeholder="请输入商品描述" />
       </el-form-item>
+      <el-form-item label="商品图片">
+        <div class="image-upload-section">
+          <div v-if="productForm.image" class="image-preview">
+            <img :src="productForm.image" alt="商品图片" />
+            <div class="image-actions">
+              <el-button type="danger" size="small" :icon="Delete" @click="handleImageDelete">
+                删除
+              </el-button>
+            </div>
+          </div>
+          <el-upload
+            v-else
+            class="image-uploader"
+            :show-file-list="false"
+            :before-upload="() => false"
+            :http-request="handleImageUpload"
+            accept="image/*"
+          >
+            <div class="upload-placeholder" :class="{ 'is-uploading': imageUploading }">
+              <el-icon v-if="!imageUploading" class="upload-icon"><Upload /></el-icon>
+              <span v-if="imageUploading">上传中...</span>
+              <span v-else>点击上传图片</span>
+            </div>
+          </el-upload>
+          <div class="upload-tip">建议尺寸: 200x200px，支持 JPG、PNG 格式</div>
+        </div>
+      </el-form-item>
       <el-form-item label="商品类型" required>
         <el-select v-model="productForm.type" class="w-full">
           <el-option v-for="t in productTypes" :key="t.value" :label="t.label" :value="t.value" />
         </el-select>
       </el-form-item>
+      <template v-if="productForm.type === 2">
+        <el-form-item label="优惠券类型">
+          <el-radio-group v-model="productForm.couponType">
+            <el-radio :value="1">满减券</el-radio>
+            <el-radio :value="2">无门槛券</el-radio>
+          </el-radio-group>
+        </el-form-item>
+        <el-form-item v-if="productForm.couponType === 1" label="门槛金额">
+          <el-input-number v-model="productForm.couponThreshold" :min="1" :max="10000" :precision="2" />
+          <span class="form-hint">满{{ productForm.couponThreshold }}元可用</span>
+        </el-form-item>
+        <el-form-item label="减免金额">
+          <el-input-number v-model="productForm.couponAmount" :min="1" :max="1000" :precision="2" />
+          <span class="form-hint">减{{ productForm.couponAmount }}元</span>
+        </el-form-item>
+      </template>
+      <template v-if="productForm.type === 3 || productForm.type === 4">
+        <el-form-item label="会员天数">
+          <el-input-number v-model="productForm.vipDays" :min="1" :max="365" />
+          <span class="form-hint">天</span>
+        </el-form-item>
+      </template>
       <el-form-item label="所需积分" required>
         <el-input-number v-model="productForm.pointsCost" :min="0" />
       </el-form-item>
@@ -407,5 +488,77 @@ const formatPrice = (price: number) => {
 
 :deep(.custom-dialog .el-dialog) {
   border-radius: 16px;
+}
+
+.image-upload-section {
+  width: 100%;
+}
+
+.image-preview {
+  position: relative;
+  width: 150px;
+  height: 150px;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid #e5e7eb;
+}
+
+.image-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.image-preview .image-actions {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 6px;
+  background: linear-gradient(transparent, rgba(0, 0, 0, 0.6));
+  display: flex;
+  justify-content: center;
+}
+
+.image-uploader {
+  width: 150px;
+  height: 150px;
+}
+
+.upload-placeholder {
+  width: 150px;
+  height: 150px;
+  border: 2px dashed #d9d9d9;
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.3s;
+  background: #fafafa;
+}
+
+.upload-placeholder:hover {
+  border-color: #1677ff;
+  background: #f0f7ff;
+}
+
+.upload-placeholder.is-uploading {
+  border-color: #1677ff;
+  background: #f0f7ff;
+  cursor: not-allowed;
+}
+
+.upload-icon {
+  font-size: 28px;
+  color: #909399;
+  margin-bottom: 6px;
+}
+
+.upload-tip {
+  margin-top: 8px;
+  font-size: 12px;
+  color: #909399;
 }
 </style>

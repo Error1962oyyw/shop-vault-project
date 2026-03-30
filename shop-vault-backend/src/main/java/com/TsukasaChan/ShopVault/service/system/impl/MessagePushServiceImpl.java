@@ -123,6 +123,90 @@ public class MessagePushServiceImpl extends ServiceImpl<MessagePushMapper, Messa
         log.info("重试失败消息完成: count={}", failedMessages.size());
     }
 
+    @Override
+    @Async
+    @Transactional(rollbackFor = Exception.class)
+    public void pushToAdmin(String type, String title, String content, String linkUrl, Long relatedId) {
+        MessagePush message = createMessage(type, title, content);
+        message.setTargetRole("ADMIN");
+        message.setLinkUrl(linkUrl);
+        message.setRelatedId(relatedId);
+        save(message);
+
+        try {
+            WebSocketMessage<String> wsMessage = WebSocketMessage.of(type, title, content, content);
+            webSocketService.broadcast("/topic/admin-messages", wsMessage);
+            
+            message.setStatus(MessagePush.STATUS_SENT);
+            message.setSendTime(LocalDateTime.now());
+            updateById(message);
+            
+            log.info("管理员消息推送成功: type={}, relatedId={}", type, relatedId);
+        } catch (Exception e) {
+            handlePushError(message, e);
+        }
+    }
+
+    @Override
+    public List<MessagePush> getAdminMessages() {
+        return list(new LambdaQueryWrapper<MessagePush>()
+                .eq(MessagePush::getTargetRole, "ADMIN")
+                .in(MessagePush::getType, 
+                    MessagePush.TYPE_ADMIN_PURCHASE,
+                    MessagePush.TYPE_ADMIN_AFTER_SALES,
+                    MessagePush.TYPE_ADMIN_COMMENT,
+                    MessagePush.TYPE_ADMIN_CHAT)
+                .orderByDesc(MessagePush::getSendTime)
+                .last("LIMIT 100"));
+    }
+
+    @Override
+    public int getAdminUnreadCount() {
+        return (int) count(new LambdaQueryWrapper<MessagePush>()
+                .eq(MessagePush::getTargetRole, "ADMIN")
+                .eq(MessagePush::getStatus, MessagePush.STATUS_SENT)
+                .in(MessagePush::getType,
+                    MessagePush.TYPE_ADMIN_PURCHASE,
+                    MessagePush.TYPE_ADMIN_AFTER_SALES,
+                    MessagePush.TYPE_ADMIN_COMMENT,
+                    MessagePush.TYPE_ADMIN_CHAT));
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void markAllAsReadForAdmin() {
+        List<MessagePush> unreadMessages = list(new LambdaQueryWrapper<MessagePush>()
+                .eq(MessagePush::getTargetRole, "ADMIN")
+                .eq(MessagePush::getStatus, MessagePush.STATUS_SENT)
+                .in(MessagePush::getType,
+                    MessagePush.TYPE_ADMIN_PURCHASE,
+                    MessagePush.TYPE_ADMIN_AFTER_SALES,
+                    MessagePush.TYPE_ADMIN_COMMENT,
+                    MessagePush.TYPE_ADMIN_CHAT));
+        
+        LocalDateTime now = LocalDateTime.now();
+        for (MessagePush message : unreadMessages) {
+            message.setStatus(MessagePush.STATUS_READ);
+            message.setReadTime(now);
+        }
+        updateBatchById(unreadMessages);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void markAsReadByRelatedId(String type, Long relatedId) {
+        MessagePush message = getOne(new LambdaQueryWrapper<MessagePush>()
+                .eq(MessagePush::getType, type)
+                .eq(MessagePush::getRelatedId, relatedId)
+                .eq(MessagePush::getStatus, MessagePush.STATUS_SENT));
+        
+        if (message != null) {
+            message.setStatus(MessagePush.STATUS_READ);
+            message.setReadTime(LocalDateTime.now());
+            updateById(message);
+        }
+    }
+
     private MessagePush createMessage(String type, String title, String content) {
         MessagePush message = new MessagePush();
         message.setType(type);

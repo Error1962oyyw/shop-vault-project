@@ -18,13 +18,18 @@ const form = ref<ActivityForm>({
   name: '',
   type: 1,
   status: 1,
+  activityType: 1,
   discountRate: 0.85,
   pointsMultiplier: 2.0,
   startTime: '',
   endTime: '',
   description: '',
   ruleExpression: '',
-  ruleType: 'none'
+  ruleType: 'none',
+  couponType: 1,
+  couponThreshold: 0,
+  couponAmount: 0,
+  couponTotal: 100
 })
 
 const rules = {
@@ -134,13 +139,18 @@ const handleAdd = () => {
     name: '',
     type: 1,
     status: 1,
+    activityType: 1,
     discountRate: 0.85,
     pointsMultiplier: 2.0,
     startTime: '',
     endTime: '',
     description: '',
     ruleExpression: '',
-    ruleType: 'none'
+    ruleType: 'none',
+    couponType: 1,
+    couponThreshold: 0,
+    couponAmount: 0,
+    couponTotal: 100
   }
   selectedWeekDays.value = []
   selectedMonthDays.value = []
@@ -246,6 +256,13 @@ onMounted(() => {
     <el-card class="table-card" v-loading="loading">
       <el-table :data="activities" stripe>
         <el-table-column prop="name" label="活动名称" min-width="150" />
+        <el-table-column label="活动类别" width="100">
+          <template #default="{ row }">
+            <el-tag :type="row.activityType === 2 ? 'warning' : 'primary'" size="small">
+              {{ row.activityType === 2 ? '优惠券' : '全场折扣' }}
+            </el-tag>
+          </template>
+        </el-table-column>
         <el-table-column label="活动时间" min-width="200">
           <template #default="{ row }">
             <div class="time-range">
@@ -253,14 +270,13 @@ onMounted(() => {
             </div>
           </template>
         </el-table-column>
-        <el-table-column prop="discountRate" label="折扣率" width="100">
+        <el-table-column prop="discountRate" label="折扣/优惠" width="120">
           <template #default="{ row }">
-            {{ row.discountRate ? `${(row.discountRate * 10).toFixed(1)}折` : '-' }}
-          </template>
-        </el-table-column>
-        <el-table-column prop="pointsMultiplier" label="积分倍率" width="100">
-          <template #default="{ row }">
-            {{ row.pointsMultiplier ? `${row.pointsMultiplier}倍` : '-' }}
+            <span v-if="row.activityType === 1">{{ row.discountRate ? `${(row.discountRate * 10).toFixed(1)}折` : '-' }}</span>
+            <span v-else-if="row.activityType === 2 && row.couponAmount">
+              {{ row.couponType === 1 ? `满${row.couponThreshold}减${row.couponAmount}` : `无门槛减${row.couponAmount}` }}
+            </span>
+            <span v-else>-</span>
           </template>
         </el-table-column>
         <el-table-column prop="ruleExpression" label="规则表达式" width="180">
@@ -321,14 +337,36 @@ onMounted(() => {
             style="width: 100%"
           />
         </el-form-item>
-        <el-form-item label="折扣率">
+        <el-form-item label="活动类别" prop="activityType">
+          <el-radio-group v-model="form.activityType">
+            <el-radio :value="1">全场折扣</el-radio>
+            <el-radio :value="2">优惠券</el-radio>
+          </el-radio-group>
+        </el-form-item>
+        <el-form-item v-if="form.activityType === 1" label="折扣率">
           <el-input-number v-model="form.discountRate" :min="0.1" :max="1" :step="0.05" :precision="2" />
           <span class="ml-2 text-gray-500">{{ form.discountRate ? `${(form.discountRate * 10).toFixed(1)}折` : '' }}</span>
         </el-form-item>
-        <el-form-item label="积分倍率">
-          <el-input-number v-model="form.pointsMultiplier" :min="1" :max="10" :step="0.5" :precision="1" />
-          <span class="ml-2 text-gray-500">{{ form.pointsMultiplier ? `${form.pointsMultiplier}倍积分` : '' }}</span>
-        </el-form-item>
+        <template v-if="form.activityType === 2">
+          <el-form-item label="优惠券类型">
+            <el-radio-group v-model="form.couponType">
+              <el-radio :value="1">满减券</el-radio>
+              <el-radio :value="2">无门槛券</el-radio>
+            </el-radio-group>
+          </el-form-item>
+          <el-form-item v-if="form.couponType === 1" label="门槛金额">
+            <el-input-number v-model="form.couponThreshold" :min="1" :max="10000" :precision="2" />
+            <span class="ml-2 text-gray-500">满{{ form.couponThreshold || 0 }}元可用</span>
+          </el-form-item>
+          <el-form-item label="减免金额">
+            <el-input-number v-model="form.couponAmount" :min="1" :max="1000" :precision="2" />
+            <span class="ml-2 text-gray-500">减{{ form.couponAmount || 0 }}元</span>
+          </el-form-item>
+          <el-form-item label="发行总量">
+            <el-input-number v-model="form.couponTotal" :min="1" :max="100000" />
+            <span class="ml-2 text-gray-500">张</span>
+          </el-form-item>
+        </template>
         <el-form-item label="规则类型">
           <el-radio-group v-model="form.ruleType">
             <el-radio value="none">无固定规则</el-radio>
