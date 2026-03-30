@@ -1,9 +1,11 @@
 package com.TsukasaChan.ShopVault.service.marketing.impl;
 
+import com.TsukasaChan.ShopVault.entity.marketing.BalanceRecord;
 import com.TsukasaChan.ShopVault.entity.marketing.PointsRecord;
 import com.TsukasaChan.ShopVault.entity.marketing.VipMembership;
 import com.TsukasaChan.ShopVault.entity.system.User;
 import com.TsukasaChan.ShopVault.mapper.marketing.VipMembershipMapper;
+import com.TsukasaChan.ShopVault.service.marketing.BalanceRecordService;
 import com.TsukasaChan.ShopVault.service.marketing.PointsRecordService;
 import com.TsukasaChan.ShopVault.service.marketing.UserVipInfoService;
 import com.TsukasaChan.ShopVault.service.marketing.VipMembershipService;
@@ -26,6 +28,7 @@ public class VipMembershipServiceImpl extends ServiceImpl<VipMembershipMapper, V
     private final UserService userService;
     private final UserVipInfoService userVipInfoService;
     private final PointsRecordService pointsRecordService;
+    private final BalanceRecordService balanceRecordService;
 
     private static final int VIP_MONTHLY_POINTS = 1000;
     private static final int VIP_YEARLY_POINTS = 10000;
@@ -178,7 +181,19 @@ public class VipMembershipServiceImpl extends ServiceImpl<VipMembershipMapper, V
             if (userBalance.compareTo(balanceCost) < 0) {
                 throw new RuntimeException("余额不足，需要 ¥" + balanceCost);
             }
-            user.setBalance(userBalance.subtract(balanceCost));
+            BigDecimal balanceBefore = userBalance;
+            BigDecimal balanceAfter = userBalance.subtract(balanceCost);
+            user.setBalance(balanceAfter);
+            
+            balanceRecordService.recordBalanceChange(
+                    userId,
+                    balanceCost.negate(),
+                    balanceBefore,
+                    balanceAfter,
+                    BalanceRecord.TYPE_VIP_PURCHASE,
+                    description,
+                    null
+            );
         } else {
             throw new RuntimeException("无效的支付方式");
         }

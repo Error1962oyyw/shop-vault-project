@@ -585,7 +585,27 @@ CREATE TABLE `sys_message_push` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='消息推送表';
 
 -- ----------------------------
--- 27. 操作日志表 (sys_log)
+-- 27. 余额交易记录表 (sms_balance_record)
+-- ----------------------------
+DROP TABLE IF EXISTS `sms_balance_record`;
+CREATE TABLE `sms_balance_record` (
+    `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+    `user_id` BIGINT NOT NULL COMMENT '用户ID',
+    `amount` DECIMAL(10,2) NOT NULL COMMENT '变动金额(正数增加,负数减少)',
+    `balance_before` DECIMAL(10,2) NOT NULL COMMENT '变动前余额',
+    `balance_after` DECIMAL(10,2) NOT NULL COMMENT '变动后余额',
+    `type` VARCHAR(50) NOT NULL COMMENT '交易类型',
+    `description` VARCHAR(255) COMMENT '交易描述',
+    `related_id` BIGINT COMMENT '关联业务ID',
+    `create_time` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    PRIMARY KEY (`id`),
+    KEY `idx_user_id` (`user_id`),
+    KEY `idx_type` (`type`),
+    KEY `idx_create_time` (`create_time`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='余额交易记录表';
+
+-- ----------------------------
+-- 28. 操作日志表 (sys_log)
 -- ----------------------------
 DROP TABLE IF EXISTS `sys_log`;
 CREATE TABLE `sys_log` (
