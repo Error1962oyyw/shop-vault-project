@@ -209,9 +209,12 @@ public class VipMembershipServiceImpl extends ServiceImpl<VipMembershipMapper, V
             membership.setStartTime(LocalDateTime.now());
             membership.setEndTime(LocalDateTime.now().plusDays(days));
         }
-        this.save(membership);
+        
+        if (!this.save(membership)) {
+            throw new RuntimeException("VIP会员记录保存失败");
+        }
 
-        if ("balance".equals(paymentMethod)) {
+        if ("balance".equals(paymentMethod) && membership.getId() != null) {
             balanceRecordService.recordBalanceChange(
                     userId,
                     balanceCost.negate(),
