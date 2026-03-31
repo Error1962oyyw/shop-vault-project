@@ -27,5 +27,7 @@ public class SpecValue implements Serializable {
 
     private Integer sortOrder;
 
+    private Integer isSystem;
+
     private LocalDateTime createTime;
 }

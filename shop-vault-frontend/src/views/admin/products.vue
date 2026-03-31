@@ -1,12 +1,13 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { ElMessage } from 'element-plus'
-import { Search, Plus, Upload, Delete } from '@element-plus/icons-vue'
+import { Search, Plus, Upload, Delete, Setting } from '@element-plus/icons-vue'
 import { getProductList, publishProduct, getCategoryList, uploadImage } from '@/api/product'
+import { getSpecTemplates, getProductSpecs, addProductSpec, deleteProductSpec, addProductSpecValue, deleteProductSpecValue } from '@/api/spec'
 import { usePagination } from '@/composables'
 import { AdminPageLayout } from '@/components/admin'
 import { formatMoney } from '@/utils/format'
-import type { Product, Category, PageResult } from '@/types/api'
+import type { Product, Category, PageResult, Spec, ProductSpec } from '@/types/api'
 
 const loading = ref(false)
 const products = ref<Product[]>([])
@@ -32,6 +33,14 @@ const publishForm = ref({
 const categorySearchKeyword = ref('')
 const mainImageUploading = ref(false)
 const detailImagesUploading = ref(false)
+
+const specTemplates = ref<Spec[]>([])
+const productSpecs = ref<ProductSpec[]>([])
+const showSpecDialog = ref(false)
+const currentEditProductId = ref<number | null>(null)
+const newSpecName = ref('')
+const newSpecValue = ref('')
+const selectedSpecTemplate = ref<number | undefined>()
 
 const parentCategories = computed(() => {
   return categories.value.filter(cat => cat.level === 1)
@@ -62,9 +71,6 @@ const handleParentCategoryChange = () => {
   categorySearchKeyword.value = ''
 }
 
-const handleCategoryChange = () => {
-}
-
 const getCategoryDisplayName = (category: Category) => {
   if (category.cocoId) {
     return `${category.name} (${category.cocoId}: ${category.yoloLabel})`
@@ -90,6 +96,14 @@ const fetchCategories = async () => {
     categories.value = await getCategoryList()
   } catch (error) {
     console.error('获取分类失败', error)
+  }
+}
+
+const fetchSpecTemplates = async () => {
+  try {
+    specTemplates.value = await getSpecTemplates()
+  } catch (error) {
+    console.error('获取规格模板失败', error)
   }
 }
 
@@ -197,9 +211,136 @@ const openPublishDialog = () => {
   showPublishDialog.value = true
 }
 
+const openSpecDialog = async (productId: number) => {
+  currentEditProductId.value = productId
+  showSpecDialog.value = true
+  await loadProductSpecs(productId)
+}
+
+const loadProductSpecs = async (productId: number) => {
+  try {
+    productSpecs.value = await getProductSpecs(productId)
+  } catch (error) {
+    console.error('获取商品规格失败', error)
+    productSpecs.value = []
+  }
+}
+
+const handleAddCustomSpec = async () => {
+  if (!newSpecName.value.trim()) {
+    ElMessage.warning('请输入规格名称')
+    return
+  }
+  if (!currentEditProductId.value) return
+
+  try {
+    await addProductSpec(currentEditProductId.value, {
+      specName: newSpecName.value.trim(),
+      isCustom: 1,
+      values: []
+    })
+    ElMessage.success('添加规格成功')
+    newSpecName.value = ''
+    await loadProductSpecs(currentEditProductId.value)
+  } catch (error) {
+    console.error('添加规格失败', error)
+    ElMessage.error('添加规格失败')
+  }
+}
+
+const handleAddSpecFromTemplate = async () => {
+  if (!selectedSpecTemplate.value) {
+    ElMessage.warning('请选择规格模板')
+    return
+  }
+  if (!currentEditProductId.value) return
+
+  const template = specTemplates.value.find(s => s.id === selectedSpecTemplate.value)
+  if (!template) return
+
+  try {
+    await addProductSpec(currentEditProductId.value, {
+      specId: template.id,
+      specName: template.name,
+      isCustom: 0,
+      values: template.values?.map((v, index) => ({
+        specValueId: v.id,
+        value: v.value,
+        sortOrder: index,
+        isCustom: 0
+      })) || []
+    })
+    ElMessage.success('添加规格成功')
+    selectedSpecTemplate.value = undefined
+    await loadProductSpecs(currentEditProductId.value)
+  } catch (error) {
+    console.error('添加规格失败', error)
+    ElMessage.error('添加规格失败')
+  }
+}
+
+const handleDeleteSpec = async (specId: number) => {
+  try {
+    await deleteProductSpec(specId)
+    ElMessage.success('删除成功')
+    if (currentEditProductId.value) {
+      await loadProductSpecs(currentEditProductId.value)
+    }
+  } catch (error) {
+    console.error('删除规格失败', error)
+    ElMessage.error('删除失败')
+  }
+}
+
+const handleAddSpecValue = async (productSpecId: number) => {
+  if (!newSpecValue.value.trim()) {
+    ElMessage.warning('请输入规格值')
+    return
+  }
+
+  try {
+    await addProductSpecValue(productSpecId, {
+      value: newSpecValue.value.trim(),
+      isCustom: 1
+    })
+    ElMessage.success('添加规格值成功')
+    newSpecValue.value = ''
+    if (currentEditProductId.value) {
+      await loadProductSpecs(currentEditProductId.value)
+    }
+  } catch (error) {
+    console.error('添加规格值失败', error)
+    ElMessage.error('添加规格值失败')
+  }
+}
+
+const handleDeleteSpecValue = async (valueId: number) => {
+  try {
+    await deleteProductSpecValue(valueId)
+    ElMessage.success('删除成功')
+    if (currentEditProductId.value) {
+      await loadProductSpecs(currentEditProductId.value)
+    }
+  } catch (error) {
+    console.error('删除规格值失败', error)
+    ElMessage.error('删除失败')
+  }
+}
+
+watch(showSpecDialog, (val) => {
+  if (!val) {
+    currentEditProductId.value = null
+    productSpecs.value = []
+    newSpecName.value = ''
+    newSpecValue.value = ''
+    selectedSpecTemplate.value = undefined
+  }
+})
+
 onMounted(() => {
   fetchProducts()
   fetchCategories()
+  fetchSpecTemplates()
 })
 </script>
 
@@ -251,9 +392,13 @@ onMounted(() => {
           </el-tag>
         </template>
       </el-table-column>
-      <el-table-column label="操作" width="150" align="center">
-        <template #default>
+      <el-table-column label="操作" width="200" align="center">
+        <template #default="{ row }">
           <el-button type="primary" link size="small">编辑</el-button>
+          <el-button type="warning" link size="small" @click="openSpecDialog(row.id)">
+            <el-icon class="mr-1"><Setting /></el-icon>
+            规格
+          </el-button>
           <el-button type="danger" link size="small">删除</el-button>
         </template>
       </el-table-column>
@@ -304,7 +449,6 @@ onMounted(() => {
             :disabled="!publishForm.parentCategoryId"
             filterable
             :filter-method="(query: string) => categorySearchKeyword = query"
-            @change="handleCategoryChange"
           >
             <el-option 
               v-for="cat in filteredSubCategories" 
@@ -434,6 +578,92 @@ onMounted(() => {
     <template #footer>
       <el-button @click="showPublishDialog = false">取消</el-button>
       <el-button type="primary" @click="handlePublish">发布</el-button>
+    </template>
+  </el-dialog>
+
+  <el-dialog v-model="showSpecDialog" title="商品规格管理" width="700px" class="custom-dialog">
+    <div class="spec-manager">
+      <div class="spec-add-section">
+        <el-divider content-position="left">添加规格</el-divider>
+        <div class="add-spec-row">
+          <el-input 
+            v-model="newSpecName" 
+            placeholder="输入自定义规格名称，如：重量、容量" 
+            class="spec-name-input"
+            @keyup.enter="handleAddCustomSpec"
+          />
+          <el-button type="primary" @click="handleAddCustomSpec">
+            <el-icon><Plus /></el-icon>
+            添加自定义规格
+          </el-button>
+        </div>
+        <div class="add-spec-row">
+          <el-select 
+            v-model="selectedSpecTemplate" 
+            placeholder="选择规格模板"
+            class="spec-template-select"
+          >
+            <el-option 
+              v-for="spec in specTemplates" 
+              :key="spec.id" 
+              :label="`${spec.name} (${spec.values?.length || 0}个值)`" 
+              :value="spec.id"
+            />
+          </el-select>
+          <el-button type="success" @click="handleAddSpecFromTemplate">
+            从模板添加
+          </el-button>
+        </div>
+      </div>
+
+      <el-divider content-position="left">已配置规格</el-divider>
+      
+      <div v-if="productSpecs.length === 0" class="empty-spec">
+        <el-empty description="暂无规格配置，请添加规格" :image-size="80" />
+      </div>
+
+      <div v-else class="spec-list">
+        <div v-for="spec in productSpecs" :key="spec.id" class="spec-item">
+          <div class="spec-header">
+            <div class="spec-title">
+              <span class="spec-name">{{ spec.specName }}</span>
+              <el-tag v-if="spec.isCustom === 1" type="warning" size="small">自定义</el-tag>
+              <el-tag v-else type="info" size="small">模板</el-tag>
+            </div>
+            <el-button type="danger" link size="small" @click="handleDeleteSpec(spec.id)">
+              删除规格
+            </el-button>
+          </div>
+          
+          <div class="spec-values">
+            <el-tag 
+              v-for="value in spec.values" 
+              :key="value.id" 
+              closable
+              class="spec-value-tag"
+              @close="value.id && handleDeleteSpecValue(value.id)"
+            >
+              {{ value.value }}
+            </el-tag>
+            
+            <el-input 
+              v-model="newSpecValue"
+              placeholder="添加规格值"
+              class="add-value-input"
+              size="small"
+              @keyup.enter="handleAddSpecValue(spec.id)"
+            >
+              <template #append>
+                <el-button :icon="Plus" @click="handleAddSpecValue(spec.id)" />
+              </template>
+            </el-input>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <template #footer>
+      <el-button @click="showSpecDialog = false">关闭</el-button>
     </template>
   </el-dialog>
 </template>
@@ -751,5 +981,78 @@ onMounted(() => {
   font-size: 24px;
   color: #909399;
   margin-bottom: 4px;
+}
+
+.spec-manager {
+  min-height: 300px;
+}
+
+.spec-add-section {
+  margin-bottom: 20px;
+}
+
+.add-spec-row {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.spec-name-input {
+  flex: 1;
+}
+
+.spec-template-select {
+  flex: 1;
+}
+
+.empty-spec {
+  padding: 20px 0;
+}
+
+.spec-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.spec-item {
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 16px;
+  background: #fafafa;
+}
+
+.spec-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.spec-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.spec-name {
+  font-weight: 600;
+  font-size: 15px;
+  color: #1f2937;
+}
+
+.spec-values {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.spec-value-tag {
+  margin: 0;
+}
+
+.add-value-input {
+  width: 150px;
 }
 </style>

@@ -9,11 +9,10 @@ import lombok.Data;
 import java.io.Serial;
 import java.io.Serializable;
 import java.time.LocalDateTime;
-import java.util.List;
 
 @Data
-@TableName("pms_spec")
-public class Spec implements Serializable {
+@TableName("pms_product_spec_value")
+public class ProductSpecValue implements Serializable {
 
     @TableField(exist = false)
     @Serial
@@ -22,14 +21,15 @@ public class Spec implements Serializable {
     @TableId(value = "id", type = IdType.AUTO)
     private Long id;
 
-    private String name;
+    private Long productSpecId;
+
+    private Long specValueId;
+
+    private String value;
 
     private Integer sortOrder;
 
-    private Integer isSystem;
+    private Integer isCustom;
 
     private LocalDateTime createTime;
-
-    @TableField(exist = false)
-    private List<SpecValue> values;
 }

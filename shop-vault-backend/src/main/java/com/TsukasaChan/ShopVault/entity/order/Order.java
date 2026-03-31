@@ -63,6 +63,8 @@ public class Order implements Serializable {
 
     private BigDecimal couponDiscount;
 
+    private BigDecimal vipDiscount;
+
     private Long skuId;
 
     private Integer orderType;

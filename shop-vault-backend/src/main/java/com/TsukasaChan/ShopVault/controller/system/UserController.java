@@ -4,11 +4,17 @@ import com.TsukasaChan.ShopVault.annotation.LogOperation;
 import com.TsukasaChan.ShopVault.common.Result;
 import com.TsukasaChan.ShopVault.controller.BaseController;
 import com.TsukasaChan.ShopVault.dto.PasswordUpdateDto;
+import com.TsukasaChan.ShopVault.entity.marketing.BalanceRecord;
 import com.TsukasaChan.ShopVault.entity.system.User;
 import com.TsukasaChan.ShopVault.integration.LocalFileService;
+import com.TsukasaChan.ShopVault.service.marketing.BalanceRecordService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+
+import java.math.BigDecimal;
+import java.util.HashMap;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/user")
@@ -16,6 +22,7 @@ import org.springframework.web.multipart.MultipartFile;
 public class UserController extends BaseController {
 
     private final LocalFileService localFileService;
+    private final BalanceRecordService balanceRecordService;
 
     @GetMapping("/profile")
     public Result<User> getProfile() {
@@ -62,5 +69,53 @@ public class UserController extends BaseController {
         userService.updateProfile(getCurrentUserId(), updateInfo);
 
         return Result.success(avatarUrl);
+    }
+
+    @LogOperation(module = "个人中心", action = "模拟充值")
+    @PostMapping("/balance/recharge")
+    public Result<Map<String, Object>> rechargeBalance(@RequestBody Map<String, BigDecimal> request) {
+        BigDecimal amount = request.get("amount");
+        if (amount == null || amount.compareTo(BigDecimal.ZERO) <= 0) {
+            return Result.error(400, "充值金额必须大于0");
+        }
+        
+        if (amount.scale() > 2) {
+            return Result.error(400, "充值金额最多支持两位小数");
+        }
+        
+        if (amount.compareTo(new BigDecimal("10000")) > 0) {
+            return Result.error(400, "单次充值金额不能超过10000元");
+        }
+        
+        Long userId = getCurrentUserId();
+        
+        boolean updated = userService.updateBalanceWithLock(userId, amount);
+        if (!updated) {
+            return Result.error(500, "充值失败，请重试");
+        }
+        
+        User user = userService.getById(userId);
+        BigDecimal balanceBefore = user.getBalance().subtract(amount);
+        BigDecimal balanceAfter = user.getBalance();
+        
+        balanceRecordService.recordBalanceChange(
+                userId,
+                amount,
+                balanceBefore,
+                balanceAfter,
+                BalanceRecord.TYPE_RECHARGE,
+                "模拟充值",
+                null
+        );
+        
+        Map<String, Object> result = new HashMap<>();
+        result.put("balance", balanceAfter);
+        result.put("amount", amount);
+        return Result.success(result);
+    }
+
+    @GetMapping("/balance/records")
+    public Result<?> getBalanceRecords() {
+        return Result.success(balanceRecordService.getUserBalanceRecords(getCurrentUserId()));
     }
 }

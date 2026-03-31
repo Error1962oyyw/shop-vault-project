@@ -78,3 +78,30 @@ export const uploadAvatar = (file: File) => {
     headers: { 'Content-Type': 'multipart/form-data' }
   });
 };
+
+export interface BalanceRecord {
+  id: number;
+  userId: number;
+  amount: number;
+  balanceBefore: number;
+  balanceAfter: number;
+  type: string;
+  description: string;
+  relatedId: number | null;
+  createTime: string;
+}
+
+export const rechargeBalance = (amount: number) => {
+  return request<{ balance: number; amount: number }>({
+    url: '/api/user/balance/recharge',
+    method: 'post',
+    data: { amount }
+  });
+};
+
+export const getBalanceRecords = () => {
+  return request<BalanceRecord[]>({
+    url: '/api/user/balance/records',
+    method: 'get'
+  });
+};

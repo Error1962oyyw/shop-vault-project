@@ -60,6 +60,9 @@ const handleCommand = (command: string) => {
     case 'favorites':
       router.push('/favorites')
       break
+    case 'cart':
+      router.push('/cart')
+      break
     case 'points':
       router.push('/points')
       break
@@ -124,6 +127,10 @@ onMounted(() => {
                   <el-dropdown-item command="favorites">
                     <el-icon><Star /></el-icon>我的收藏
                   </el-dropdown-item>
+                  <el-dropdown-item command="cart">
+                    <el-icon><ShoppingCart /></el-icon>购物车
+                    <el-badge v-if="cartCount > 0" :value="cartCount" :max="99" class="cart-badge" />
+                  </el-dropdown-item>
                   <el-dropdown-item command="points">
                     <el-icon><Coin /></el-icon>会员中心
                   </el-dropdown-item>
@@ -184,25 +191,17 @@ onMounted(() => {
           </div>
 
           <div class="action-section">
-            <div class="action-item" @click="goTo('/cart')">
-              <el-badge :value="cartCount" :hidden="cartCount === 0" :max="99">
-                <div class="action-icon">
-                  <el-icon><ShoppingCart /></el-icon>
-                </div>
-              </el-badge>
-              <span class="action-label hide-mobile">购物车</span>
+            <div class="action-item hide-mobile" @click="goTo('/ai-search')">
+              <div class="action-icon action-icon-ai">
+                <el-icon><Camera /></el-icon>
+              </div>
+              <span class="action-label">AI识图</span>
             </div>
             <div class="action-item hide-mobile" @click="goTo('/chat')">
               <div class="action-icon">
                 <el-icon><Service /></el-icon>
               </div>
               <span class="action-label">客服</span>
-            </div>
-            <div class="action-item hide-mobile" @click="goTo('/ai-search')">
-              <div class="action-icon action-icon-ai">
-                <el-icon><Camera /></el-icon>
-              </div>
-              <span class="action-label">AI识图</span>
             </div>
             <el-button 
               class="show-mobile mobile-menu-btn" 
@@ -586,6 +585,14 @@ onMounted(() => {
 .action-label {
   font-size: 12px;
   color: var(--text-secondary);
+}
+
+.cart-badge {
+  margin-left: 8px;
+}
+
+.cart-badge :deep(.el-badge__content) {
+  font-size: 10px;
 }
 
 .mobile-menu-btn {

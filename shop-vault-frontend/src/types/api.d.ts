@@ -388,6 +388,25 @@ export interface SpecValue {
   sort: number;
 }
 
+export interface ProductSpec {
+  id: number;
+  productId: number;
+  specId: number;
+  specName: string;
+  sortOrder: number;
+  isCustom: number;
+  values: ProductSpecValue[];
+}
+
+export interface ProductSpecValue {
+  id?: number;
+  productSpecId?: number;
+  specValueId: number | null;
+  value: string;
+  sortOrder: number;
+  isCustom: number;
+}
+
 export interface Activity {
   id: number;
   name: string;

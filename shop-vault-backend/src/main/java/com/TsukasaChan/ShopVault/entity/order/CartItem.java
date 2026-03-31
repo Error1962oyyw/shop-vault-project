@@ -32,5 +32,9 @@ public class CartItem implements Serializable {
 
     private Integer quantity;
 
+    private Integer selected;
+
     private LocalDateTime createTime;
+
+    private LocalDateTime updateTime;
 }

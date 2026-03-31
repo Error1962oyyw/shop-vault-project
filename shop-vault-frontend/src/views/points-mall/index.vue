@@ -19,6 +19,9 @@ const previewIndex = ref(0)
 
 const filteredProducts = computed(() => {
   if (activeTab.value === 'all') return products.value
+  if (activeTab.value === 'vip') {
+    return products.value.filter(p => p.type === 3 || p.type === 4)
+  }
   return products.value.filter(p => p.type === parseInt(activeTab.value))
 })
 
@@ -26,8 +29,7 @@ const productTypes = [
   { value: 'all', label: '全部', icon: Present },
   { value: '1', label: '小商品', icon: Present },
   { value: '2', label: '优惠券', icon: Ticket },
-  { value: '3', label: 'VIP月卡', icon: Medal },
-  { value: '4', label: 'SVIP年卡', icon: Medal }
+  { value: 'vip', label: 'VIP', icon: Medal }
 ]
 
 const fetchUserInfo = async () => {

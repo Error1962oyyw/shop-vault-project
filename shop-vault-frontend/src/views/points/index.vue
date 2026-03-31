@@ -5,7 +5,7 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { Coin, Ticket, Present, Star, Medal, Timer, Check, Calendar } from '@element-plus/icons-vue'
 import UserLayout from '@/components/layout/UserLayout.vue'
 import { signIn, getPointsRecords, getAvailableCoupons, receiveCoupon, getMyCoupons, todaySigned } from '@/api/marketing'
-import { getProfile } from '@/api/user'
+import { getProfile, rechargeBalance } from '@/api/user'
 import { getVipInfo, getVipHistory, purchaseVip } from '@/api/vip'
 import type { PointsRecord, CouponTemplate, UserCoupon } from '@/types/api'
 import type { VipInfo, VipMembership } from '@/api/vip'
@@ -20,6 +20,10 @@ const myCoupons = ref<UserCoupon[]>([])
 const loading = ref(false)
 const signInLoading = ref(false)
 const hasSignedIn = ref(false)
+
+const showRechargeDialog = ref(false)
+const rechargeAmount = ref(100)
+const rechargeLoading = ref(false)
 
 const vipInfo = ref<VipInfo | null>(null)
 const vipHistory = ref<VipMembership[]>([])
@@ -40,16 +44,14 @@ const vipCards = [
   {
     type: 1,
     name: 'VIP月卡',
-    points: 1000,
-    originalPrice: 99,
+    price: 99,
     duration: '30天',
     benefits: ['商品98折优惠', '专属会员日活动', '1.25倍积分特权', '优先客服通道'],
   },
   {
-    type: 2,
+    type: 3,
     name: 'SVIP年卡',
-    points: 15000,
-    originalPrice: 999,
+    price: 1499,
     duration: '365天',
     benefits: ['商品95折优惠', '专属会员日活动', '1.5倍积分特权', '优先客服通道', '生日专属礼遇', '新品优先体验'],
     recommended: true
@@ -152,55 +154,62 @@ const handleClaimCoupon = async (couponId: number) => {
   }
 }
 
-const handleExchangeVip = async (type: number) => {
+const handlePurchaseVip = async (type: number) => {
   const card = vipCards.find(c => c.type === type)
   if (!card) return
   
-  const canUsePoints = userInfo.value.points >= card.points
-  const canUseBalance = (userInfo.value.balance || 0) >= card.originalPrice
-  
-  if (!canUsePoints && !canUseBalance) {
-    ElMessage.warning('积分和余额均不足')
+  const userBalance = userInfo.value.balance || 0
+  if (userBalance < card.price) {
+    ElMessage.warning(`余额不足，需要 ¥${card.price}`)
     return
   }
   
-  let paymentMethod: 'points' | 'balance' = 'points'
-  
-  if (canUsePoints && canUseBalance) {
-    try {
-      await ElMessageBox.confirm(
-        `请选择支付方式：\n积分兑换需要 ${card.points} 积分\n余额购买需要 ¥${card.originalPrice}`,
-        '开通' + card.name,
-        {
-          confirmButtonText: '积分兑换',
-          cancelButtonText: '余额购买',
-          distinguishCancelAndClose: true
-        }
-      )
-      paymentMethod = 'points'
-    } catch (action: any) {
-      if (action === 'cancel') {
-        paymentMethod = 'balance'
-      } else {
-        return
+  try {
+    await ElMessageBox.confirm(
+      `确认使用 ¥${card.price} 购买${card.name}？`,
+      '购买确认',
+      {
+        confirmButtonText: '确认购买',
+        cancelButtonText: '取消',
+        type: 'info'
       }
+    )
+    
+    exchangeLoading.value = true
+    try {
+      await purchaseVip(type, 'balance')
+      ElMessage.success('VIP购买成功！')
+      await fetchUserInfo()
+      await fetchVipInfo()
+      await fetchVipHistory()
+    } catch (error: any) {
+      const msg = error?.response?.data?.msg || error?.message || '购买失败'
+      ElMessage.error(msg)
+    } finally {
+      exchangeLoading.value = false
     }
-  } else if (canUseBalance) {
-    paymentMethod = 'balance'
+  } catch {
+    // 用户取消
+  }
+}
+
+const handleRecharge = async () => {
+  if (rechargeAmount.value <= 0) {
+    ElMessage.warning('请输入有效的充值金额')
+    return
   }
   
-  exchangeLoading.value = true
+  rechargeLoading.value = true
   try {
-    await purchaseVip(type, paymentMethod)
-    ElMessage.success('VIP开通成功！')
+    await rechargeBalance(rechargeAmount.value)
+    ElMessage.success(`成功充值 ¥${rechargeAmount.value}`)
+    showRechargeDialog.value = false
     await fetchUserInfo()
-    await fetchVipInfo()
-    await fetchVipHistory()
   } catch (error: any) {
-    const msg = error?.response?.data?.msg || error?.message || '开通失败'
+    const msg = error?.response?.data?.msg || error?.message || '充值失败'
     ElMessage.error(msg)
   } finally {
-    exchangeLoading.value = false
+    rechargeLoading.value = false
   }
 }
 
@@ -323,7 +332,17 @@ onMounted(() => {
                 <span class="points-label">可用积分</span>
                 <span class="points-value">{{ userInfo.points }}</span>
               </div>
-              
+              <div class="points-display">
+                <span class="points-label">账户余额</span>
+                <span class="points-value">¥{{ (userInfo.balance || 0).toFixed(2) }}</span>
+              </div>
+              <el-button 
+                type="success"
+                class="recharge-btn"
+                @click="showRechargeDialog = true"
+              >
+                充值
+              </el-button>
               <el-button 
                 :type="hasSignedIn ? 'info' : 'primary'"
                 :loading="signInLoading"
@@ -436,11 +455,10 @@ onMounted(() => {
                       </div>
                     </div>
                     <div class="card-price">
-                      <div class="points-price">
-                        <span class="points-value">{{ card.points }}</span>
-                        <span class="points-label">积分</span>
+                      <div class="money-price">
+                        <span class="price-symbol">¥</span>
+                        <span class="price-value">{{ card.price }}</span>
                       </div>
-                      <div class="original-price">价值 ¥{{ card.originalPrice }}</div>
                     </div>
                     <div class="card-benefits">
                       <div v-for="(benefit, index) in card.benefits" :key="index" class="benefit-item">
@@ -451,11 +469,10 @@ onMounted(() => {
                     <el-button 
                       :type="card.recommended ? 'warning' : 'primary'"
                       :loading="exchangeLoading"
-                      :disabled="userInfo.points < card.points"
                       class="exchange-btn"
-                      @click="handleExchangeVip(card.type)"
+                      @click="handlePurchaseVip(card.type)"
                     >
-                      {{ userInfo.points < card.points ? '积分不足' : '立即开通' }}
+                      立即购买
                     </el-button>
                   </div>
                 </div>
@@ -556,6 +573,45 @@ onMounted(() => {
         </section>
       </div>
     </div>
+
+    <el-dialog
+      v-model="showRechargeDialog"
+      title="账户充值"
+      width="400px"
+      class="recharge-dialog"
+    >
+      <div class="recharge-content">
+        <div class="current-balance">
+          当前余额: <span class="balance-amount">¥{{ (userInfo.balance || 0).toFixed(2) }}</span>
+        </div>
+        <div class="quick-amounts">
+          <el-button
+            v-for="amount in [50, 100, 200, 500, 1000]"
+            :key="amount"
+            :type="rechargeAmount === amount ? 'primary' : 'default'"
+            @click="rechargeAmount = amount"
+          >
+            ¥{{ amount }}
+          </el-button>
+        </div>
+        <el-form-item label="自定义金额">
+          <el-input-number
+            v-model="rechargeAmount"
+            :min="1"
+            :max="10000"
+            :precision="2"
+            :step="100"
+            style="width: 100%"
+          />
+        </el-form-item>
+      </div>
+      <template #footer>
+        <el-button @click="showRechargeDialog = false">取消</el-button>
+        <el-button type="primary" :loading="rechargeLoading" @click="handleRecharge">
+          确认充值 ¥{{ rechargeAmount }}
+        </el-button>
+      </template>
+    </el-dialog>
   </UserLayout>
 </template>
 
@@ -1145,6 +1201,24 @@ onMounted(() => {
   margin-bottom: 20px;
 }
 
+.money-price {
+  display: flex;
+  align-items: baseline;
+  gap: 2px;
+}
+
+.price-symbol {
+  font-size: 18px;
+  font-weight: 600;
+  color: #fa8c16;
+}
+
+.price-value {
+  font-size: 36px;
+  font-weight: 800;
+  color: #fa8c16;
+}
+
 .points-price {
   display: flex;
   align-items: baseline;
@@ -1167,6 +1241,41 @@ onMounted(() => {
   color: #9ca3af;
   text-decoration: line-through;
   margin-top: 4px;
+}
+
+.recharge-btn {
+  padding: 12px 24px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.recharge-dialog .recharge-content {
+  padding: 10px 0;
+}
+
+.recharge-dialog .current-balance {
+  text-align: center;
+  font-size: 16px;
+  color: #6b7280;
+  margin-bottom: 20px;
+}
+
+.recharge-dialog .balance-amount {
+  font-size: 24px;
+  font-weight: 700;
+  color: #10b981;
+}
+
+.recharge-dialog .quick-amounts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.recharge-dialog .quick-amounts .el-button {
+  flex: 1;
+  min-width: 80px;
 }
 
 .card-benefits {

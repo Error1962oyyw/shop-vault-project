@@ -12,8 +12,8 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 @Data
-@TableName("pms_spec")
-public class Spec implements Serializable {
+@TableName("pms_product_spec")
+public class ProductSpec implements Serializable {
 
     @TableField(exist = false)
     @Serial
@@ -22,14 +22,18 @@ public class Spec implements Serializable {
     @TableId(value = "id", type = IdType.AUTO)
     private Long id;
 
-    private String name;
+    private Long productId;
+
+    private Long specId;
+
+    private String specName;
 
     private Integer sortOrder;
 
-    private Integer isSystem;
+    private Integer isCustom;
 
     private LocalDateTime createTime;
 
     @TableField(exist = false)
-    private List<SpecValue> values;
+    private List<ProductSpecValue> values;
 }
