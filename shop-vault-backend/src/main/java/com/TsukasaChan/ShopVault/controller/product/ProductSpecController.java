@@ -9,6 +9,7 @@ import com.TsukasaChan.ShopVault.entity.product.Spec;
 import com.TsukasaChan.ShopVault.entity.product.SpecValue;
 import com.TsukasaChan.ShopVault.service.product.*;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
@@ -20,6 +21,7 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+@Slf4j
 @RestController
 @RequestMapping("/api/admin/product-specs")
 @RequiredArgsConstructor
@@ -106,6 +108,8 @@ public class ProductSpecController {
                 }
 
                 if (productSpecValueService.existsByValue(productSpec.getId(), valueDto.getValue().trim())) {
+                    log.warn("添加规格值失败：规格值已存在, productSpecId={}, value={}", 
+                            productSpec.getId(), valueDto.getValue().trim());
                     continue;
                 }
 
@@ -171,6 +175,8 @@ public class ProductSpecController {
                 }
 
                 if (productSpecValueService.existsByValue(id, valueDto.getValue().trim())) {
+                    log.warn("添加规格值失败：规格值已存在, productSpecId={}, value={}", 
+                            id, valueDto.getValue().trim());
                     continue;
                 }
 
@@ -223,7 +229,7 @@ public class ProductSpecController {
         value.setValue(dto.getValue().trim());
         value.setSortOrder(dto.getSortOrder() != null ? dto.getSortOrder() : 0);
         value.setIsCustom(dto.getIsCustom() != null ? dto.getIsCustom() : 
-                (dto.getSpecValueId() == null) ? 1 : 0);
+                (dto.getSpecValueId() == null ? 1 : 0));
         value.setCreateTime(LocalDateTime.now());
         productSpecValueService.save(value);
 
