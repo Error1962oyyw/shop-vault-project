@@ -1,6 +1,7 @@
 package com.TsukasaChan.ShopVault.controller.order;
 
 import com.TsukasaChan.ShopVault.common.Result;
+import com.TsukasaChan.ShopVault.common.VipConstants;
 import com.TsukasaChan.ShopVault.dto.CreateOrderDto;
 import com.TsukasaChan.ShopVault.dto.OrderDetailDto;
 import com.TsukasaChan.ShopVault.entity.order.Order;
@@ -40,6 +41,10 @@ public class UnifiedOrderController extends BaseController {
             return Result.error(400, "vipType参数类型错误或缺失");
         }
         int vipType = (Integer) vipTypeObj;
+        
+        if (vipType < VipConstants.TYPE_VIP_MONTHLY || vipType > VipConstants.TYPE_SVIP_YEARLY) {
+            return Result.error(400, "vipType参数值无效，有效值: 1=VIP月卡, 2=VIP年卡, 3=SVIP年卡");
+        }
         
         Object paymentMethodObj = params.get("paymentMethod");
         if (paymentMethodObj == null || !(paymentMethodObj instanceof String)) {
