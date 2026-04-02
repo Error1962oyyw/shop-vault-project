@@ -43,7 +43,10 @@ public class UnifiedOrderController extends BaseController {
         int vipType = (Integer) vipTypeObj;
         
         if (vipType < VipConstants.TYPE_VIP_MONTHLY || vipType > VipConstants.TYPE_SVIP_YEARLY) {
-            return Result.error(400, "vipType参数值无效，有效值: 1=VIP月卡, 2=VIP年卡, 3=SVIP年卡");
+            return Result.error(400, "vipType参数值无效，有效值: "
+                    + VipConstants.TYPE_VIP_MONTHLY + "=VIP月卡, "
+                    + VipConstants.TYPE_VIP_YEARLY + "=VIP年卡, "
+                    + VipConstants.TYPE_SVIP_YEARLY + "=SVIP年卡");
         }
         
         Object paymentMethodObj = params.get("paymentMethod");
