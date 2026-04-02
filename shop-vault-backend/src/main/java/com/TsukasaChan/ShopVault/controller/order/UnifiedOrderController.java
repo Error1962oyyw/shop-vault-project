@@ -36,14 +36,14 @@ public class UnifiedOrderController extends BaseController {
         Long userId = getCurrentUserId();
         
         Object vipTypeObj = params.get("vipType");
-        if (!(vipTypeObj instanceof Integer)) {
+        if (vipTypeObj == null || !(vipTypeObj instanceof Integer)) {
             return Result.error(400, "vipType参数类型错误或缺失");
         }
         int vipType = (Integer) vipTypeObj;
         
         Object paymentMethodObj = params.get("paymentMethod");
         if (paymentMethodObj == null || !(paymentMethodObj instanceof String)) {
-            return Result.error(400, "paymentMethod参数错误或缺失");
+            return Result.error(400, "paymentMethod参数类型错误或缺失");
         }
         String paymentMethod = (String) paymentMethodObj;
         
