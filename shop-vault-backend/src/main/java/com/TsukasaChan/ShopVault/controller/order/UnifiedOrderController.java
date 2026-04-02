@@ -34,8 +34,18 @@ public class UnifiedOrderController extends BaseController {
     @PostMapping("/vip")
     public Result<Map<String, Object>> createVipOrder(@RequestBody Map<String, Object> params) {
         Long userId = getCurrentUserId();
-        int vipType = (Integer) params.get("vipType");
-        String paymentMethod = (String) params.get("paymentMethod");
+        
+        Object vipTypeObj = params.get("vipType");
+        if (!(vipTypeObj instanceof Integer)) {
+            return Result.error(400, "vipType参数类型错误或缺失");
+        }
+        int vipType = (Integer) vipTypeObj;
+        
+        Object paymentMethodObj = params.get("paymentMethod");
+        if (paymentMethodObj == null || !(paymentMethodObj instanceof String)) {
+            return Result.error(400, "paymentMethod参数错误或缺失");
+        }
+        String paymentMethod = (String) paymentMethodObj;
         
         Order order = unifiedOrderService.createVipOrder(userId, vipType, paymentMethod);
         return Result.success(buildOrderResult(order));
@@ -44,8 +54,33 @@ public class UnifiedOrderController extends BaseController {
     @PostMapping("/points-exchange")
     public Result<Map<String, Object>> createPointsExchangeOrder(@RequestBody Map<String, Object> params) {
         Long userId = getCurrentUserId();
-        Long productId = Long.valueOf(params.get("productId").toString());
-        Integer quantity = params.get("quantity") != null ? (Integer) params.get("quantity") : 1;
+        
+        Object productIdObj = params.get("productId");
+        if (productIdObj == null) {
+            return Result.error(400, "productId参数不能为空");
+        }
+        Long productId;
+        try {
+            productId = Long.valueOf(productIdObj.toString());
+        } catch (NumberFormatException e) {
+            return Result.error(400, "productId参数格式错误");
+        }
+        
+        Integer quantity = 1;
+        if (params.get("quantity") != null) {
+            Object quantityObj = params.get("quantity");
+            if (quantityObj instanceof Integer) {
+                quantity = (Integer) quantityObj;
+            } else if (quantityObj instanceof Number) {
+                quantity = ((Number) quantityObj).intValue();
+            } else {
+                try {
+                    quantity = Integer.parseInt(quantityObj.toString());
+                } catch (NumberFormatException e) {
+                    return Result.error(400, "quantity参数格式错误");
+                }
+            }
+        }
         
         Order order = unifiedOrderService.createPointsExchangeOrder(userId, productId, quantity);
         return Result.success(buildOrderResult(order));

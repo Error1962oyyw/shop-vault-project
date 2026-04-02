@@ -52,13 +52,17 @@ public class VipMembershipServiceImpl extends ServiceImpl<VipMembershipMapper, V
             throw new RuntimeException("用户不存在");
         }
 
+        if (vipType < VipConstants.TYPE_VIP_MONTHLY || vipType > VipConstants.TYPE_SVIP_YEARLY) {
+            throw new RuntimeException("无效的VIP类型");
+        }
+
         int pointsCost = VipConstants.getPointsByType(vipType);
         int days = VipConstants.getDurationByType(vipType);
         int vipLevel = VipConstants.getLevelByType(vipType);
         String description = "兑换" + getVipTypeName(vipType);
 
-        if (pointsCost == 0) {
-            throw new RuntimeException("无效的VIP类型");
+        if (pointsCost <= 0) {
+            throw new RuntimeException("该VIP类型不支持积分兑换");
         }
 
         if (user.getPoints() < pointsCost) {
