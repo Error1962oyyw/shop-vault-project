@@ -1,5 +1,6 @@
 package com.TsukasaChan.ShopVault.service.marketing.impl;
 
+import com.TsukasaChan.ShopVault.common.VipConstants;
 import com.TsukasaChan.ShopVault.entity.marketing.BalanceRecord;
 import com.TsukasaChan.ShopVault.entity.marketing.PointsRecord;
 import com.TsukasaChan.ShopVault.entity.marketing.VipMembership;
@@ -30,14 +31,6 @@ public class VipMembershipServiceImpl extends ServiceImpl<VipMembershipMapper, V
     private final PointsRecordService pointsRecordService;
     private final BalanceRecordService balanceRecordService;
 
-    private static final int VIP_MONTHLY_POINTS = 1000;
-    private static final int VIP_YEARLY_POINTS = 10000;
-    private static final int SVIP_YEARLY_POINTS = 20000;
-    
-    private static final BigDecimal VIP_MONTHLY_PRICE = new BigDecimal("99.00");
-    private static final BigDecimal VIP_YEARLY_PRICE = new BigDecimal("999.00");
-    private static final BigDecimal SVIP_YEARLY_PRICE = new BigDecimal("1499.00");
-
     @Override
     public VipMembership getActiveVipByUserId(Long userId) {
         return this.getOne(new LambdaQueryWrapper<VipMembership>()
@@ -59,27 +52,12 @@ public class VipMembershipServiceImpl extends ServiceImpl<VipMembershipMapper, V
             throw new RuntimeException("用户不存在");
         }
 
-        int pointsCost;
-        int days;
-        int vipLevel;
-        String description;
-        
-        if (vipType == VipMembership.TYPE_MONTHLY) {
-            pointsCost = VIP_MONTHLY_POINTS;
-            days = 30;
-            vipLevel = VipMembership.LEVEL_VIP;
-            description = "兑换VIP月卡";
-        } else if (vipType == VipMembership.TYPE_YEARLY) {
-            pointsCost = VIP_YEARLY_POINTS;
-            days = 365;
-            vipLevel = VipMembership.LEVEL_VIP;
-            description = "兑换VIP年卡";
-        } else if (vipType == VipMembership.TYPE_SVIP_YEARLY) {
-            pointsCost = SVIP_YEARLY_POINTS;
-            days = 365;
-            vipLevel = VipMembership.LEVEL_SVIP;
-            description = "兑换SVIP年卡";
-        } else {
+        int pointsCost = VipConstants.getPointsByType(vipType);
+        int days = VipConstants.getDurationByType(vipType);
+        int vipLevel = VipConstants.getLevelByType(vipType);
+        String description = "兑换" + getVipTypeName(vipType);
+
+        if (pointsCost == 0) {
             throw new RuntimeException("无效的VIP类型");
         }
 
@@ -136,31 +114,31 @@ public class VipMembershipServiceImpl extends ServiceImpl<VipMembershipMapper, V
         String description;
 
         if (vipType == VipMembership.TYPE_MONTHLY) {
-            days = 30;
-            vipLevel = VipMembership.LEVEL_VIP;
+            days = VipConstants.DURATION_VIP_MONTHLY;
+            vipLevel = VipConstants.LEVEL_VIP;
             description = "购买VIP月卡";
             if ("points".equals(paymentMethod)) {
-                pointsCost = VIP_MONTHLY_POINTS;
+                pointsCost = VipConstants.VIP_MONTHLY_POINTS;
             } else {
-                balanceCost = VIP_MONTHLY_PRICE;
+                balanceCost = VipConstants.VIP_MONTHLY_PRICE;
             }
         } else if (vipType == VipMembership.TYPE_YEARLY) {
-            days = 365;
-            vipLevel = VipMembership.LEVEL_VIP;
+            days = VipConstants.DURATION_VIP_YEARLY;
+            vipLevel = VipConstants.LEVEL_VIP;
             description = "购买VIP年卡";
             if ("points".equals(paymentMethod)) {
-                pointsCost = VIP_YEARLY_POINTS;
+                pointsCost = VipConstants.VIP_YEARLY_POINTS;
             } else {
-                balanceCost = VIP_YEARLY_PRICE;
+                balanceCost = VipConstants.VIP_YEARLY_PRICE;
             }
         } else if (vipType == VipMembership.TYPE_SVIP_YEARLY) {
-            days = 365;
-            vipLevel = VipMembership.LEVEL_SVIP;
+            days = VipConstants.DURATION_SVIP_YEARLY;
+            vipLevel = VipConstants.LEVEL_SVIP;
             description = "购买SVIP年卡";
             if ("points".equals(paymentMethod)) {
-                pointsCost = SVIP_YEARLY_POINTS;
+                pointsCost = VipConstants.SVIP_YEARLY_POINTS;
             } else {
-                balanceCost = SVIP_YEARLY_PRICE;
+                balanceCost = VipConstants.SVIP_YEARLY_PRICE;
             }
         } else {
             throw new RuntimeException("无效的VIP类型");
@@ -258,5 +236,14 @@ public class VipMembershipServiceImpl extends ServiceImpl<VipMembershipMapper, V
         return this.list(new LambdaQueryWrapper<VipMembership>()
                 .eq(VipMembership::getUserId, userId)
                 .orderByDesc(VipMembership::getCreateTime));
+    }
+
+    private String getVipTypeName(int vipType) {
+        return switch (vipType) {
+            case VipConstants.TYPE_VIP_MONTHLY -> "VIP月卡";
+            case VipConstants.TYPE_VIP_YEARLY -> "VIP年卡";
+            case VipConstants.TYPE_SVIP_YEARLY -> "SVIP年卡";
+            default -> "未知类型";
+        };
     }
 }

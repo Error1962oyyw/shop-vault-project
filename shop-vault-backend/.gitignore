@@ -33,5 +33,5 @@ build/
 .vscode/
 
 ### Custom ###
-**/src/test/
-**/uploads/
+/src/test/
+/uploads/

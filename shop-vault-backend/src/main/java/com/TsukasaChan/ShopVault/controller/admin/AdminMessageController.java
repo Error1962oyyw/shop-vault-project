@@ -1,6 +1,7 @@
 package com.TsukasaChan.ShopVault.controller.admin;
 
 import com.TsukasaChan.ShopVault.common.Result;
+import com.TsukasaChan.ShopVault.controller.BaseController;
 import com.TsukasaChan.ShopVault.entity.system.MessagePush;
 import com.TsukasaChan.ShopVault.service.system.MessagePushService;
 import lombok.RequiredArgsConstructor;
@@ -15,7 +16,7 @@ import java.util.Map;
 @RequestMapping("/api/admin/messages")
 @RequiredArgsConstructor
 @PreAuthorize("hasRole('ADMIN')")
-public class AdminMessageController {
+public class AdminMessageController extends BaseController {
 
     private final MessagePushService messagePushService;
 

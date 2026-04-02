@@ -3,6 +3,7 @@ package com.TsukasaChan.ShopVault.controller.admin;
 import com.TsukasaChan.ShopVault.common.PageResult;
 import com.TsukasaChan.ShopVault.common.Result;
 import com.TsukasaChan.ShopVault.common.ServiceUtils;
+import com.TsukasaChan.ShopVault.controller.BaseController;
 import com.TsukasaChan.ShopVault.entity.marketing.UserVipInfo;
 import com.TsukasaChan.ShopVault.entity.marketing.VipMembership;
 import com.TsukasaChan.ShopVault.entity.system.User;
@@ -10,6 +11,7 @@ import com.TsukasaChan.ShopVault.service.marketing.UserVipInfoService;
 import com.TsukasaChan.ShopVault.service.marketing.VipMembershipService;
 import com.TsukasaChan.ShopVault.service.system.UserService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -20,7 +22,8 @@ import java.util.stream.Collectors;
 @RestController
 @RequestMapping("/api/admin/vip")
 @RequiredArgsConstructor
-public class AdminVipController {
+@PreAuthorize("hasRole('ADMIN')")
+public class AdminVipController extends BaseController {
 
     private final UserVipInfoService userVipInfoService;
     private final VipMembershipService vipMembershipService;

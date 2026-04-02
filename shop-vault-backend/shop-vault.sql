@@ -243,7 +243,10 @@ CREATE TABLE `oms_order` (
     `user_id` BIGINT NOT NULL COMMENT '用户ID',
     `total_amount` DECIMAL(10,2) NOT NULL COMMENT '订单总金额',
     `pay_amount` DECIMAL(10,2) NOT NULL COMMENT '实付金额 (扣除优惠后)',
+    `points_amount` INT DEFAULT 0 COMMENT '积分支付数量',
     `status` TINYINT DEFAULT 0 COMMENT '状态: 0待付款 1待发货 2待收货 3已完成 4已关闭 5售后中',
+    `order_type` TINYINT DEFAULT 0 COMMENT '订单类型: 0普通商品 1VIP购买 2SVIP购买 3积分兑换',
+    `payment_method` VARCHAR(20) DEFAULT NULL COMMENT '支付方式: BALANCE/POINTS/ALIPAY/WECHAT',
     `receiver_snapshot` TEXT COMMENT '收货人信息快照(JSON格式)',
     `tracking_company` VARCHAR(64) DEFAULT NULL COMMENT '物流公司',
     `tracking_no` VARCHAR(64) DEFAULT NULL COMMENT '物流单号',
@@ -251,25 +254,61 @@ CREATE TABLE `oms_order` (
     `delivery_time` DATETIME DEFAULT NULL COMMENT '发货时间',
     `receive_time` DATETIME DEFAULT NULL COMMENT '确认收货时间',
     `auto_receive_time` DATETIME DEFAULT NULL COMMENT '自动收货时间(发货后+10天)',
+    `expire_time` DATETIME DEFAULT NULL COMMENT '订单过期时间(创建后24小时)',
     `is_extended` TINYINT(1) DEFAULT 0 COMMENT '是否已延长收货: 0否 1是',
     `close_time` DATETIME DEFAULT NULL COMMENT '订单关闭时间',
+    `close_reason` VARCHAR(255) DEFAULT NULL COMMENT '订单关闭原因',
     `points_used` INT DEFAULT 0 COMMENT '使用积分数量',
     `points_discount` DECIMAL(10,2) DEFAULT 0.00 COMMENT '积分抵扣金额',
     `coupon_id` BIGINT DEFAULT NULL COMMENT '使用的优惠券ID',
     `coupon_discount` DECIMAL(10,2) DEFAULT 0.00 COMMENT '优惠券抵扣金额',
     `vip_discount` DECIMAL(10,2) DEFAULT 0.00 COMMENT 'VIP折扣金额',
+    `discount_disabled` TINYINT(1) DEFAULT 0 COMMENT '是否禁用折扣: 0否 1是',
     `sku_id` BIGINT DEFAULT NULL COMMENT 'SKU ID',
-    `order_type` TINYINT DEFAULT 0 COMMENT '订单类型: 0普通订单 1积分兑换订单',
-    `is_points_exchange` TINYINT DEFAULT 0 COMMENT '是否积分兑换: 0否 1是',
-    `after_sales_disabled` TINYINT DEFAULT 0 COMMENT '售后是否禁用: 0否 1是',
+    `related_id` BIGINT DEFAULT NULL COMMENT '关联ID(VIP会员记录ID等)',
+    `is_points_exchange` TINYINT(1) DEFAULT 0 COMMENT '是否积分兑换: 0否 1是',
+    `after_sales_disabled` TINYINT(1) DEFAULT 0 COMMENT '售后是否禁用: 0否 1是',
+    `remark` VARCHAR(500) DEFAULT NULL COMMENT '订单备注',
     `create_time` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    `update_time` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
     PRIMARY KEY (`id`),
     UNIQUE KEY `uk_order_no` (`order_no`),
     KEY `idx_user_id` (`user_id`),
     KEY `idx_status` (`status`),
     KEY `idx_status_create` (`status`, `create_time`),
-    KEY `idx_user_status` (`user_id`, `status`)
+    KEY `idx_user_status` (`user_id`, `status`),
+    KEY `idx_order_type` (`order_type`),
+    KEY `idx_expire_time` (`expire_time`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='订单主表';
+
+-- ----------------------------
+-- 10.1 支付记录表 (oms_payment_record)
+-- ----------------------------
+DROP TABLE IF EXISTS `oms_payment_record`;
+CREATE TABLE `oms_payment_record` (
+    `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+    `order_id` BIGINT NOT NULL COMMENT '订单ID',
+    `order_no` VARCHAR(64) NOT NULL COMMENT '订单编号',
+    `user_id` BIGINT NOT NULL COMMENT '用户ID',
+    `payment_no` VARCHAR(64) NOT NULL COMMENT '支付流水号',
+    `payment_method` VARCHAR(20) NOT NULL COMMENT '支付方式: BALANCE/POINTS/ALIPAY/WECHAT',
+    `amount` DECIMAL(10,2) NOT NULL COMMENT '支付金额',
+    `points_amount` INT DEFAULT 0 COMMENT '积分支付数量',
+    `status` TINYINT DEFAULT 0 COMMENT '状态: 0待支付 1支付中 2支付成功 3支付失败 4已退款',
+    `third_party_no` VARCHAR(128) DEFAULT NULL COMMENT '第三方支付流水号',
+    `error_message` VARCHAR(500) DEFAULT NULL COMMENT '错误信息',
+    `paid_time` DATETIME DEFAULT NULL COMMENT '支付成功时间',
+    `refund_time` DATETIME DEFAULT NULL COMMENT '退款时间',
+    `refund_amount` DECIMAL(10,2) DEFAULT NULL COMMENT '退款金额',
+    `create_time` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    `update_time` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uk_payment_no` (`payment_no`),
+    KEY `idx_order_id` (`order_id`),
+    KEY `idx_order_no` (`order_no`),
+    KEY `idx_user_id` (`user_id`),
+    KEY `idx_status` (`status`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='支付记录表';
 
 -- ----------------------------
 -- 11. 订单明细表 (oms_order_item)

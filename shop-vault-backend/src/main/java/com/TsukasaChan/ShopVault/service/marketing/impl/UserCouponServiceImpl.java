@@ -149,7 +149,8 @@ public class UserCouponServiceImpl extends ServiceImpl<UserCouponMapper, UserCou
         log.info("已处理{}张过期优惠券", expiredCoupons.size());
     }
 
-    private void loadCouponTemplates(List<UserCoupon> coupons) {
+    @Override
+    public void loadCouponTemplates(List<UserCoupon> coupons) {
         if (coupons.isEmpty()) {
             return;
         }

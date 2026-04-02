@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Objects;
 
 @RestController
 @RequestMapping("/api/coupons")
@@ -25,7 +26,20 @@ public class CouponController {
 
     @GetMapping("/available")
     public Result<List<CouponTemplate>> listAvailable() {
-        return Result.success(couponTemplateService.listAvailable());
+        Long userId = SecurityUtils.getCurrentUserId();
+        List<CouponTemplate> allAvailable = couponTemplateService.listAvailable();
+        if (userId == null) {
+            return Result.success(allAvailable);
+        }
+        List<Long> claimedTemplateIds = userCouponService.list(
+                new LambdaQueryWrapper<UserCoupon>()
+                        .eq(UserCoupon::getUserId, userId)
+                        .select(UserCoupon::getCouponTemplateId))
+                .stream().map(UserCoupon::getCouponTemplateId).filter(Objects::nonNull).distinct().toList();
+        if (!claimedTemplateIds.isEmpty()) {
+            allAvailable.removeIf(t -> claimedTemplateIds.contains(t.getId()));
+        }
+        return Result.success(allAvailable);
     }
 
     @GetMapping("/{id}")
@@ -48,7 +62,9 @@ public class CouponController {
             wrapper.eq(UserCoupon::getStatus, status);
         }
         wrapper.orderByDesc(UserCoupon::getGetTime);
-        return Result.success(userCouponService.list(wrapper));
+        List<UserCoupon> coupons = userCouponService.list(wrapper);
+        userCouponService.loadCouponTemplates(coupons);
+        return Result.success(coupons);
     }
 
     @GetMapping("/my/available")

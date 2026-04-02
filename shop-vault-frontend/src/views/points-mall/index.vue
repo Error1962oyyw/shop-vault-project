@@ -162,7 +162,15 @@ onMounted(() => {
     <div class="points-mall-page animate-fade-in">
       <div class="page-container">
         <div class="page-header">
-          <div class="header-bg"></div>
+          <div class="header-bg">
+            <div class="points-display">
+              <div class="points-value">
+                <Coin class="coin-icon" />
+                <span class="points-number">{{ userInfo.points }}</span>
+              </div>
+              <div class="points-label">可用积分</div>
+            </div>
+          </div>
           <div class="header-content">
             <div class="header-left">
               <h1 class="header-title">
@@ -170,15 +178,6 @@ onMounted(() => {
                 积分商城
               </h1>
               <p class="header-subtitle">用积分兑换精彩好礼</p>
-            </div>
-            <div class="header-right">
-              <div class="points-display">
-                <div class="points-value">
-                  <Coin class="coin-icon" />
-                  <span class="points-number">{{ userInfo.points }}</span>
-                </div>
-                <div class="points-label">可用积分</div>
-              </div>
             </div>
           </div>
         </div>
@@ -326,16 +325,19 @@ onMounted(() => {
   position: absolute;
   inset: 0;
   background: linear-gradient(135deg, #fa8c16 0%, #ffc53d 50%, #ffd591 100%);
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  padding: 40px;
 }
 
 .header-content {
   position: relative;
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-start;
   align-items: center;
   padding: 40px;
   color: #fff;
-  gap: 40px;
 }
 
 .header-left {
@@ -373,19 +375,19 @@ onMounted(() => {
   margin: 0;
 }
 
-.header-right {
-  display: flex;
-  align-items: center;
-}
-
 .points-display {
+  position: relative;
+  z-index: 2;
   text-align: center;
-  background: rgba(255, 255, 255, 0.2);
-  backdrop-filter: blur(10px);
+  background: rgba(0, 0, 0, 0.15);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   padding: 20px 32px;
   border-radius: 16px;
-  border: 1px solid rgba(255, 255, 255, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.4);
   min-width: 160px;
+  color: #fff;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
 }
 
 .points-value {
@@ -396,18 +398,21 @@ onMounted(() => {
   align-items: center;
   justify-content: center;
   gap: 8px;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
 .points-number {
   font-size: 36px;
   font-weight: 800;
   line-height: 1;
+  color: #fff;
 }
 
 .coin-icon {
   width: 24px;
   height: 24px;
   flex-shrink: 0;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.2));
 }
 
 .coin-icon :deep(svg) {
@@ -417,8 +422,11 @@ onMounted(() => {
 
 .points-label {
   font-size: 14px;
-  opacity: 0.9;
+  font-weight: 500;
   margin-top: 8px;
+  color: #fff;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+  letter-spacing: 0.5px;
 }
 
 .notice-banner {

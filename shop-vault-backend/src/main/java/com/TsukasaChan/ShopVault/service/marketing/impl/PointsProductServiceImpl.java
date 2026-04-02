@@ -162,7 +162,7 @@ public class PointsProductServiceImpl extends ServiceImpl<PointsProductMapper, P
         order.setTotalAmount(product.getPrice());
         order.setPayAmount(BigDecimal.ZERO);
         order.setStatus(1);
-        order.setOrderType(Order.ORDER_TYPE_POINTS);
+        order.setOrderType(Order.ORDER_TYPE_POINTS_EXCHANGE);
         order.setIsPointsExchange(1);
         order.setAfterSalesDisabled(1);
         orderService.save(order);

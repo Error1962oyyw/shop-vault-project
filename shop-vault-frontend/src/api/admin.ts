@@ -246,17 +246,17 @@ export const toggleYoloMapping = (id: number) => {
 
 export const handleAfterSales = (data: AfterSalesHandleParams) => {
   return request<string>({
-    url: '/api/after-sales/handle',
+    url: `/api/admin/after-sales/${data.orderNo}/resolve`,
     method: 'post',
-    data
+    data: { status: data.agree ? 1 : 2, refundAmount: data.refundAmount }
   });
 };
 
 export const confirmReturn = (params: { orderNo: string; isAgree: boolean; remark?: string }) => {
   return request<string>({
-    url: '/api/after-sales/confirm-return',
+    url: `/api/admin/after-sales/${params.orderNo}/resolve`,
     method: 'post',
-    params
+    data: { status: params.isAgree ? 1 : 2 }
   });
 };
 

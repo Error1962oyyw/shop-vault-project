@@ -21,4 +21,6 @@ public interface UserCouponService extends IService<UserCoupon> {
     boolean useCoupon(Long userCouponId, Long orderId, BigDecimal orderAmount);
 
     void expireCoupons();
+
+    void loadCouponTemplates(List<UserCoupon> coupons);
 }

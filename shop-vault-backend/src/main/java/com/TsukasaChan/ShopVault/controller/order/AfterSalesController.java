@@ -4,13 +4,11 @@ import com.TsukasaChan.ShopVault.annotation.LogOperation;
 import com.TsukasaChan.ShopVault.common.Result;
 import com.TsukasaChan.ShopVault.controller.BaseController;
 import com.TsukasaChan.ShopVault.dto.AfterSalesApplyDto;
-import com.TsukasaChan.ShopVault.dto.AfterSalesHandleDto;
 import com.TsukasaChan.ShopVault.dto.ReturnLogisticsDto;
 import com.TsukasaChan.ShopVault.entity.order.AfterSales;
 import com.TsukasaChan.ShopVault.service.order.AfterSalesService;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import lombok.RequiredArgsConstructor;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -49,34 +47,6 @@ public class AfterSalesController extends BaseController {
     public Result<String> submitReturnLogistics(@RequestBody ReturnLogisticsDto dto) {
         afterSalesService.submitReturnLogistics(dto, getCurrentUserId());
         return Result.success("退货物流信息已提交");
-    }
-
-    @LogOperation(module = "售后服务", action = "商家审核售后申请")
-    @PreAuthorize("hasRole('ADMIN')")
-    @PostMapping("/handle")
-    public Result<String> handleAfterSales(@RequestBody AfterSalesHandleDto dto) {
-        if (dto.getOrderNo() == null || dto.getIsAgree() == null) {
-            return Result.error(400, "处理参数不完整");
-        }
-        afterSalesService.handleAfterSales(dto);
-        return Result.success("售后处理完毕：" + (dto.getIsAgree() ? "已同意" : "已拒绝"));
-    }
-
-    @LogOperation(module = "售后服务", action = "商家确认退货")
-    @PreAuthorize("hasRole('ADMIN')")
-    @PostMapping("/confirm-return")
-    public Result<String> confirmReturn(
-            @RequestParam String orderNo,
-            @RequestParam boolean isAgree,
-            @RequestParam(required = false) String remark) {
-        afterSalesService.confirmReturn(orderNo, isAgree, remark);
-        return Result.success(isAgree ? "已确认退货并退款" : "已拒绝退货");
-    }
-
-    @PreAuthorize("hasRole('ADMIN')")
-    @GetMapping("/admin-list")
-    public Result<List<AfterSales>> getAllAfterSalesList() {
-        return Result.success(afterSalesService.getAllAfterSalesList());
     }
 
     @GetMapping("/detail/{orderNo}")

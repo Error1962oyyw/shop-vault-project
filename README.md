@@ -1,93 +1,76 @@
 # 小铺宝库 - 智慧电商系统
 
-> 基于Spring Boot + Vue 3的智慧电商平台，集成YOLO视觉搜索与协同过滤推荐算法
+> 基于Spring Boot 3 + Vue 3的智慧电商平台，集成YOLO视觉搜索与协同过滤推荐算法
 
 ## 项目概述
 
-"小铺宝库"是一个面向中小型商家的智慧电商系统，采用前后端分离架构设计。系统创新性地将YOLO目标检测算法与协同过滤推荐算法集成于Spring Boot微服务架构中，构建"交易+会员+AI"的业务闭环，为用户提供智能化的购物体验。
+"小铺宝库"是一个面向中小型商家的全功能智慧电商系统，采用前后端分离架构设计。系统创新性地将YOLO目标检测算法与协同过滤推荐算法集成于Spring Boot微服务架构中，构建"交易+会员+AI+营销"的完整业务闭环。
 
 ### 核心特性
 
 - **智慧导购**：基于YOLO算法的视觉搜索，实现"以图搜物"的直观购物体验
 - **个性化推荐**：基于协同过滤算法的商品推荐，解决冷门商品曝光问题
-- **会员营销体系**：积分商城、会员日活动等闭环运营机制
-- **全流程交易**：购物车、订单、支付、物流、售后完整业务链
+- **会员营销体系**：VIP/SVIP会员、积分商城（含签到/兑换）、优惠券、会员日活动等闭环运营机制
+- **统一订单系统**：支持普通商品/VIP/SVIP/积分兑换四种场景的订单创建与支付流程
+- **全流程交易**：购物车、订单、支付（余额/积分/支付宝/微信）、物流、售后完整业务链
+- **管理后台**：商品管理、订单管理、售后处理、营销配置、用户管理等完整后台
 
 ---
 
-## 研究背景与意义
+## 系统架构
 
-### 选题意义
-
-随着移动互联网与人工智能技术的深度融合，传统电商模式正面临"信息过载"与"交互单一"的双重挑战。消费者对购物体验的要求已从单纯的商品交易转向个性化、智能化与综合服务，而传统电商平台在功能集成及中小商户赋能方面仍存在不足。
-
-本系统的设计意义体现在三个方面：
-
-1. **AI辅助导航**：针对用户"难以准确描述商品名称"的场景，利用YOLO算法提供"视觉分类入口"，快速定位商品所属大类，实现"AI粗筛+人工细选"的创新检索模式
-
-2. **个性化服务**：利用协同过滤算法分析用户行为，实现千人千面的商品推荐，解决冷门商品曝光不足问题
-
-3. **中小商家赋能**：构建闭环会员营销体系，提供低成本、高适配的数字化经营解决方案
-
-### 技术创新
-
-- YOLO目标检测与电商场景的深度融合
-- 基于物品的协同过滤推荐算法
-- Spring Boot微服务架构下的AI服务解耦设计
-
----
-
-## 核心功能
-
-### 用户端功能
-
-| 模块 | 功能描述 |
-|------|----------|
-| 注册登录 | 支持手机号/邮箱注册、JWT身份认证 |
-| 个人中心 | 头像/昵称修改、密码管理、收货地址管理 |
-| 智慧导购 | YOLO视觉搜索、协同过滤个性化推荐 |
-| 购物车 | 商品添加、数量修改、批量结算 |
-| 订单交易 | 下单、模拟支付、物流查询、确认收货 |
-| 商品评价 | 评分、图文评价 |
-| 积分体系 | 积分获取、积分兑换、会员日活动 |
-| 客服聊天 | WebSocket实时通讯 |
-
-### 管理端功能
-
-| 模块 | 功能描述 |
-|------|----------|
-| 商品管理 | 商品发布、SKU管理、库存管理 |
-| 订单管理 | 订单查询、发货处理 |
-| 售后管理 | 退款审核、退货处理 |
-| 营销管理 | 优惠券、会员日活动、积分规则 |
-| 用户管理 | 用户查询、状态管理 |
-| 数据大屏 | 销售统计、趋势分析 |
-| YOLO映射 | 物体类别与商品分类映射配置 |
-
----
-
-## 技术架构
-
-### 系统架构
+### 整体架构
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                        表现层 (Vue.js)                        │
-│  组件化开发 │ Vue Router │ Pinia状态管理 │ Element Plus      │
+│                        表现层 (Vue 3)                        │
+│  Vue Router │ Pinia状态管理 │ Element Plus │ TypeScript     │
 └─────────────────────────────────────────────────────────────┘
                               │
                               ▼
 ┌─────────────────────────────────────────────────────────────┐
-│                    业务逻辑层 (Spring Boot)                   │
+│                    业务逻辑层 (Spring Boot 3)                 │
 │  Spring Security │ JWT认证 │ MyBatis Plus │ Spring AOP      │
+│  Redis分布式锁 │ 定时任务 │ WebSocket实时通讯                 │
 └─────────────────────────────────────────────────────────────┘
                               │
               ┌───────────────┼───────────────┐
               ▼               ▼               ▼
 ┌─────────────────┐ ┌─────────────────┐ ┌─────────────────┐
-│   MySQL 8.4.8   │ │   Redis 8.6.0   │ │   YOLO Service  │
-│   数据持久化     │ │  缓存/Token     │ │   AI识别服务     │
+│   MySQL 8.x    │ │   Redis 8.x    │ │   YOLO Service  │
+│   数据持久化     │ │  缓存/分布式锁  │ │   AI识别服务     │
 └─────────────────┘ └─────────────────┘ └─────────────────┘
+```
+
+### Controller 层职责划分
+
+```
+controller/
+├── admin/                    ← 管理员专用接口（@PreAuthorize + BaseController）
+│   ├── AdminController       → /api/admin          用户管理(列表/状态)
+│   ├── AdminOrderController  → /api/admin/orders   订单管理(列表/详情/发货)
+│   ├── AdminAfterSalesController → /api/admin/after-sales 售后管理
+│   ├── AdminActivityController→ /api/admin/activities 活动CRUD
+│   ├── AdminMessageController → /api/admin/messages 消息管理
+│   ├── AdminPointsProductController → /api/admin/points-products 积分商品
+│   ├── AdminPointsRuleController  → /api/admin/points-rules 积分规则
+│   └── AdminVipController     → /api/admin/vip       VIP用户管理
+│
+├── order/                    ← 用户端订单接口
+│   ├── OrderController       → /api/order           下单/支付/收货/取消
+│   ├── AfterSalesController  → /api/after-sales     申请/取消/退货物流
+│   └── UnifiedOrderController→ /api/orders          统一创建/支付/列表
+│
+├── marketing/                ← 营销接口
+│   ├── MarketingController   → /api/marketing       签到/积分记录
+│   ├── VipController         → /api/vip             VIP查看/购买/兑换
+│   ├── PointsMallController  → /api/points-mall     积分商城浏览/兑换
+│   ├── ActivityController    → /api/activity        活动领券
+│   └── CouponController      → /api/coupons         优惠券领取/我的
+│
+├── product/                  ← 商品接口
+├── system/                   ← 系统接口(用户/消息推送)
+└── product-spec/             ← 商品规格值自定义
 ```
 
 ### 技术栈
@@ -97,37 +80,164 @@
 | 技术 | 版本 | 说明 |
 |------|------|------|
 | Spring Boot | 3.5.12 | 核心框架 |
-| Spring Security | - | 安全认证 |
+| Spring Security | - | 安全认证（RBAC权限控制） |
 | MyBatis Plus | 3.5.16 | ORM框架 |
-| MySQL | 8.4.8 | 关系型数据库 |
-| Redis | 8.6.0 | 缓存中间件 |
+| MySQL | 8.x | 关系型数据库 |
+| Redis | 8.x | 缓存/分布式锁/Token存储 |
 | JWT | 0.13.0 | 无状态认证 |
-| Hutool | 5.8.44 | 工具库 |
+| Lombok | - | 简化代码 |
 | WebSocket | - | 实时通讯 |
 | Spring Mail | - | 邮件服务 |
-| Maven | 3.9.14 | 项目构建 |
+| Maven | 3.9+ | 项目构建 |
 
 #### 前端技术
 
 | 技术 | 版本 | 说明 |
 |------|------|------|
-| Vue | 3.5.30 | 渐进式框架 |
-| TypeScript | 5.9.3 | 类型支持 |
-| Vite | 8.0.0 | 构建工具 |
-| Vue Router | 4.6.4 | 路由管理 |
-| Pinia | 3.0.4 | 状态管理 |
-| Element Plus | 2.13.6 | UI组件库 |
-| Tailwind CSS | 4.2.1 | 样式框架 |
-| Axios | 1.13.6 | HTTP客户端 |
-| Node.js | 24.14.0 | 运行环境 |
+| Vue | 3.5+ | 渐进式框架（Composition API） |
+| TypeScript | 5.9+ | 类型支持 |
+| Vite | 8.0+ | 构建工具 |
+| Vue Router | 4.6+ | 路由管理 |
+| Pinia | 3.0+ | 状态管理 |
+| Element Plus | 2.13+ | UI组件库 |
+| Axios | 1.13+ | HTTP客户端 |
+| Tailwind CSS | 4.2+ | 样式框架 |
 
 #### AI服务
 
-| 技术 | 版本 | 说明 |
+| 技术 | 说明 |
+|------|------|
+| YOLO (Ultralytics) | 目标检测算法，用于视觉搜索 |
+| Python 3.11+ | Flask API 服务 |
+
+---
+
+## 核心功能模块
+
+### 用户端功能
+
+| 模块 | 功能点 | 说明 |
+|------|--------|------|
+| 注册登录 | 手机号/邮箱注册、JWT认证、密码重置 | 支持邮箱验证码 |
+| 个人中心 | 头像上传、昵称/手机修改、密码管理、收货地址CRUD | - |
+| 智慧导购 | YOLO视觉搜索、协同过滤推荐 | 以图搜物 |
+| 商品浏览 | 商品列表、分类筛选、详情页、规格选择、收藏 | 支持规格值自定义 |
+| 购物车 | 添加/删除/数量修改、批量结算 | - |
+| 统一下单 | 普通商品/VIP月卡/SVIP年卡/积分兑换 四种场景 | 24小时自动过期 |
+| 订单支付 | 余额支付、积分支付（纯积分兑换不支持混合） | VIP/SVIP不享受折扣 |
+| 订单管理 | 列表/详情、确认收货、取消订单、申请售后 | - |
+| 积分体系 | 每日签到（支持不限次数/连续签到奖励）、积分获取/消耗记录 | 规则可配置 |
+| 积分商城 | 积分商品浏览、积分兑换下单 | - |
+| VIP会员 | VIP月卡(¥99)、SVIP年卡(¥1499)购买/积分兑换 | 含权益展示 |
+| 优惠券 | 领取优惠券、我的优惠券、使用/过期 | 已领自动过滤 |
+| 售后服务 | 申请售后、填写退货物流、退款进度 | - |
+| 客服聊天 | WebSocket实时消息通讯 | - |
+
+### 管理端功能
+
+| 模块 | 功能点 | 说明 |
+|------|--------|------|
+| 数据大屏 | 销售统计、趋势图表、用户增长 | ECharts可视化 |
+| 商品管理 | 商品发布/编辑/上下架、SKU管理、库存管理、规格值自定义 | - |
+| 订单管理 | 全部订单查询/详情、状态更新、发货（输入物流信息） | - |
+| 售后管理 | 售后列表、同意/拒绝申请 | - |
+| 优惠券管理 | 优惠券模板CRUD、发放/过期处理 | - |
+| 会员日活动 | 活动CRUD、领券入口配置 | - |
+| 积分商品管理 | 积分商品CRUD | - |
+| 积分规则管理 | 签到规则配置（每日上限/不限次数/积分值） | - |
+| VIP用户管理 | VIP用户列表/等级/到期时间 | - |
+| 用户管理 | 用户列表/状态/余额调整 | - |
+| YOLO映射 | 物体类别↔商品分类映射配置 | - |
+| 消息中心 | 站内消息管理 | - |
+
+---
+
+## 统一订单与支付系统
+
+### 支持的业务场景
+
+| 场景 | 订单类型 | 支付方式 | 折扣优惠 | 优惠券 |
+|------|---------|---------|---------|--------|
+| 普通商品购买 | `ORDER_TYPE_NORMAL(0)` | 余额/支付宝/微信 | ✅ 可用 | ✅ 可用 |
+| VIP月卡购买 | `ORDER_TYPE_VIP(1)` | 余额/支付宝/微信 | ❌ 禁用 | ❌ 隐藏 |
+| SVIP年卡购买 | `ORDER_TYPE_SVIP(2)` | 余额/支付宝/微信 | ❌ 禁用 | ❌ 隐藏 |
+| 积分兑换 | `ORDER_TYPE_POINTS_EXCHANGE(3)` | 仅积分支付 | ❌ 禁用 | ❌ 隐藏 |
+
+### 订单生命周期
+
+```
+待支付(0) → 待发货(1) → 待收货(2) → 已完成(3)
+                ↓               ↓
+           售后中(5)      申请售后
+                ↓
+           已关闭(4) ← 24h超时自动取消 / 用户主动取消
+```
+
+### 核心 API
+
+| 方法 | 路径 | 说明 |
 |------|------|------|
-| YOLO | - | 目标检测算法，用于视觉搜索 |
-| Ultralytics | - | YOLO模型框架 |
-| Python | 3.11.14 | AI服务运行环境 |
+| POST | `/api/orders/create` | 创建普通商品订单 |
+| POST | `/api/orders/vip` | 创建VIP/SVIP订单 |
+| POST | `/api/orders/points-exchange` | 创建积分兑换订单 |
+| POST | `/api/orders/{id}/pay` | 支付订单（BALANCE/POINTS） |
+| POST | `/api/orders/{id}/cancel` | 取消订单 |
+| GET | `/api/orders` | 用户订单列表 |
+| GET | `/api/orders/{id}` | 订单详情 |
+
+---
+
+## 积分与签到系统
+
+### 签到规则
+
+- 支持**每日次数限制**配置（管理员可在后台设置 `dailyLimit`）
+- 设置为 **0 表示不限次数**
+- 支持**连续签到奖励**（7天/30天里程碑额外积分）
+
+### 签到 API
+
+| 方法 | 路径 | 返回值 | 说明 |
+|------|------|--------|------|
+| POST | `/api/marketing/sign-in` | SignInResult | 执行签到 |
+| GET | `/api/marketing/sign-in/status` | SignInStatus | 获取签到状态 |
+
+**SignInResult 结构**：
+```json
+{
+  "points": 15,
+  "todayCount": 2,
+  "consecutiveDays": 5,
+  "dailyLimit": 0,
+  "remaining": 2147483647
+}
+```
+
+---
+
+## VIP 会员体系
+
+### 会员类型
+
+| 类型 | 价格 | 获得积分 | 有效期 | 权益 |
+|------|------|---------|--------|------|
+| VIP月卡 | ¥99 | 3000 | 30天 | 基础会员折扣 |
+| SVIP年卡 | ¥1499 | 20000 | 365天 | 高级会员权益 |
+
+### VIP 相关常量（集中管理）
+
+所有 VIP 相关常量定义在 `VipConstants.java` 中：
+
+```java
+VipConstants.VIP_MONTHLY_PRICE      // ¥99.00
+VipConstants.SVIP_YEARLY_PRICE      // ¥1499.00
+VipConstants.VIP_MONTHLY_POINTS     // 3000
+VipConstants.TYPE_VIP_MONTHLY        // 1
+VipConstants.TYPE_SVIP_YEARLY        // 3
+VipConstants.DURATION_VIP_MONTHLY    // 30 天
+VipConstants.LEVEL_VIP               // 1
+VipConstants.LEVEL_SVIP              // 2
+```
 
 ---
 
@@ -138,128 +248,54 @@
 | 组件 | 版本要求 |
 |------|----------|
 | JDK | 21+ |
-| Node.js | 24.14.0+ |
-| MySQL | 8.4.8+ |
-| Redis | 8.6.0+ |
-| Maven | 3.9.14+ |
-| Python | 3.11.14+ |
+| Node.js | 18+ |
+| MySQL | 8.x |
+| Redis | 6.x+ |
+| Maven | 3.9+ |
+| Python | 3.11+ (YOLO服务可选) |
 
-### 后端配置
+### 快速启动
 
-1. **克隆项目**
-
-```bash
-git clone <repository-url>
-cd shop-vault-project
-```
-
-2. **配置环境变量**
-
-创建环境变量或修改 `application.yml`：
-
-```bash
-# MySQL配置
-MYSQL_ACCOUNT=your_mysql_account
-MYSQL_PASSWORD=your_mysql_password
-
-# Redis配置
-REDIS_PASSWORD=your_redis_password
-
-# JWT配置（必须配置）
-JWT_SECRET=your_jwt_secret_key_at_least_32_characters
-JWT_EXPIRATION=3600000
-JWT_REFRESH_EXPIRATION=604800000
-JWT_MIN_SECRET_LENGTH=32
-
-# 邮件服务配置
-QQ_MAIL_ACCOUNT=your_qq_email
-QQ_MAIL_AUTHORIZATION=your_mail_auth_code
-```
-
-3. **初始化数据库**
-
-```bash
-mysql -u root -p < shop-vault-backend/shop-vault.sql
-```
-
-4. **启动后端服务**
+#### 1. 后端
 
 ```bash
 cd shop-vault-backend
-./mvnw spring-boot:run
+
+# 配置环境变量
+export JWT_SECRET="your_secret_key_at_least_32_characters"
+export MYSQL_ACCOUNT=root
+export MYSQL_PASSWORD=your_password
+export REDIS_PASSWORD=your_redis_password
+
+# 导入数据库
+mysql -u root -p < shop-vault.sql
+mysql -u root -p < shop-vault-data.sql
+
+# 启动
+mvn spring-boot:run
+# 服务端口: 8080
 ```
 
-后端服务将在 `http://localhost:8080` 启动
-
-### 前端配置
-
-1. **安装依赖**
+#### 2. 前端
 
 ```bash
 cd shop-vault-frontend
+
 npm install
-```
-
-2. **启动开发服务器**
-
-```bash
 npm run dev
+# 开发服务器: http://localhost:5173
+
+npm run build
+# 生产构建输出: dist/
 ```
 
-前端服务将在 `http://localhost:5173` 启动
-
-### YOLO服务配置
-
-1. **进入YOLO目录**
+#### 3. YOLO服务（可选）
 
 ```bash
 cd shop-vault-yolo
-```
-
-2. **安装依赖**
-
-```bash
 pip install ultralytics flask
-```
-
-3. **启动服务**
-
-```bash
 python yolo_api.py
-```
-
-YOLO服务将在 `http://localhost:5000` 启动
-
----
-
-## JWT环境变量配置说明
-
-| 环境变量名 | 配置键名 | 说明 | 建议值/格式 |
-|------------|----------|------|-------------|
-| `JWT_SECRET` | `shop-vault.jwt.secret` | JWT签名密钥 | 至少32字符的随机字符串，如：`your_jwt_secret_key_at_least_32_characters` |
-| `JWT_EXPIRATION` | `shop-vault.jwt.expiration` | Token有效期（毫秒） | 默认值：`3600000`（1小时） |
-| `JWT_REFRESH_EXPIRATION` | `shop-vault.jwt.refresh-expiration` | 刷新Token有效期（毫秒） | 默认值：`604800000`（7天） |
-| `JWT_MIN_SECRET_LENGTH` | `shop-vault.jwt.min-secret-length` | 密钥最小长度 | 默认值：`32` |
-
-### 配置方法
-
-**Windows系统环境变量配置：**
-```powershell
-# 临时配置（当前终端有效）
-$env:JWT_SECRET="your_secret_key_at_least_32_characters"
-
-# 永久配置（系统环境变量）
-[Environment]::SetEnvironmentVariable("JWT_SECRET", "your_secret_key_at_least_32_characters", "User")
-```
-
-**Linux/Mac系统环境变量配置：**
-```bash
-# 临时配置
-export JWT_SECRET="your_secret_key_at_least_32_characters"
-
-# 永久配置（添加到 ~/.bashrc 或 ~/.zshrc）
-echo 'export JWT_SECRET="your_secret_key_at_least_32_characters"' >> ~/.bashrc
-source ~/.bashrc
+# 服务端口: 5000
 ```
 
 ---
@@ -268,174 +304,78 @@ source ~/.bashrc
 
 ```
 shop-vault-project/
-├── shop-vault-backend/           # 后端项目
-│   ├── src/main/java/
-│   │   └── com/TsukasaChan/ShopVault/
-│   │       ├── annotation/       # 自定义注解
-│   │       ├── aspect/           # AOP切面
-│   │       ├── common/           # 公共组件
-│   │       ├── config/           # 配置类
-│   │       ├── controller/       # 控制器层
-│   │       │   ├── admin/        # 管理端接口
-│   │       │   ├── marketing/    # 营销接口
-│   │       │   ├── order/        # 订单接口
-│   │       │   ├── product/      # 商品接口
-│   │       │   └── system/       # 系统接口
-│   │       ├── dto/              # 数据传输对象
-│   │       ├── entity/           # 实体类
-│   │       │   ├── marketing/    # 营销相关实体
-│   │       │   ├── order/        # 订单相关实体
-│   │       │   ├── product/      # 商品相关实体
-│   │       │   └── system/       # 系统相关实体
-│   │       ├── infrastructure/   # 基础设施服务
-│   │       ├── integration/      # 外部服务集成
-│   │       ├── manager/          # 业务管理器
-│   │       ├── mapper/           # MyBatis Mapper
-│   │       ├── security/         # 安全认证
-│   │       ├── service/          # 服务层
-│   │       ├── task/             # 定时任务
-│   │       ├── util/             # 工具类
-│   │       └── websocket/        # WebSocket
-│   └── src/main/resources/
-│       └── application.yml       # 配置文件
+├── shop-vault-backend/              # Spring Boot 后端
+│   └── src/main/java/com/TsukasaChan/ShopVault/
+│       ├── annotation/              # @LogOperation 自定义注解
+│       ├── aspect/                  # 操作日志 AOP 切面
+│       ├── common/                  # Result/PageResult/BaseController/SecurityUtils/VipConstants
+│       ├── config/                  # Security/WebSocket/Mail/CORS 配置
+│       ├── controller/
+│       │   ├── admin/               # 8个管理员 Controller
+│       │   ├── order/               # 3个订单 Controller
+│       │   ├── marketing/           # 5个营销 Controller
+│       │   ├── product/             # 商品 Controller
+│       │   ├── system/              # 系统 Controller
+│       │   └── product-spec/        # 规格值 Controller
+│       ├── dto/                     # CreateOrderDto/AfterSalesHandleDto 等
+│       ├── entity/                  # 实体类（order/marketing/product/system）
+│       ├── infrastructure/          # Redis 分布式锁
+│       ├── mapper/                  # MyBatis Mapper 接口
+│       ├── security/                # JWT Filter / UserDetails
+│       ├── service/                 # 服务层接口
+│       │   └── impl/                # 服务实现类
+│       ├── task/                   # 定时任务（订单超时/VIP过期）
+│       ├── util/                   # OrderNoGenerator 工具类
+│       └── websocket/              # WebSocket 服务
 │
-├── shop-vault-frontend/          # 前端项目
-│   ├── src/
-│   │   ├── api/                  # API接口
-│   │   ├── assets/               # 静态资源
-│   │   ├── components/           # 组件
-│   │   │   ├── admin/            # 管理端组件
-│   │   │   ├── common/           # 公共组件
-│   │   │   └── layout/           # 布局组件
-│   │   ├── composables/          # 组合式函数
-│   │   ├── router/               # 路由配置
-│   │   ├── stores/               # Pinia状态
-│   │   ├── types/                # TypeScript类型
-│   │   ├── utils/                # 工具函数
-│   │   └── views/                # 页面视图
-│   │       ├── admin/            # 管理端页面
-│   │       ├── ai-search/        # AI搜索
-│   │       ├── cart/             # 购物车
-│   │       ├── checkout/         # 结算
-│   │       ├── home/             # 首页
-│   │       ├── login/            # 登录
-│   │       ├── member-day/       # 会员日
-│   │       ├── orders/           # 订单
-│   │       ├── points/           # 积分
-│   │       ├── product/          # 商品详情
-│   │       ├── products/         # 商品列表
-│   │       └── profile/          # 个人中心
-│   └── vite.config.ts            # Vite配置
+├── shop-vault-frontend/             # Vue 3 前端
+│   └── src/
+│       ├── api/                    # 14个 API 模块文件
+│       ├── components/             # 公共/布局/UI 组件
+│       ├── views/
+│       │   ├── admin/              # 16个管理页面
+│       │   ├── orders/             # 用户订单
+│       │   ├── points/             # 积中心(签到/优惠券/VIP)
+│       │   ├── points-mall/        # 积分商城
+│       │   └── ...                 # 其他用户页面
+│       ├── stores/                 # Pinia 状态
+│       ├── types/                  # TypeScript 类型定义
+│       └── utils/                  # 工具函数
 │
-└── shop-vault-yolo/              # YOLO AI服务
-    └── yolo_api.py               # 预测服务
+└── shop-vault-yolo/                # YOLO AI 服务
+    └── yolo_api.py                # Flask API
 ```
 
 ---
 
-## API文档
+## 开发规范
 
-### 认证接口
+### 后端规范
 
-| 方法 | 路径 | 说明 |
-|------|------|------|
-| POST | /api/auth/register | 用户注册 |
-| POST | /api/auth/login | 用户登录 |
-| POST | /api/auth/refresh | 刷新Token |
-| POST | /api/auth/logout | 用户登出 |
+- Controller 层按职责分离：用户端接口在业务包下，管理端接口统一在 `controller/admin/`
+- 所有 Admin Controller 必须继承 `BaseController` 并使用 `@PreAuthorize("hasRole('ADMIN')")`
+- VIP 相关常量统一使用 `VipConstants` 类，禁止硬编码
+- 订单号生成使用 `OrderNoGenerator.generate()` 工具方法
+- 使用 Lombok 注解简化实体类（`@Data`, `@RequiredArgsConstructor`）
 
-### 商品接口
+### 前端规范
 
-| 方法 | 路径 | 说明 |
-|------|------|------|
-| GET | /api/products | 商品列表 |
-| GET | /api/products/{id} | 商品详情 |
-| GET | /api/categories | 分类列表 |
-| GET | /api/products/recommendations | 个性化推荐 |
-
-### AI搜索接口
-
-| 方法 | 路径 | 说明 |
-|------|------|------|
-| POST | /api/yolo/search | YOLO视觉搜索 |
-
-### 订单接口
-
-| 方法 | 路径 | 说明 |
-|------|------|------|
-| POST | /api/orders | 创建订单 |
-| GET | /api/orders | 订单列表 |
-| PUT | /api/orders/{id}/pay | 支付订单 |
-| PUT | /api/orders/{id}/confirm | 确认收货 |
+- 使用 `<script setup lang="ts">` Composition API
+- API 调用统一封装在 `src/api/` 目录
+- TypeScript 类型定义集中在 `types/api.d.ts`
+- 使用 Element Plus 组件库
+- 路径别名：`@/` = `src/`
 
 ---
 
-## 核心算法
+## 注意事项
 
-### YOLO视觉搜索
-
-系统使用YOLO目标检测算法实现视觉搜索功能：
-
-1. 用户上传图片
-2. 后端调用YOLO服务识别图片中的物体
-3. 通过白名单过滤器筛选电商相关类别
-4. 将识别结果映射到商品分类
-5. 返回对应分类的商品列表
-
-### 协同过滤推荐
-
-采用基于物品的协同过滤算法（Item-based CF）：
-
-1. 收集用户浏览、购买行为数据
-2. 计算物品相似度矩阵
-3. 根据用户历史行为推荐相似商品
-4. 解决冷门商品曝光问题
-
----
-
-## 开发指南
-
-### 构建生产版本
-
-```bash
-# 后端
-cd shop-vault-backend
-./mvnw clean package
-
-# 前端
-cd shop-vault-frontend
-npm run build
-```
-
-### 运行测试
-
-```bash
-# 后端测试
-cd shop-vault-backend
-./mvnw test
-```
-
-### 代码规范
-
-- 后端遵循阿里巴巴Java开发规范
-- 前端遵循Vue官方风格指南
-- 使用TypeScript强类型约束
-
----
-
-## 参考文献
-
-1. 任建新,王一鸣,李鑫,等. 基于Java Web的智慧商城购物系统设计[J]. 信息技术与信息化, 2022
-2. Panjaitan B, Nauli S B. Web Based E-Commerce System Development[J]. IJAR, 2024
-3. Zhang Z, et al. ZZ-YOLOv11: A Lightweight Vehicle Detection Model[J]. Sensors, 2025
-4. 沈剑翘, 朱天唯. 协同过滤推荐算法及其在电子商城中的应用[J]. 电脑与电信, 2020
-5. Kevin Santiago Rey Rodriguez, et al. Secure Development Methodology for Full Stack Web Applications[J]. CMC, 2025
-
----
-
-## 致谢
-
-感谢指导教师的悉心指导，感谢Gemini 3在开发过程中提供的辅助支持。
+1. **JWT 配置必须设置**：`JWT_SECRET` 至少32字符，否则服务无法启动
+2. **数据库初始化顺序**：先执行 `shop-vault.sql`（表结构），再执行 `shop-vault-data.sql`（初始数据）
+3. **Redis 必须启动**：用于 Token 存储、分布式锁、缓存等核心功能
+4. **订单超时自动取消**：通过定时任务每分钟检查，24小时未支付自动关闭
+5. **VIP/SVIP 不享受折扣**：系统自动设置 `discountDisabled=1` 和 `afterSalesDisabled=1`
+6. **积分兑换仅支持纯积分支付**：不允许混合支付方式
 
 ---
 

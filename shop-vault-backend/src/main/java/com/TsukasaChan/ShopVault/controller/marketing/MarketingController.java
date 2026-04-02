@@ -4,6 +4,7 @@ import com.TsukasaChan.ShopVault.common.Result;
 import com.TsukasaChan.ShopVault.controller.BaseController;
 import com.TsukasaChan.ShopVault.entity.marketing.PointsRecord;
 import com.TsukasaChan.ShopVault.service.marketing.PointsRecordService;
+import com.TsukasaChan.ShopVault.service.marketing.impl.PointsRecordServiceImpl.SignInResult;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
@@ -19,21 +20,19 @@ public class MarketingController extends BaseController {
     private final PointsRecordService pointsRecordService;
 
     @Data
-    public static class SignInResult {
-        private Integer points;
-        private String message;
-        
-        public SignInResult(Integer points, String message) {
-            this.points = points;
-            this.message = message;
-        }
+    public static class SignInStatus {
+        private boolean todaySigned;
+        private Integer todayCount;
+        private Integer consecutiveDays;
+        private Integer dailyLimit;
+        private Integer remaining;
     }
 
     @PostMapping("/sign-in")
     public Result<SignInResult> signIn() {
         Long userId = getCurrentUserId();
-        Integer points = pointsRecordService.signIn(userId);
-        return Result.success(new SignInResult(points, "签到成功"));
+        SignInResult result = pointsRecordService.signIn(userId);
+        return Result.success(result);
     }
 
     @GetMapping("/points/records")
@@ -50,5 +49,15 @@ public class MarketingController extends BaseController {
         Long userId = getCurrentUserId();
         boolean signed = pointsRecordService.todaySigned(userId);
         return Result.success(signed);
+    }
+
+    @GetMapping("/sign-in/status")
+    public Result<SignInStatus> getSignInStatus() {
+        Long userId = getCurrentUserId();
+        SignInStatus status = new SignInStatus();
+        status.setTodaySigned(pointsRecordService.todaySigned(userId));
+        status.setTodayCount(pointsRecordService.getTodaySignInCount(userId));
+        status.setConsecutiveDays(pointsRecordService.getConsecutiveSignInDays(userId));
+        return Result.success(status);
     }
 }

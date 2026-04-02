@@ -4,9 +4,10 @@ import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Coin, Ticket, Present, Star, Medal, Timer, Check, Calendar } from '@element-plus/icons-vue'
 import UserLayout from '@/components/layout/UserLayout.vue'
-import { signIn, getPointsRecords, getAvailableCoupons, receiveCoupon, getMyCoupons, todaySigned } from '@/api/marketing'
+import { signIn, getPointsRecords, getAvailableCoupons, receiveCoupon, getMyCoupons, getSignInStatus } from '@/api/marketing'
 import { getProfile, rechargeBalance } from '@/api/user'
-import { getVipInfo, getVipHistory, purchaseVip } from '@/api/vip'
+import { getVipInfo, getVipHistory } from '@/api/vip'
+import { createVipOrder, payOrder } from '@/api/order'
 import type { PointsRecord, CouponTemplate, UserCoupon } from '@/types/api'
 import type { VipInfo, VipMembership } from '@/api/vip'
 
@@ -20,6 +21,7 @@ const myCoupons = ref<UserCoupon[]>([])
 const loading = ref(false)
 const signInLoading = ref(false)
 const hasSignedIn = ref(false)
+const signInStatus = ref<{ todaySigned: boolean; todayCount: number; consecutiveDays: number; dailyLimit: number; remaining: number } | null>(null)
 
 const showRechargeDialog = ref(false)
 const rechargeAmount = ref(100)
@@ -73,8 +75,9 @@ const fetchUserInfo = async () => {
 
 const checkTodaySigned = async () => {
   try {
-    const signed = await todaySigned()
-    hasSignedIn.value = signed
+    const status = await getSignInStatus()
+    signInStatus.value = status
+    hasSignedIn.value = status.todaySigned && status.remaining <= 0
   } catch (error) {
     console.error('检查签到状态失败', error)
   }
@@ -124,21 +127,21 @@ const fetchVipHistory = async () => {
 }
 
 const handleSignIn = async () => {
-  if (hasSignedIn.value || signInLoading.value) return
+  if (signInStatus.value && signInStatus.value.remaining <= 0) return
   
   signInLoading.value = true
   try {
     const res = await signIn()
-    ElMessage.success(`签到成功，获得${res.points}积分`)
-    hasSignedIn.value = true
+    ElMessage.success(`签到成功，获得${res.points}积分${res.consecutiveDays > 1 ? ` (连续${res.consecutiveDays}天)` : ''}`)
+    await checkTodaySigned()
     await fetchUserInfo()
     await fetchPointsRecords()
   } catch (error: any) {
     const msg = error?.response?.data?.msg || error?.message || '签到失败'
-    if (msg.includes('已签到')) {
-      hasSignedIn.value = true
-    }
     ElMessage.error(msg)
+    if (msg.includes('已达上限')) {
+      await checkTodaySigned()
+    }
   } finally {
     signInLoading.value = false
   }
@@ -158,18 +161,12 @@ const handlePurchaseVip = async (type: number) => {
   const card = vipCards.find(c => c.type === type)
   if (!card) return
   
-  const userBalance = userInfo.value.balance || 0
-  if (userBalance < card.price) {
-    ElMessage.warning(`余额不足，需要 ¥${card.price}`)
-    return
-  }
-  
   try {
     await ElMessageBox.confirm(
-      `确认使用 ¥${card.price} 购买${card.name}？`,
+      `确认购买${card.name}？\n\n价格：¥${card.price}\n⚠️ VIP/SVIP购买不享受会员折扣优惠`,
       '购买确认',
       {
-        confirmButtonText: '确认购买',
+        confirmButtonText: '确认下单',
         cancelButtonText: '取消',
         type: 'info'
       }
@@ -177,13 +174,30 @@ const handlePurchaseVip = async (type: number) => {
     
     exchangeLoading.value = true
     try {
-      await purchaseVip(type, 'balance')
-      ElMessage.success('VIP购买成功！')
-      await fetchUserInfo()
-      await fetchVipInfo()
-      await fetchVipHistory()
+      const res = await createVipOrder({ vipType: type, paymentMethod: 'BALANCE' })
+      
+      if (res.orderId) {
+        try {
+          await payOrder(res.orderId, { paymentMethod: 'BALANCE' })
+          ElMessage.success(`${card.name}购买成功！`)
+          await fetchUserInfo()
+          await fetchVipInfo()
+          await fetchVipHistory()
+        } catch (payError: any) {
+          const payMsg = payError?.response?.data?.msg || payError?.message || ''
+          if (payMsg.includes('余额不足')) {
+            ElMessageBox.alert(
+              `账户余额不足！\n\n当前余额：¥${userInfo.value.balance || 0}\n需要金额：¥${card.price}\n\n请先充值后再完成支付。`,
+              '支付失败',
+              { confirmButtonText: '我知道了', type: 'warning' }
+            )
+          } else {
+            ElMessage.error(payMsg || '支付失败，请重试')
+          }
+        }
+      }
     } catch (error: any) {
-      const msg = error?.response?.data?.msg || error?.message || '购买失败'
+      const msg = error?.response?.data?.msg || error?.message || '下单失败'
       ElMessage.error(msg)
     } finally {
       exchangeLoading.value = false
@@ -351,7 +365,7 @@ onMounted(() => {
                 @click="handleSignIn"
               >
                 <Coin class="btn-icon" />
-                {{ hasSignedIn ? '今日已签到' : '签到领积分' }}
+                {{ hasSignedIn ? (signInStatus?.dailyLimit === 0 ? `今日已签${signInStatus.todayCount}次` : '今日已签到') : '签到领积分' }}
               </el-button>
             </div>
           </div>
@@ -546,18 +560,18 @@ onMounted(() => {
                   <template v-if="myCoupons.length > 0">
                     <div class="coupons-grid">
                       <div 
-                        v-for="coupon in myCoupons" 
-                        :key="coupon.id"
-                        class="coupon-card"
-                        :class="coupon.status === 0 ? 'coupon-usable' : 'coupon-used'"
-                      >
-                        <div class="coupon-left">
-                          <div class="coupon-value">¥{{ coupon.value }}</div>
-                          <div class="coupon-condition">满{{ coupon.minAmount }}元可用</div>
-                        </div>
-                        <div class="coupon-right">
-                          <div class="coupon-name">{{ coupon.couponName }}</div>
-                          <div class="coupon-date">{{ formatDate(coupon.startTime) }} ~ {{ formatDate(coupon.endTime) }}</div>
+                      v-for="coupon in myCoupons" 
+                      :key="coupon.id"
+                      class="coupon-card"
+                      :class="coupon.status === 0 ? 'coupon-usable' : 'coupon-used'"
+                    >
+                      <div class="coupon-left">
+                        <div class="coupon-value">¥{{ coupon.couponTemplate?.value ?? '-' }}</div>
+                        <div class="coupon-condition">满{{ coupon.couponTemplate?.minAmount ?? 0 }}元可用</div>
+                      </div>
+                      <div class="coupon-right">
+                        <div class="coupon-name">{{ coupon.couponTemplate?.name || '优惠券' }}</div>
+                        <div class="coupon-date">{{ formatDate(coupon.couponTemplate?.validStartTime ?? '') }} ~ {{ formatDate(coupon.couponTemplate?.validEndTime ?? '') }}</div>
                           <el-tag :type="coupon.status === 0 ? 'success' : 'info'" size="small">
                             {{ coupon.status === 0 ? '未使用' : coupon.status === 1 ? '已使用' : '已过期' }}
                           </el-tag>
@@ -661,12 +675,16 @@ onMounted(() => {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  background: rgba(255, 255, 255, 0.2);
+  background: rgba(0, 0, 0, 0.15);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   padding: 6px 16px;
   border-radius: 20px;
   font-size: 14px;
   font-weight: 600;
   width: fit-content;
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.3);
 }
 
 .badge-icon {
@@ -718,11 +736,12 @@ onMounted(() => {
 
 .points-label {
   font-size: 14px;
-  opacity: 0.9;
+  color: #fff;
+  font-weight: 500;
 }
 
 .member-day-card {
-  background: rgba(255, 255, 255, 0.15);
+  background: rgba(0, 0, 0, 0.12);
   border: 1px solid rgba(255, 255, 255, 0.3);
   border-radius: 16px;
   padding: 16px 20px;
@@ -781,10 +800,11 @@ onMounted(() => {
 
 .benefit-item {
   font-size: 11px;
-  color: rgba(255, 255, 255, 0.9);
-  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+  background: rgba(0, 0, 0, 0.15);
   padding: 2px 8px;
   border-radius: 4px;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
 }
 
 .member-day-btn {
@@ -1109,7 +1129,7 @@ onMounted(() => {
 
 .record-time {
   font-size: 12px;
-  color: #9ca3af;
+  color: #6b7280;
 }
 
 .record-points {
@@ -1238,7 +1258,7 @@ onMounted(() => {
 
 .original-price {
   font-size: 14px;
-  color: #9ca3af;
+  color: #6b7280;
   text-decoration: line-through;
   margin-top: 4px;
 }
@@ -1371,7 +1391,7 @@ onMounted(() => {
 
 .history-time {
   font-size: 12px;
-  color: #9ca3af;
+  color: #6b7280;
 }
 
 .history-right {
@@ -1475,7 +1495,7 @@ onMounted(() => {
 }
 
 .coupon-used .coupon-value {
-  color: #9ca3af;
+  color: #6b7280;
 }
 
 .coupon-condition {

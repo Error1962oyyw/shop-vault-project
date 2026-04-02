@@ -9,16 +9,19 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDateTime;
+
 @RestController
-@RequestMapping("/api/order/admin")
+@RequestMapping("/api/admin/orders")
 @RequiredArgsConstructor
 public class AdminOrderController extends BaseController {
 
     private final OrderService orderService;
 
-    @GetMapping("/list")
+    @GetMapping
     @PreAuthorize("hasRole('ADMIN')")
     public Result<PageResult<Order>> getAdminOrderList(
             @RequestParam(defaultValue = "1") Integer pageNum,
@@ -64,5 +67,43 @@ public class AdminOrderController extends BaseController {
         order.setStatus(status);
         orderService.updateById(order);
         return Result.success("订单状态更新成功");
+    }
+
+    @PostMapping("/{orderNo}/ship")
+    @PreAuthorize("hasRole('ADMIN')")
+    public Result<String> shipOrder(
+            @PathVariable String orderNo,
+            @RequestBody ShipRequest request
+    ) {
+        if (!StringUtils.hasText(request.getTrackingCompany())) {
+            return Result.error(400, "请选择物流公司");
+        }
+        if (!StringUtils.hasText(request.getTrackingNo())) {
+            return Result.error(400, "请输入物流单号");
+        }
+        if (request.getTrackingNo().length() > 50) {
+            return Result.error(400, "物流单号长度不能超过50个字符");
+        }
+
+        Order order = orderService.getOne(new LambdaQueryWrapper<Order>()
+                .eq(Order::getOrderNo, orderNo));
+        if (order == null) {
+            return Result.error(404, "订单不存在");
+        }
+        if (order.getStatus() != Order.STATUS_PENDING_DELIVERY) {
+            return Result.error(400, "当前订单状态不允许发货");
+        }
+        order.setStatus(Order.STATUS_PENDING_RECEIVE);
+        order.setTrackingCompany(request.getTrackingCompany());
+        order.setTrackingNo(request.getTrackingNo());
+        order.setDeliveryTime(LocalDateTime.now());
+        orderService.updateById(order);
+        return Result.success("发货成功");
+    }
+
+    @lombok.Data
+    public static class ShipRequest {
+        private String trackingCompany;
+        private String trackingNo;
     }
 }

@@ -59,21 +59,39 @@ public class PointsRecordServiceImpl extends ServiceImpl<PointsRecordMapper, Poi
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public Integer signIn(Long userId) {
-        if (todaySigned(userId)) {
-            throw new RuntimeException("今日已签到，请明天再来！");
+    public SignInResult signIn(Long userId) {
+        PointsRule signInRule = getSignInRule();
+        int dailyLimit = signInRule != null && signInRule.getDailyLimit() != null ? signInRule.getDailyLimit() : 1;
+        
+        if (dailyLimit != 0) {
+            int todayCount = getTodaySignInCount(userId);
+            if (todayCount >= dailyLimit) {
+                throw new RuntimeException("今日已签到" + todayCount + "次，已达上限");
+            }
         }
         
-        PointsRule signInRule = getSignInRule();
         int signInPoints = calculateSignInPoints(signInRule);
+        int consecutiveDays = getConsecutiveSignInDays(userId);
+        int bonusPoints = calculateConsecutiveBonus(consecutiveDays, signInRule);
+        int totalPoints = signInPoints + bonusPoints;
         
-        log.info("用户签到 - userId: {}, 签到积分: {}, 规则配置: pointsValue={}, pointsRatio={}", 
-                userId, signInPoints, 
-                signInRule != null ? signInRule.getPointsValue() : "null",
-                signInRule != null ? signInRule.getPointsRatio() : "null");
+        log.info("用户签到 - userId: {}, 签到积分: {}, 连续天数: {}, 奖励积分: {}, 总积分: {}, 每日上限: {}", 
+                userId, totalPoints, consecutiveDays + 1, bonusPoints, totalPoints, dailyLimit == 0 ? "不限" : dailyLimit);
         
-        addPoints(userId, signInPoints, PointsRecord.TYPE_SIGN_IN, "每日签到奖励", null);
-        return signInPoints;
+        String description = "每日签到奖励";
+        if (bonusPoints > 0) {
+            description += "(连续" + (consecutiveDays + 1) + "天+" + bonusPoints + ")";
+        }
+        
+        addPoints(userId, totalPoints, PointsRecord.TYPE_SIGN_IN, description, null);
+        
+        SignInResult result = new SignInResult();
+        result.setPoints(totalPoints);
+        result.setTodayCount(getTodaySignInCount(userId));
+        result.setConsecutiveDays(consecutiveDays + 1);
+        result.setDailyLimit(dailyLimit);
+        result.setRemaining(Math.max(0, dailyLimit == 0 ? Integer.MAX_VALUE : dailyLimit - getTodaySignInCount(userId)));
+        return result;
     }
 
     @Override
@@ -83,6 +101,44 @@ public class PointsRecordServiceImpl extends ServiceImpl<PointsRecordMapper, Poi
                 .eq(PointsRecord::getUserId, userId)
                 .eq(PointsRecord::getType, PointsRecord.TYPE_SIGN_IN)
                 .ge(PointsRecord::getCreateTime, todayStart)) > 0;
+    }
+
+    @Override
+    public int getTodaySignInCount(Long userId) {
+        LocalDateTime todayStart = LocalDateTime.now().toLocalDate().atStartOfDay();
+        return Math.toIntExact(this.count(new LambdaQueryWrapper<PointsRecord>()
+                .eq(PointsRecord::getUserId, userId)
+                .eq(PointsRecord::getType, PointsRecord.TYPE_SIGN_IN)
+                .ge(PointsRecord::getCreateTime, todayStart)));
+    }
+
+    @Override
+    public int getConsecutiveSignInDays(Long userId) {
+        LocalDateTime today = LocalDateTime.now().toLocalDate().atStartOfDay();
+        int consecutiveDays = 0;
+        LocalDateTime checkDate = today.minusDays(1);
+        
+        while (true) {
+            LocalDateTime dayStart = checkDate.toLocalDate().atStartOfDay();
+            LocalDateTime dayEnd = dayStart.plusDays(1);
+            
+            boolean hasRecord = this.count(new LambdaQueryWrapper<PointsRecord>()
+                    .eq(PointsRecord::getUserId, userId)
+                    .eq(PointsRecord::getType, PointsRecord.TYPE_SIGN_IN)
+                    .ge(PointsRecord::getCreateTime, dayStart)
+                    .lt(PointsRecord::getCreateTime, dayEnd)) > 0;
+            
+            if (hasRecord) {
+                consecutiveDays++;
+                checkDate = checkDate.minusDays(1);
+            } else {
+                break;
+            }
+            
+            if (consecutiveDays > 365) break;
+        }
+        
+        return consecutiveDays;
     }
     
     private PointsRule getSignInRule() {
@@ -109,5 +165,25 @@ public class PointsRecordServiceImpl extends ServiceImpl<PointsRecordMapper, Poi
         }
         
         return basePoints;
+    }
+    
+    private int calculateConsecutiveBonus(int consecutiveDays, PointsRule rule) {
+        if (consecutiveDays < 1 || rule == null) return 0;
+        int bonus = 0;
+        if (consecutiveDays >= 7 && consecutiveDays % 7 == 0) {
+            bonus = rule.getPointsValue() != null ? rule.getPointsValue() / 2 : 5;
+        } else if (consecutiveDays >= 30) {
+            bonus = rule.getPointsValue() != null ? rule.getPointsValue() : 10;
+        }
+        return bonus;
+    }
+
+    @lombok.Data
+    public static class SignInResult {
+        private Integer points;
+        private Integer todayCount;
+        private Integer consecutiveDays;
+        private Integer dailyLimit;
+        private Integer remaining;
     }
 }

@@ -20,7 +20,21 @@ public class Order implements Serializable {
     private static final long serialVersionUID = 1L;
 
     public static final int ORDER_TYPE_NORMAL = 0;
-    public static final int ORDER_TYPE_POINTS = 1;
+    public static final int ORDER_TYPE_VIP = 1;
+    public static final int ORDER_TYPE_SVIP = 2;
+    public static final int ORDER_TYPE_POINTS_EXCHANGE = 3;
+
+    public static final int STATUS_PENDING_PAYMENT = 0;
+    public static final int STATUS_PENDING_DELIVERY = 1;
+    public static final int STATUS_PENDING_RECEIVE = 2;
+    public static final int STATUS_COMPLETED = 3;
+    public static final int STATUS_CLOSED = 4;
+    public static final int STATUS_AFTER_SALES = 5;
+
+    public static final String PAYMENT_METHOD_BALANCE = "BALANCE";
+    public static final String PAYMENT_METHOD_POINTS = "POINTS";
+    public static final String PAYMENT_METHOD_ALIPAY = "ALIPAY";
+    public static final String PAYMENT_METHOD_WECHAT = "WECHAT";
 
     @TableId(type = IdType.AUTO)
     private Long id;
@@ -33,7 +47,13 @@ public class Order implements Serializable {
 
     private BigDecimal payAmount;
 
+    private Integer pointsAmount;
+
     private Integer status;
+
+    private Integer orderType;
+
+    private String paymentMethod;
 
     private String receiverSnapshot;
 
@@ -47,13 +67,15 @@ public class Order implements Serializable {
 
     private LocalDateTime receiveTime;
 
-    private LocalDateTime createTime;
-
     private LocalDateTime autoReceiveTime;
+
+    private LocalDateTime expireTime;
 
     private Integer isExtended;
 
     private LocalDateTime closeTime;
+
+    private String closeReason;
 
     private Integer pointsUsed;
 
@@ -65,11 +87,25 @@ public class Order implements Serializable {
 
     private BigDecimal vipDiscount;
 
+    private Integer discountDisabled;
+
     private Long skuId;
 
-    private Integer orderType;
+    private Long relatedId;
 
     private Integer isPointsExchange;
 
     private Integer afterSalesDisabled;
+
+    private String remark;
+
+    private LocalDateTime createTime;
+
+    private LocalDateTime updateTime;
+
+    @TableField(exist = false)
+    private String productName;
+
+    @TableField(exist = false)
+    private String productImage;
 }

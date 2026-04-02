@@ -5,7 +5,7 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { 
   ArrowDown, User, List, Star, Coin, SwitchButton, 
   Shop, Search, ShoppingCart, Service, Camera, Menu,
-  HomeFilled, Goods, Present
+  HomeFilled, Goods, Present, ChatDotRound
 } from '@element-plus/icons-vue'
 import { useUserStore } from '@/stores/user'
 import { useCartStore } from '@/stores/cart'
@@ -156,9 +156,27 @@ onMounted(() => {
           </template>
         </div>
         <div class="top-right">
-          <router-link v-if="isLoggedIn" to="/orders" class="top-link">我的订单</router-link>
-          <router-link v-if="isLoggedIn" to="/favorites" class="top-link">我的收藏</router-link>
-          <router-link to="/products" class="top-link">全部商品</router-link>
+          <router-link v-if="isLoggedIn" to="/orders" class="top-link">
+            <el-icon><List /></el-icon>
+            我的订单
+          </router-link>
+          <router-link v-if="isLoggedIn" to="/cart" class="top-link cart-link">
+            <el-icon><ShoppingCart /></el-icon>
+            购物车
+            <el-badge v-if="cartCount > 0" :value="cartCount" :max="99" class="cart-badge-inline" />
+          </router-link>
+          <router-link v-if="isLoggedIn" to="/favorites" class="top-link">
+            <el-icon><Star /></el-icon>
+            我的收藏
+          </router-link>
+          <router-link to="/products" class="top-link">
+            <el-icon><Goods /></el-icon>
+            全部商品
+          </router-link>
+          <router-link v-if="isLoggedIn" to="/chat" class="top-link">
+            <el-icon><ChatDotRound /></el-icon>
+            在线客服
+          </router-link>
         </div>
       </div>
     </div>
@@ -196,12 +214,6 @@ onMounted(() => {
                 <el-icon><Camera /></el-icon>
               </div>
               <span class="action-label">AI识图</span>
-            </div>
-            <div class="action-item hide-mobile" @click="goTo('/chat')">
-              <div class="action-icon">
-                <el-icon><Service /></el-icon>
-              </div>
-              <span class="action-label">客服</span>
             </div>
             <el-button 
               class="show-mobile mobile-menu-btn" 
@@ -449,10 +461,29 @@ onMounted(() => {
   color: var(--text-secondary);
   text-decoration: none;
   transition: color 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
 }
 
 .top-link:hover {
   color: var(--primary-color);
+}
+
+.cart-link {
+  position: relative;
+}
+
+.cart-badge-inline {
+  margin-left: 4px;
+}
+
+.cart-badge-inline :deep(.el-badge__content) {
+  font-size: 10px;
+  height: 16px;
+  line-height: 16px;
+  padding: 0 5px;
 }
 
 .divider {

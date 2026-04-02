@@ -1,106 +1,115 @@
 import request from '@/utils/request';
-import type { Order, PageResult, AfterSales, ApplyAfterSalesParams } from '@/types/api';
+import type { Order, OrderDetail, PageResult, AfterSales } from '@/types/api';
 
-export const getOrderList = (params?: { status?: number }) => {
-  return request<Order[]>({
-    url: '/api/order/list',
+export const createOrder = (data: {
+  orderType?: number;
+  productId?: number;
+  skuId?: number;
+  quantity?: number;
+  addressId?: number;
+  couponId?: number;
+  pointsUsed?: number;
+  paymentMethod?: string;
+  remark?: string;
+}) => {
+  return request<{ orderId: number; orderNo: string }>({
+    url: '/api/orders/create',
+    method: 'post',
+    data
+  });
+};
+
+export const createVipOrder = (data: { vipType: number; paymentMethod: string }) => {
+  return request<{ orderId: number; orderNo: string; payAmount: number }>({
+    url: '/api/orders/vip',
+    method: 'post',
+    data
+  });
+};
+
+export const createPointsExchangeOrder = (data: { productId: number; quantity?: number }) => {
+  return request<{ orderId: number; orderNo: string; pointsAmount: number }>({
+    url: '/api/orders/points-exchange',
+    method: 'post',
+    data
+  });
+};
+
+export const getUserOrders = (params: { status?: number; page?: number; size?: number }) => {
+  return request<PageResult<OrderDetail>>({
+    url: '/api/orders',
     method: 'get',
     params
   });
 };
 
-export const getOrderDetail = (orderNo: string) => {
-  return request<Order>({
-    url: `/api/order/detail/${orderNo}`,
+export const getOrderDetail = (orderId: number) => {
+  return request<OrderDetail>({
+    url: `/api/orders/${orderId}`,
     method: 'get'
   });
 };
 
-export const buyNow = (data: { productId: number; quantity: number; userCouponId?: number }) => {
-  return request<string>({
-    url: '/api/order/buy-now',
+export const payOrder = (orderId: number, data: { paymentMethod: string }) => {
+  return request<{ orderId: number; status: number }>({
+    url: `/api/orders/${orderId}/pay`,
     method: 'post',
     data
   });
 };
 
-export const cartCheckout = (data: { cartItemIds: number[]; addressId: number; remark?: string; userCouponId?: number }) => {
-  return request<string>({
-    url: '/api/order/cart-checkout',
+export const cancelOrder = (orderId: number, data?: { reason?: string }) => {
+  return request<void>({
+    url: `/api/orders/${orderId}/cancel`,
     method: 'post',
     data
   });
 };
 
-export const payOrder = (orderNo: string) => {
-  return request<void>({
-    url: `/api/order/pay/${orderNo}`,
-    method: 'post'
-  });
-};
-
-export const shipOrder = (orderNo: string) => {
-  return request<void>({
-    url: `/api/order/ship/${orderNo}`,
-    method: 'post'
-  });
-};
-
-export const receiveOrder = (orderNo: string) => {
-  return request<void>({
-    url: `/api/order/receive/${orderNo}`,
-    method: 'post'
-  });
-};
-
-export const extendOrder = (orderNo: string) => {
-  return request<void>({
-    url: `/api/order/extend/${orderNo}`,
-    method: 'post'
-  });
-};
-
-export const cancelOrder = (orderNo: string) => {
-  return request<void>({
-    url: `/api/order/cancel/${orderNo}`,
-    method: 'post'
-  });
-};
-
-export const applyAfterSales = (data: ApplyAfterSalesParams) => {
-  return request<void>({
-    url: '/api/after-sales/apply',
+export const cartCheckout = (data: { addressId: number; couponId?: number; pointsUsed?: number; remark?: string }) => {
+  return request<{ orderId: number; orderNo: string }>({
+    url: '/api/orders/checkout',
     method: 'post',
     data
   });
 };
 
-export const getMyAfterSalesList = () => {
-  return request<AfterSales[]>({
-    url: '/api/after-sales/my-list',
-    method: 'get'
-  });
-};
-
-export const resolveAfterSales = (data: { id: number; status: number; refundAmount?: number; remark?: string }) => {
-  return request<void>({
-    url: '/api/after-sales/resolve',
+export const buyNow = (data: { productId: number; skuId?: number; quantity: number; addressId: number; couponId?: number; pointsUsed?: number; remark?: string }) => {
+  return request<{ orderId: number; orderNo: string }>({
+    url: '/api/orders/buy-now',
     method: 'post',
     data
   });
 };
 
-export const getAdminAfterSalesList = () => {
-  return request<AfterSales[]>({
-    url: '/api/after-sales/admin-list',
-    method: 'get'
-  });
-};
-
-export const getAdminOrderList = (params: { status?: number; pageNum: number; pageSize: number }) => {
+export const getAdminOrderList = (params: { status?: number; page?: number; size?: number; orderNo?: string }) => {
   return request<PageResult<Order>>({
-    url: '/api/order/admin/list',
+    url: '/api/admin/orders',
     method: 'get',
     params
+  });
+};
+
+export const shipOrder = (orderNo: string, data: { trackingCompany: string; trackingNo: string }) => {
+  return request<void>({
+    url: `/api/admin/orders/${orderNo}/ship`,
+    method: 'post',
+    data
+  });
+};
+
+export const getAdminAfterSalesList = (params?: { status?: number }) => {
+  return request<AfterSales[]>({
+    url: '/api/admin/after-sales',
+    method: 'get',
+    params
+  });
+};
+
+export const resolveAfterSales = (data: { id: number; status: number; refundAmount?: number }) => {
+  return request<void>({
+    url: `/api/admin/after-sales/${data.id}/resolve`,
+    method: 'post',
+    data
   });
 };

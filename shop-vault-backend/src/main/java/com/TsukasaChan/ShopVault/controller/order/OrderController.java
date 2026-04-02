@@ -9,7 +9,6 @@ import com.TsukasaChan.ShopVault.entity.order.Order;
 import com.TsukasaChan.ShopVault.service.order.OrderService;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import lombok.RequiredArgsConstructor;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -57,14 +56,6 @@ public class OrderController extends BaseController {
     public Result<String> payOrder(@PathVariable String orderNo) {
         orderService.payOrder(orderNo, getCurrentUserId());
         return Result.success("支付成功！");
-    }
-
-    @LogOperation(module = "订单管理", action = "商家发货")
-    @PreAuthorize("hasRole('ADMIN')")
-    @PostMapping("/ship/{orderNo}")
-    public Result<String> shipOrder(@PathVariable String orderNo) {
-        orderService.shipOrder(orderNo);
-        return Result.success("发货成功！");
     }
 
     @PostMapping("/receive/{orderNo}")

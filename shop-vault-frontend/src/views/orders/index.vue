@@ -1,122 +1,142 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
-import { ElMessage, ElMessageBox } from 'element-plus'
+import { ref, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
+import { ElMessage } from 'element-plus'
+import { Clock, Document, List } from '@element-plus/icons-vue'
+import { getUserOrders, cancelOrder, payOrder } from '@/api/order'
+import { formatMoney, formatDateTime } from '@/utils/format'
+import type { OrderDetail } from '@/types/api'
 import UserLayout from '@/components/layout/UserLayout.vue'
-import { getOrderList, cancelOrder, receiveOrder, extendOrder } from '@/api/order'
-import type { Order } from '@/types/api'
 
-const route = useRoute()
 const router = useRouter()
-
 const loading = ref(false)
-const orders = ref<Order[]>([])
-const activeTab = ref('all')
+const orders = ref<OrderDetail[]>([])
+const currentStatus = ref<number | undefined>(undefined)
+const total = ref(0)
+const page = ref(1)
+const size = ref(10)
 
-const tabs = [
-  { label: '全部订单', value: 'all', status: undefined },
-  { label: '待付款', value: 'unpaid', status: 0 },
-  { label: '待发货', value: 'unshipped', status: 1 },
-  { label: '待收货', value: 'unreceived', status: 2 },
-  { label: '已完成', value: 'completed', status: 3 },
-  { label: '已取消', value: 'cancelled', status: 4 }
+const statusTabs = [
+  { label: '全部', value: undefined },
+  { label: '待付款', value: 0 },
+  { label: '待发货', value: 1 },
+  { label: '待收货', value: 2 },
+  { label: '已完成', value: 3 },
+  { label: '已关闭', value: 4 }
 ]
 
-const currentStatus = computed(() => {
-  const tab = tabs.find(t => t.value === activeTab.value)
-  return tab?.status
-})
+const showPaymentDialog = ref(false)
+const selectedOrder = ref<OrderDetail | null>(null)
+const selectedPaymentMethod = ref('')
+const paymentLoading = ref(false)
+
+const canPay = (order: OrderDetail) => {
+  return order.status === 0 && (!order.expireTime || new Date(order.expireTime) > new Date())
+}
+
+const canCancel = (order: OrderDetail) => {
+  return order.status === 0
+}
 
 const fetchOrders = async () => {
   loading.value = true
   try {
-    const res = await getOrderList({ status: currentStatus.value })
-    orders.value = res || []
-  } catch (error: any) {
-    console.error('获取订单失败', error)
-    ElMessage.error('获取订单失败')
+    const res = await getUserOrders({
+      status: currentStatus.value,
+      page: page.value,
+      size: size.value
+    })
+    orders.value = res.records
+    total.value = res.total
+  } catch (error) {
+    console.error('获取订单列表失败', error)
+    ElMessage.error('获取订单列表失败')
   } finally {
     loading.value = false
   }
 }
 
-const handleTabChange = () => {
+const handleStatusChange = (status: number | undefined) => {
+  currentStatus.value = status
+  page.value = 1
   fetchOrders()
 }
 
-const handleCancel = async (orderNo: string) => {
+const handlePageChange = (newPage: number) => {
+  page.value = newPage
+  fetchOrders()
+}
+
+const openPaymentDialog = (order: OrderDetail) => {
+  selectedOrder.value = order
+  selectedPaymentMethod.value = ''
+  showPaymentDialog.value = true
+}
+
+const handlePayment = async () => {
+  if (!selectedPaymentMethod.value) {
+    ElMessage.warning('请选择支付方式')
+    return
+  }
+
+  if (!selectedOrder.value) return
+
+  paymentLoading.value = true
   try {
-    await ElMessageBox.confirm('确定要取消该订单吗？', '提示', {
-      confirmButtonText: '确定',
-      cancelButtonText: '取消',
-      type: 'warning'
-    })
-    await cancelOrder(orderNo)
+    await payOrder(selectedOrder.value.id, { paymentMethod: selectedPaymentMethod.value })
+    ElMessage.success('支付成功')
+    showPaymentDialog.value = false
+    fetchOrders()
+  } catch (error: any) {
+    ElMessage.error(error.message || '支付失败')
+  } finally {
+    paymentLoading.value = false
+  }
+}
+
+const handleCancel = async (order: OrderDetail) => {
+  try {
+    await cancelOrder(order.id, { reason: '用户主动取消' })
     ElMessage.success('订单已取消')
     fetchOrders()
-  } catch (error) {
+  } catch (error: any) {
+    ElMessage.error(error.message || '取消失败')
   }
 }
 
-const handlePay = (orderNo: string) => {
-  router.push(`/order/pay/${orderNo}`)
+const viewOrderDetail = (orderId: number) => {
+  router.push(`/orders/${orderId}`)
 }
 
-const handleReceive = async (orderNo: string) => {
-  try {
-    await ElMessageBox.confirm('确认已收到货物吗？', '确认收货', {
-      confirmButtonText: '确定',
-      cancelButtonText: '取消',
-      type: 'info'
-    })
-    await receiveOrder(orderNo)
-    ElMessage.success('已确认收货')
-    fetchOrders()
-  } catch (error) {
+const getStatusClass = (status: number) => {
+  switch (status) {
+    case 0: return 'status-pending'
+    case 1: return 'status-processing'
+    case 2: return 'status-shipping'
+    case 3: return 'status-completed'
+    case 4: return 'status-closed'
+    default: return ''
   }
 }
 
-const handleExtend = async (orderNo: string) => {
-  try {
-    await extendOrder(orderNo)
-    ElMessage.success('已延长收货时间')
-  } catch (error) {
-    console.error('延长收货失败', error)
+const getOrderTypeLabel = (type: number) => {
+  switch (type) {
+    case 1: return 'VIP购买'
+    case 2: return 'SVIP购买'
+    case 3: return '积分兑换'
+    default: return '普通商品'
   }
 }
 
-const getStatusText = (status: number) => {
-  const texts: Record<number, string> = {
-    0: '待付款',
-    1: '待发货',
-    2: '待收货',
-    3: '已完成',
-    4: '已取消',
-    5: '售后中'
-  }
-  return texts[status] || '未知'
+const isVipOrder = (order: OrderDetail) => {
+  return order.orderType === 1 || order.orderType === 2
 }
 
-const getStatusColor = (status: number): 'warning' | 'primary' | 'success' | 'info' | 'danger' => {
-  const colors: Record<number, 'warning' | 'primary' | 'success' | 'info' | 'danger'> = {
-    0: 'warning',
-    1: 'primary',
-    2: 'primary',
-    3: 'success',
-    4: 'info',
-    5: 'danger'
-  }
-  return colors[status] || 'info'
-}
-
-const goToDetail = (orderNo: string) => {
-  router.push(`/order/detail/${orderNo}`)
+const isPointsOrder = (order: OrderDetail) => {
+  return order.orderType === 3
 }
 
 onMounted(() => {
-  if (route.query.status) {
-    activeTab.value = route.query.status as string
-  }
   fetchOrders()
 })
 </script>
@@ -124,374 +144,493 @@ onMounted(() => {
 <template>
   <UserLayout>
     <div class="orders-page animate-fade-in">
-      <div class="page-container">
-        <div class="orders-card">
-          <el-tabs v-model="activeTab" class="orders-tabs" @tab-change="handleTabChange">
-            <el-tab-pane 
-              v-for="tab in tabs" 
-              :key="tab.value"
-              :label="tab.label"
-              :name="tab.value"
-            />
-          </el-tabs>
+      <div class="page-header">
+        <h1>
+          <List class="header-icon" />
+          我的订单
+        </h1>
+      </div>
 
-          <div v-loading="loading" class="orders-content">
-            <template v-if="orders.length > 0">
-              <div class="orders-list">
-                <div 
-                  v-for="order in orders" 
-                  :key="order.orderNo"
-                  class="order-item"
-                >
-                  <div class="order-header">
-                    <div class="order-info">
-                      <span class="info-item">订单编号：{{ order.orderNo }}</span>
-                      <span class="info-item">{{ order.createTime }}</span>
-                      <el-tag v-if="order.isPointsExchange === 1" type="warning" size="small" class="points-tag">
-                        积分兑换
-                      </el-tag>
-                    </div>
-                    <el-tag :type="getStatusColor(order.status)" size="small" class="status-tag">
-                      {{ getStatusText(order.status) }}
-                    </el-tag>
-                  </div>
+    <div class="status-tabs">
+      <div 
+        v-for="tab in statusTabs" 
+        :key="tab.label"
+        :class="['tab-item', { active: currentStatus === tab.value }]"
+        @click="handleStatusChange(tab.value)"
+      >
+        {{ tab.label }}
+      </div>
+    </div>
 
-                  <div class="order-body">
-                    <div 
-                      v-for="item in order.items" 
-                      :key="item.id"
-                      class="order-product"
-                    >
-                      <img 
-                        :src="item.productImage" 
-                        :alt="item.productName"
-                        class="product-image"
-                        @click="goToDetail(order.orderNo)"
-                      />
-                      <div class="product-info">
-                        <h3 
-                          class="product-name"
-                          @click="goToDetail(order.orderNo)"
-                        >
-                          {{ item.productName }}
-                        </h3>
-                        <p class="product-price">
-                          ¥{{ item.price.toFixed(2) }} × {{ item.quantity }}
-                        </p>
-                      </div>
-                      <div class="product-total">
-                        <span class="total-price">
-                          ¥{{ item.totalAmount.toFixed(2) }}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
+    <div class="orders-list" v-loading="loading">
+      <div v-if="orders.length === 0" class="empty-orders">
+        <el-empty description="暂无订单">
+          <el-button type="primary" @click="router.push('/products')">去购物</el-button>
+        </el-empty>
+      </div>
 
-                  <div class="order-footer">
-                    <div class="receiver-info">
-                      收货人：{{ order.receiverName }} {{ order.receiverPhone }}
-                    </div>
-                    <div class="order-summary">
-                      <span class="summary-text">
-                        共 {{ order.items?.length || 0 }} 件商品，实付
-                        <span class="pay-amount">
-                          ¥{{ order.payAmount?.toFixed(2) || '0.00' }}
-                        </span>
-                      </span>
-                      
-                      <div class="order-actions">
-                        <template v-if="order.status === 0">
-                          <el-button size="small" @click="handleCancel(order.orderNo)">
-                            取消订单
-                          </el-button>
-                          <el-button type="primary" size="small" @click="handlePay(order.orderNo)">
-                            去支付
-                          </el-button>
-                        </template>
-                        
-                        <template v-else-if="order.status === 2">
-                          <el-button size="small" @click="handleExtend(order.orderNo)">
-                            延长收货
-                          </el-button>
-                          <el-button type="primary" size="small" @click="handleReceive(order.orderNo)">
-                            确认收货
-                          </el-button>
-                        </template>
-                        
-                        <el-button size="small" @click="goToDetail(order.orderNo)">
-                          订单详情
-                        </el-button>
-                      </div>
-                      <div v-if="order.isPointsExchange === 1" class="points-notice">
-                        积分兑换商品不支持售后
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </template>
+      <div v-else class="order-card" v-for="order in orders" :key="order.id">
+        <div class="order-header">
+          <div class="order-info">
+            <span class="order-no">订单号: {{ order.orderNo }}</span>
+            <el-tag size="small" :class="getStatusClass(order.status)">
+              {{ order.statusName }}
+            </el-tag>
+            <el-tag v-if="order.orderType !== 0" size="small" type="info">
+              {{ getOrderTypeLabel(order.orderType) }}
+            </el-tag>
+          </div>
+          <div class="order-time">
+            <el-icon><Clock /></el-icon>
+            {{ formatDateTime(order.createTime) }}
+          </div>
+        </div>
 
-            <el-empty v-else description="暂无订单" class="empty-state">
-              <el-button type="primary" @click="router.push('/products')">
-                去购物
-              </el-button>
-            </el-empty>
+        <div class="order-body" @click="viewOrderDetail(order.id)">
+          <div class="product-info">
+            <div class="product-image" v-if="order.productImage">
+              <img :src="order.productImage" :alt="order.productName" />
+            </div>
+            <div class="product-detail">
+              <h3 class="product-name">{{ order.productName || 'VIP会员' }}</h3>
+              <p class="product-meta">
+                <span v-if="order.quantity">数量: {{ order.quantity }}</span>
+                <span v-if="order.paymentMethodName">支付方式: {{ order.paymentMethodName }}</span>
+              </p>
+            </div>
+          </div>
+
+          <div class="order-amount">
+            <div v-if="isPointsOrder(order)" class="points-amount">
+              <span class="amount-label">积分</span>
+              <span class="amount-value">{{ order.pointsAmount }}</span>
+            </div>
+            <div v-else class="money-amount">
+              <span class="amount-label">¥</span>
+              <span class="amount-value">{{ formatMoney(order.payAmount) }}</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="order-footer">
+          <div class="expire-tip" v-if="order.status === 0 && order.expireTime">
+            <el-icon><Clock /></el-icon>
+            {{ new Date(order.expireTime) > new Date() ? '剩余' : '已' }} 
+            {{ formatDateTime(order.expireTime) }} {{ new Date(order.expireTime) > new Date() ? '自动取消' : '过期' }}
+          </div>
+          
+          <div class="order-actions">
+            <el-button 
+              v-if="canCancel(order)" 
+              type="info" 
+              plain 
+              size="small"
+              @click.stop="handleCancel(order)"
+            >
+              取消订单
+            </el-button>
+            <el-button 
+              v-if="canPay(order)" 
+              type="primary" 
+              size="small"
+              @click.stop="openPaymentDialog(order)"
+            >
+              立即支付
+            </el-button>
+            <el-button 
+              v-if="order.status === 2" 
+              type="success" 
+              plain 
+              size="small"
+            >
+              确认收货
+            </el-button>
           </div>
         </div>
       </div>
+    </div>
+
+    <div class="pagination-wrapper" v-if="total > size">
+      <el-pagination
+        :current-page="page"
+        :page-size="size"
+        :total="total"
+        layout="prev, pager, next"
+        @current-change="handlePageChange"
+      />
+    </div>
+
+    <el-dialog v-model="showPaymentDialog" title="选择支付方式" width="400px">
+      <div v-if="selectedOrder" class="payment-dialog-content">
+        <div class="order-summary">
+          <p>订单金额: 
+            <span v-if="isPointsOrder(selectedOrder)" class="highlight">
+              {{ selectedOrder.pointsAmount }} 积分
+            </span>
+            <span v-else class="highlight">
+              ¥{{ formatMoney(selectedOrder.payAmount) }}
+            </span>
+          </p>
+        </div>
+
+        <div class="payment-methods">
+          <template v-if="isPointsOrder(selectedOrder)">
+            <el-alert type="info" :closable="false" show-icon>
+              纯积分兑换，不支持混合支付
+            </el-alert>
+            <div 
+              :class="['payment-method-item', { active: selectedPaymentMethod === 'POINTS' }]"
+              @click="selectedPaymentMethod = 'POINTS'"
+            >
+              <span class="method-icon">🎁</span>
+              <span class="method-name">积分支付</span>
+              <el-icon v-if="selectedPaymentMethod === 'POINTS'" class="check-icon"><Document /></el-icon>
+            </div>
+          </template>
+          
+          <template v-else>
+            <el-alert v-if="isVipOrder(selectedOrder)" type="warning" :closable="false" show-icon>
+              VIP/SVIP购买不享受会员折扣优惠
+            </el-alert>
+            
+            <div 
+              :class="['payment-method-item', { active: selectedPaymentMethod === 'BALANCE' }]"
+              @click="selectedPaymentMethod = 'BALANCE'"
+            >
+              <span class="method-icon">💰</span>
+              <span class="method-name">余额支付</span>
+              <el-icon v-if="selectedPaymentMethod === 'BALANCE'" class="check-icon"><Document /></el-icon>
+            </div>
+            
+            <div 
+              :class="['payment-method-item', { active: selectedPaymentMethod === 'ALIPAY' }]"
+              @click="selectedPaymentMethod = 'ALIPAY'"
+            >
+              <span class="method-icon">📱</span>
+              <span class="method-name">支付宝</span>
+              <el-icon v-if="selectedPaymentMethod === 'ALIPAY'" class="check-icon"><Document /></el-icon>
+            </div>
+            
+            <div 
+              :class="['payment-method-item', { active: selectedPaymentMethod === 'WECHAT' }]"
+              @click="selectedPaymentMethod = 'WECHAT'"
+            >
+              <span class="method-icon">💚</span>
+              <span class="method-name">微信支付</span>
+              <el-icon v-if="selectedPaymentMethod === 'WECHAT'" class="check-icon"><Document /></el-icon>
+            </div>
+          </template>
+        </div>
+      </div>
+
+      <template #footer>
+        <el-button @click="showPaymentDialog = false">取消</el-button>
+        <el-button type="primary" :loading="paymentLoading" @click="handlePayment">
+          确认支付
+        </el-button>
+      </template>
+    </el-dialog>
     </div>
   </UserLayout>
 </template>
 
 <style scoped>
 .orders-page {
-  min-height: 100vh;
-  background: linear-gradient(135deg, #f0f5ff 0%, #e6f7ff 50%, #f5f7fa 100%);
-  padding: 24px 0;
-}
-
-.page-container {
-  max-width: 1200px;
+  max-width: 1000px;
   margin: 0 auto;
-  padding: 0 20px;
+  padding: 24px;
 }
 
-.orders-card {
-  background: #ffffff;
-  border-radius: var(--radius-md);
-  box-shadow: var(--shadow-sm);
-  overflow: hidden;
+.page-header {
+  margin-bottom: 24px;
 }
 
-.orders-tabs {
-  padding: 8px 32px 0;
+.page-header h1 {
+  font-size: 24px;
+  font-weight: 600;
+  color: #1f2937;
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 
-.orders-content {
-  padding: 32px;
+.header-icon {
+  width: 28px;
+  height: 28px;
+  color: #1677ff;
+}
+
+.header-icon :deep(svg) {
+  width: 28px;
+  height: 28px;
+}
+
+.status-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 20px;
+  padding: 12px;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.tab-item {
+  padding: 8px 16px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  color: #6b7280;
+  transition: all 0.2s;
+}
+
+.tab-item:hover {
+  background: #f3f4f6;
+}
+
+.tab-item.active {
+  background: #1677ff;
+  color: #fff;
 }
 
 .orders-list {
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 16px;
 }
 
-.order-item {
-  border: 1px solid #e5e7eb;
-  border-radius: var(--radius-md);
+.empty-orders {
+  padding: 60px 0;
+  background: #fff;
+  border-radius: 12px;
+}
+
+.order-card {
+  background: #fff;
+  border-radius: 12px;
   overflow: hidden;
-  transition: all 0.3s ease;
-}
-
-.order-item:hover {
-  box-shadow: var(--shadow-md);
-  transform: translateY(-2px);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
 .order-header {
-  background: linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%);
-  padding: 16px 24px;
   display: flex;
-  align-items: center;
   justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  background: #f9fafb;
   border-bottom: 1px solid #e5e7eb;
 }
 
 .order-info {
   display: flex;
   align-items: center;
-  gap: 24px;
+  gap: 12px;
 }
 
-.info-item {
-  color: #6b7280;
+.order-no {
   font-size: 14px;
+  color: #374151;
 }
 
-.status-tag {
-  font-weight: 500;
-}
-
-.points-tag {
-  margin-left: 8px;
-}
-
-.points-notice {
-  color: #f56c6c;
-  font-size: 12px;
-  margin-top: 8px;
-  padding: 4px 8px;
-  background: #fef0f0;
-  border-radius: 4px;
+.order-time {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 13px;
+  color: #9ca3af;
 }
 
 .order-body {
-  padding: 24px;
-}
-
-.order-product {
   display: flex;
+  justify-content: space-between;
   align-items: center;
-  gap: 16px;
-  margin-bottom: 16px;
-}
-
-.order-product:last-child {
-  margin-bottom: 0;
-}
-
-.product-image {
-  width: 96px;
-  height: 96px;
-  border-radius: var(--radius-sm);
-  object-fit: cover;
+  padding: 16px;
   cursor: pointer;
-  transition: transform 0.3s ease;
+  transition: background 0.2s;
 }
 
-.product-image:hover {
-  transform: scale(1.05);
+.order-body:hover {
+  background: #f9fafb;
 }
 
 .product-info {
+  display: flex;
+  gap: 12px;
   flex: 1;
-  min-width: 0;
 }
 
-.product-name {
-  font-weight: 500;
-  color: #1f2937;
-  margin-bottom: 8px;
-  cursor: pointer;
-  transition: color 0.3s ease;
-  line-height: 1.5;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  line-clamp: 2;
-  -webkit-box-orient: vertical;
+.product-image {
+  width: 80px;
+  height: 80px;
+  border-radius: 8px;
   overflow: hidden;
 }
 
-.product-name:hover {
-  color: var(--primary-color);
+.product-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
-.product-price {
+.product-detail {
+  flex: 1;
+}
+
+.product-name {
+  font-size: 15px;
+  font-weight: 500;
+  color: #1f2937;
+  margin: 0 0 8px 0;
+}
+
+.product-meta {
+  font-size: 13px;
   color: #6b7280;
-  font-size: 14px;
+  margin: 0;
 }
 
-.product-total {
+.product-meta span {
+  margin-right: 16px;
+}
+
+.order-amount {
   text-align: right;
 }
 
-.total-price {
-  color: #ef4444;
-  font-weight: 700;
-  font-size: 16px;
+.amount-label {
+  font-size: 13px;
+  color: #6b7280;
+}
+
+.amount-value {
+  font-size: 20px;
+  font-weight: 600;
+  color: #ff4d4f;
+}
+
+.points-amount .amount-value {
+  color: #faad14;
 }
 
 .order-footer {
-  background: #fafafa;
-  padding: 16px 24px;
   display: flex;
-  align-items: center;
   justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
   border-top: 1px solid #e5e7eb;
 }
 
-.receiver-info {
-  color: #6b7280;
-  font-size: 14px;
-}
-
-.order-summary {
+.expire-tip {
   display: flex;
   align-items: center;
-  gap: 24px;
-}
-
-.summary-text {
-  color: #6b7280;
-  font-size: 14px;
-}
-
-.pay-amount {
-  color: #ef4444;
-  font-weight: 700;
-  font-size: 20px;
+  gap: 4px;
+  font-size: 13px;
+  color: #f56c6c;
 }
 
 .order-actions {
   display: flex;
+  gap: 8px;
+}
+
+.status-pending {
+  color: #faad14;
+  background: #fffbe6;
+  border-color: #ffe58f;
+}
+
+.status-processing {
+  color: #1677ff;
+  background: #e6f4ff;
+  border-color: #91caff;
+}
+
+.status-shipping {
+  color: #52c41a;
+  background: #f6ffed;
+  border-color: #b7eb8f;
+}
+
+.status-completed {
+  color: #52c41a;
+  background: #f6ffed;
+  border-color: #b7eb8f;
+}
+
+.status-closed {
+  color: #9ca3af;
+  background: #f3f4f6;
+  border-color: #e5e7eb;
+}
+
+.pagination-wrapper {
+  display: flex;
+  justify-content: center;
+  margin-top: 20px;
+}
+
+.payment-dialog-content {
+  padding: 10px 0;
+}
+
+.order-summary {
+  text-align: center;
+  padding: 16px;
+  background: #f9fafb;
+  border-radius: 8px;
+  margin-bottom: 20px;
+}
+
+.order-summary p {
+  margin: 0;
+  font-size: 14px;
+  color: #6b7280;
+}
+
+.highlight {
+  font-size: 20px;
+  font-weight: 600;
+  color: #ff4d4f;
+}
+
+.payment-methods {
+  display: flex;
+  flex-direction: column;
   gap: 12px;
 }
 
-.empty-state {
-  padding: 60px 0;
+.payment-method-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  border: 2px solid #e5e7eb;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
 }
 
-@media (max-width: 1024px) {
-  .order-footer {
-    flex-direction: column;
-    gap: 16px;
-    align-items: flex-start;
-  }
-  
-  .order-summary {
-    width: 100%;
-    justify-content: space-between;
-  }
+.payment-method-item:hover {
+  border-color: #1677ff;
 }
 
-@media (max-width: 640px) {
-  .orders-page {
-    padding: 12px 0;
-  }
-  
-  .orders-tabs {
-    padding: 8px 20px 0;
-  }
-  
-  .orders-content {
-    padding: 20px;
-  }
-  
-  .order-header {
-    flex-direction: column;
-    gap: 12px;
-    align-items: flex-start;
-  }
-  
-  .order-info {
-    flex-direction: column;
-    gap: 4px;
-  }
-  
-  .order-product {
-    flex-wrap: wrap;
-  }
-  
-  .product-total {
-    width: 100%;
-    text-align: right;
-  }
-  
-  .order-summary {
-    flex-direction: column;
-    gap: 12px;
-    align-items: flex-start;
-  }
-  
-  .order-actions {
-    width: 100%;
-    flex-wrap: wrap;
-  }
-  
-  .order-actions .el-button {
-    flex: 1;
-    min-width: 0;
-  }
+.payment-method-item.active {
+  border-color: #1677ff;
+  background: #e6f4ff;
+}
+
+.method-icon {
+  font-size: 24px;
+}
+
+.method-name {
+  flex: 1;
+  font-size: 15px;
+  font-weight: 500;
+}
+
+.check-icon {
+  color: #1677ff;
+  font-size: 20px;
 }
 </style>

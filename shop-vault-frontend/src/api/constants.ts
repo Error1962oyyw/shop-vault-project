@@ -44,13 +44,13 @@ export const ORDER_API = {
   BUY_NOW: '/api/order/buy-now',
   CART_CHECKOUT: '/api/order/cart-checkout',
   PAY: (orderNo: string) => `/api/order/pay/${orderNo}`,
-  SHIP: (orderNo: string) => `/api/order/ship/${orderNo}`,
+  SHIP: (orderId: number) => `/api/admin/orders/${orderId}/ship`,
   RECEIVE: (orderNo: string) => `/api/order/receive/${orderNo}`,
   EXTEND: (orderNo: string) => `/api/order/extend/${orderNo}`,
   CANCEL: (orderNo: string) => `/api/order/cancel/${orderNo}`,
-  LIST: '/api/order/list',
-  DETAIL: (orderNo: string) => `/api/order/detail/${orderNo}`,
-  ADMIN_LIST: '/api/order/admin/list',
+  LIST: '/api/orders',
+  DETAIL: (orderId: number) => `/api/orders/${orderId}`,
+  ADMIN_LIST: '/api/admin/orders',
 } as const
 
 export const AFTER_SALES_API = {
@@ -58,9 +58,8 @@ export const AFTER_SALES_API = {
   MY_LIST: '/api/after-sales/my-list',
   CANCEL: '/api/after-sales/cancel',
   RETURN_LOGISTICS: '/api/after-sales/return-logistics',
-  HANDLE: '/api/after-sales/handle',
-  CONFIRM_RETURN: '/api/after-sales/confirm-return',
-  ADMIN_LIST: '/api/after-sales/admin-list',
+  RESOLVE: (id: number) => `/api/admin/after-sales/${id}/resolve`,
+  ADMIN_LIST: '/api/admin/after-sales',
   DETAIL: (orderNo: string) => `/api/after-sales/detail/${orderNo}`,
 } as const
 

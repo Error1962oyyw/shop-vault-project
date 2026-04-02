@@ -2,15 +2,18 @@ package com.TsukasaChan.ShopVault.controller.admin;
 
 import com.TsukasaChan.ShopVault.common.PageResult;
 import com.TsukasaChan.ShopVault.common.Result;
+import com.TsukasaChan.ShopVault.controller.BaseController;
 import com.TsukasaChan.ShopVault.entity.marketing.PointsProduct;
 import com.TsukasaChan.ShopVault.service.marketing.PointsProductService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/admin/points-products")
 @RequiredArgsConstructor
-public class AdminPointsProductController {
+@PreAuthorize("hasRole('ADMIN')")
+public class AdminPointsProductController extends BaseController {
 
     private final PointsProductService pointsProductService;
 

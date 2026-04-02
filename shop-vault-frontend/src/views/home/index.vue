@@ -1009,8 +1009,8 @@ onMounted(() => {
 }
 
 .member-avatar {
-  background: rgba(255, 255, 255, 0.2);
-  border: 3px solid rgba(255, 255, 255, 0.5);
+  background: rgba(0, 0, 0, 0.1);
+  border: 3px solid rgba(255, 255, 255, 0.6);
 }
 
 .member-info h3 {
@@ -1022,15 +1022,22 @@ onMounted(() => {
 
 .member-points {
   display: flex;
+  flex-direction: row;
   align-items: center;
   gap: 6px;
   font-size: 14px;
-  color: rgba(255, 255, 255, 0.9);
+  color: #fff;
   margin: 0;
+  white-space: nowrap;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
 }
 
 .points-icon {
-  font-size: 16px;
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  display: inline-block;
+  vertical-align: middle;
 }
 
 .member-actions {
@@ -1058,13 +1065,15 @@ onMounted(() => {
   padding: 0 24px;
   font-weight: 600;
   border-radius: 12px;
-  background: rgba(255, 255, 255, 0.2);
+  background: rgba(0, 0, 0, 0.15);
   color: #fff;
   border: 2px solid rgba(255, 255, 255, 0.5);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
 }
 
 .profile-btn:hover {
-  background: rgba(255, 255, 255, 0.3);
+  background: rgba(0, 0, 0, 0.25);
   color: #fff;
 }
 

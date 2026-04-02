@@ -53,12 +53,13 @@ const handleCurrentChange = (val: number) => {
 
 const handleShip = async (orderNo: string) => {
   try {
-    await ElMessageBox.confirm('确定要发货吗？', '提示', {
-      confirmButtonText: '确定',
+    const { value } = await ElMessageBox.prompt('请输入物流单号', '发货', {
+      confirmButtonText: '确定发货',
       cancelButtonText: '取消',
-      type: 'info'
+      inputPattern: /^[\w\d]{5,30}$/,
+      inputErrorMessage: '请输入正确的物流单号(5-30位字符)'
     })
-    await shipOrder(orderNo)
+    await shipOrder(orderNo, { trackingCompany: '通用物流', trackingNo: value })
     ElMessage.success('发货成功')
     fetchOrders()
   } catch (error) {

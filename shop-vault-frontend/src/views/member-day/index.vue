@@ -678,7 +678,7 @@ onUnmounted(() => {
 
 .upcoming-end {
   font-size: 12px;
-  color: #9ca3af;
+  color: #6b7280;
 }
 
 @media (max-width: 1024px) {

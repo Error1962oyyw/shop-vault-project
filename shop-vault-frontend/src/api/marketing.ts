@@ -2,7 +2,7 @@ import request from '@/utils/request';
 import type { PointsRecord, CouponTemplate, UserCoupon, MemberDay, Activity } from '@/types/api';
 
 export const signIn = () => {
-  return request<{ points: number }>({
+  return request<{ points: number; todayCount: number; consecutiveDays: number; dailyLimit: number; remaining: number }>({
     url: '/api/marketing/sign-in',
     method: 'post'
   });
@@ -11,6 +11,13 @@ export const signIn = () => {
 export const todaySigned = () => {
   return request<boolean>({
     url: '/api/marketing/points/today-signed',
+    method: 'get'
+  });
+};
+
+export const getSignInStatus = () => {
+  return request<{ todaySigned: boolean; todayCount: number; consecutiveDays: number; dailyLimit: number; remaining: number }>({
+    url: '/api/marketing/sign-in/status',
     method: 'get'
   });
 };

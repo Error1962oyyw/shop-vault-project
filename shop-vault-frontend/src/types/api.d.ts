@@ -303,10 +303,25 @@ export interface CouponTemplate {
   createTime: string;
 }
 
+export interface CouponTemplate {
+  id: number;
+  name: string;
+  type: number;
+  value: number;
+  discount?: number;
+  minAmount: number;
+  maxDiscount?: number;
+  validStartTime?: string;
+  validEndTime?: string;
+  status?: number;
+}
+
 export interface UserCoupon {
   id: number;
   couponId: number;
   couponName: string;
+  couponTemplateId?: number;
+  activityId?: number;
   type: number;
   value: number;
   minAmount: number;
@@ -319,6 +334,7 @@ export interface UserCoupon {
   orderId?: number;
   categoryId?: number;
   productId?: number;
+  couponTemplate?: CouponTemplate;
 }
 
 export interface MemberDay {
@@ -445,6 +461,35 @@ export interface TokenResponse {
   accessToken: string;
   refreshToken: string;
   expiresIn: number;
+}
+
+export interface OrderDetail {
+  id: number;
+  orderNo: string;
+  orderType: number;
+  orderTypeName: string;
+  status: number;
+  statusName: string;
+  totalAmount: number;
+  payAmount: number;
+  pointsAmount: number;
+  paymentMethod: string;
+  paymentMethodName: string;
+  expireTime: string;
+  paymentTime: string;
+  createTime: string;
+  closeTime: string;
+  closeReason: string;
+  receiverName: string;
+  receiverPhone: string;
+  receiverAddress: string;
+  trackingCompany: string;
+  trackingNo: string;
+  productName: string;
+  productImage: string;
+  quantity: number;
+  productPrice: number;
+  remark: string;
 }
 
 export interface RefreshTokenParams {

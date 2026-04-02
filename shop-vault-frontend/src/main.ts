@@ -9,16 +9,66 @@ import App from './App.vue'
 import router from './router'
 import { LazyLoadDirective } from './directives'
 
-const app = createApp(App)
+let app: ReturnType<typeof createApp> | null = null
+let pinia: ReturnType<typeof createPinia> | null = null
 
-app.use(createPinia())
-app.use(router)
-app.use(ElementPlus, { locale: zhCn })
-
-app.directive('lazy', LazyLoadDirective)
-
-for (const [key, component] of Object.entries(ElementPlusIconsVue)) {
-  app.component(key, component)
+const errorHandler = (err: unknown, instance: any, info: string) => {
+  console.error('Vue Error:', err)
+  console.error('Error Info:', info)
 }
 
-app.mount('#app')
+const warnHandler = (msg: string, instance: any, trace: string) => {
+  console.warn('Vue Warning:', msg)
+  console.warn('Trace:', trace)
+}
+
+const globalErrorHandler = (event: ErrorEvent) => {
+  console.error('Global Error:', event.error)
+}
+
+const unhandledRejectionHandler = (event: PromiseRejectionEvent) => {
+  console.error('Unhandled Promise Rejection:', event.reason)
+}
+
+function cleanup() {
+  if (app) {
+    app.unmount()
+    app = null
+  }
+  
+  window.removeEventListener('error', globalErrorHandler)
+  window.removeEventListener('unhandledrejection', unhandledRejectionHandler)
+}
+
+function initApp() {
+  cleanup()
+  
+  app = createApp(App)
+  pinia = createPinia()
+  
+  app.use(pinia)
+  app.use(router)
+  app.use(ElementPlus, { locale: zhCn })
+  
+  app.directive('lazy', LazyLoadDirective)
+  
+  for (const [key, component] of Object.entries(ElementPlusIconsVue)) {
+    app.component(key, component)
+  }
+  
+  app.config.errorHandler = errorHandler
+  app.config.warnHandler = warnHandler
+  
+  window.addEventListener('error', globalErrorHandler)
+  window.addEventListener('unhandledrejection', unhandledRejectionHandler)
+  
+  app.mount('#app')
+}
+
+if (import.meta.hot) {
+  import.meta.hot.dispose(() => {
+    cleanup()
+  })
+}
+
+initApp()
