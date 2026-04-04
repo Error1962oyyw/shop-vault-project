@@ -40,30 +40,64 @@ const handleLogin = async () => {
     if (valid) {
       loading.value = true
       try {
+        console.log('[Login] Starting login process for:', loginForm.email);
         const tokenResponse = await login(loginForm)
+        console.log('[Login] Token received:', {
+          hasAccessToken: !!tokenResponse.accessToken,
+          tokenLength: tokenResponse.accessToken?.length
+        });
         userStore.setToken(tokenResponse.accessToken)
-        ElMessage.success('登录成功')
-        
+        console.log('[Login] Token stored in sessionStorage');
+
         try {
-          await userStore.fetchUserInfo()
+          console.log('[Login] Fetching user info...');
+          const userInfo = await userStore.fetchUserInfo()
+          console.log('[Login] User info fetched successfully:', {
+            userId: userInfo?.id,
+            username: userInfo?.username,
+            email: userInfo?.email,
+            role: userInfo?.role
+          });
+
+          console.log('[Login] Fetching cart...');
           await cartStore.fetchCartList()
-        } catch (fetchError) {
-          console.warn('获取用户或购物车信息失败，但登录成功', fetchError)
+          console.log('[Login] Cart fetched');
+
+          ElMessage.success('登录成功')
+          console.log('[Login] Login process completed successfully');
+        } catch (fetchError: unknown) {
+          console.error('[Login Error] Failed to fetch user info:', fetchError);
+          const err = fetchError as Record<string, unknown>;
+          console.error('[Login Error] Error details:', {
+            message: err?.message,
+            response: (err?.response as Record<string, unknown>)?.data,
+            status: (err?.response as Record<string, unknown>)?.status
+          });
+          userStore.clearToken()
+          ElMessage.error('登录失败，无法获取用户信息')
+          loading.value = false
+          return
         }
-        
+
         const redirect = (route.query.redirect as string) || '/'
+        console.log('[Login] Redirecting to:', redirect);
         router.push(redirect)
       } catch (error: any) {
-        const msg = error?.response?.data?.msg || error?.message || ''
-        
-        if (msg.includes('用户不存在') || msg.includes('用户名不存在') || msg.includes('not found') || msg.includes('Not found') || msg.includes('账号不存在')) {
-          errorMessage.value = '账号不存在，请检查邮箱或注册新账号'
-        } else if (msg.includes('密码错误') || msg.includes('密码不正确') || msg.includes('Invalid password') || msg.includes('密码不匹配') || msg.includes('密码验证')) {
-          passwordError.value = '用户名或密码错误，请重新输入'
-        } else if (msg.includes('账号已被暂停') || msg.includes('已被暂停使用') || msg.includes('Disabled')) {
-          errorMessage.value = '您的账号已被暂停使用'
-        } else if (msg) {
-          errorMessage.value = msg
+        const rawMsg = error?.response?.data?.msg || error?.message || ''
+        const status = error?.response?.status
+
+        if (rawMsg.includes('账户已被暂停') || rawMsg.includes('已被暂停') || rawMsg.includes('Disabled') || rawMsg.includes('禁用')) {
+          errorMessage.value = '您的账户已被暂停'
+        } else if (rawMsg.includes('邮箱不存在') || rawMsg.includes('用户不存在') || rawMsg.includes('not found') || rawMsg.includes('不存在') || rawMsg.includes('未注册')) {
+          errorMessage.value = '邮箱不存在，请注册'
+        } else if (rawMsg.includes('密码错误') || rawMsg.includes('密码不正确') || rawMsg.includes('invalid credentials') || rawMsg.includes('Bad credentials')) {
+          passwordError.value = '密码错误，请重新输入'
+        } else if (rawMsg && !rawMsg.includes('Request failed') && !rawMsg.includes('status code')) {
+          errorMessage.value = rawMsg
+        } else if (status === 403) {
+          errorMessage.value = '您的账户已被暂停'
+        } else if (status === 401) {
+          errorMessage.value = '邮箱或密码错误，请检查后重试'
         } else {
           errorMessage.value = '登录失败，请重试'
         }

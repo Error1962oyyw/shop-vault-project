@@ -44,17 +44,36 @@ export const useUserStore = defineStore('user', () => {
   };
 
   const fetchUserInfo = async () => {
+    console.log('[UserStore] fetchUserInfo called, token exists:', !!token.value);
+
     if (!token.value) {
+      console.error('[UserStore Error] No token available');
       throw new Error('No token');
     }
-    
+
     try {
+      console.log('[UserStore] Calling getProfile API...');
       const res = await getProfile();
+      console.log('[UserStore] Profile data received:', {
+        hasData: !!res,
+        userId: res?.id,
+        username: res?.username,
+        email: res?.email,
+        role: res?.role
+      });
+
       userInfo.value = res;
       isAdmin.value = res.role === 'ADMIN';
       sessionStorage.setItem('isAdmin', String(isAdmin.value));
+
+      console.log('[UserStore] User state updated:', {
+        isAdmin: isAdmin.value,
+        userInfoSet: !!userInfo.value
+      });
+
       return res;
     } catch (error) {
+      console.error('[UserStore Error] Failed to fetch user profile:', error);
       userInfo.value = null;
       throw error;
     }

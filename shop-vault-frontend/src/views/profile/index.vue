@@ -128,7 +128,8 @@ const fetchAddresses = async () => {
 const checkTodaySigned = async () => {
   if (!userStore.token) return
   try {
-    hasSignedToday.value = await todaySigned()
+    const status = await getSignInStatus()
+    hasSignedToday.value = status.todaySigned
   } catch (error) {
     console.error('检查签到状态失败', error)
   }

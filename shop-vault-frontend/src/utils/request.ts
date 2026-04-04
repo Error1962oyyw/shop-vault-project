@@ -28,6 +28,18 @@ service.interceptors.request.use(
     const token = sessionStorage.getItem('token');
     if (token) {
       config.headers['Authorization'] = `Bearer ${token}`;
+      if (config.url?.includes('/api/user/profile') || config.url?.includes('/api/auth/')) {
+        console.log(`[API Request] ${config.method?.toUpperCase()} ${config.url}`, {
+          hasToken: true,
+          tokenPrefix: token.substring(0, 20) + '...'
+        });
+      }
+    } else {
+      const authRequiredEndpoints = ['/api/user/profile', '/api/cart/', '/api/order/', '/api/vip/', '/api/marketing/'];
+      const requiresAuth = authRequiredEndpoints.some(endpoint => config.url?.includes(endpoint));
+      if (requiresAuth) {
+        console.warn(`[API Request] No token for authenticated endpoint: ${config.url}`);
+      }
     }
     return config;
   },
@@ -42,12 +54,21 @@ service.interceptors.response.use(
     const { code, msg, message, data } = response.data;
     const errorMsg = message || msg;
 
-    if (code === 200) {
+    console.log(`[API Response] ${response.config?.method?.toUpperCase()} ${response.config?.url}`, {
+      code,
+      hasData: !!data,
+      dataType: typeof data,
+      message: errorMsg
+    });
+
+    if (code === 0 || code === 200) {
+      console.log(`[API Success] Request to ${response.config?.url} succeeded`);
       return data as any;
     } else {
-      const error: ApiError = { 
-        response: { 
-          data: { msg: errorMsg, code } 
+      console.error(`[API Error] Code ${code} for ${response.config?.url}:`, errorMsg);
+      const error: ApiError = {
+        response: {
+          data: { msg: errorMsg, code }
         },
         message: errorMsg || '请求失败'
       };
@@ -66,7 +87,7 @@ service.interceptors.response.use(
       
       switch (status) {
         case 401:
-          handleUnauthorized();
+          handleUnauthorized(error.config?.url, msg || '');
           break;
         case 403:
           apiError.response = { 
@@ -127,23 +148,35 @@ service.interceptors.response.use(
   }
 );
 
-function handleUnauthorized() {
+function isAuthEndpoint(url: string): boolean {
+  return url.includes('/api/auth/login') || url.includes('/api/auth/admin/login');
+}
+
+function handleUnauthorized(url?: string, errorMsg?: string) {
+  if (isAuthEndpoint(url || '')) {
+    return;
+  }
+
+  if (errorMsg && (errorMsg.includes('暂停') || errorMsg.includes('禁用') || errorMsg.includes('Disabled') || errorMsg.includes('suspended'))) {
+    return;
+  }
+  
   if (!isRedirecting) {
     isRedirecting = true;
     const userStore = useUserStore();
     userStore.clearToken();
     userStore.setIsGuest(true);
-    
+
     ElMessage.warning('请先登录');
-    
+
     const currentPath = router.currentRoute.value.fullPath;
-    const isLoginPage = router.currentRoute.value.path === '/login' || 
+    const isLoginPage = router.currentRoute.value.path === '/login' ||
                         router.currentRoute.value.path === '/admin/login';
-    
+
     if (!isLoginPage) {
-      router.push({ 
-        path: '/login', 
-        query: { redirect: currentPath } 
+      router.push({
+        path: '/login',
+        query: { redirect: currentPath }
       }).finally(() => {
         isRedirecting = false;
       });

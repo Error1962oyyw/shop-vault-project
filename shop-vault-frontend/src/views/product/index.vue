@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, reactive } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import UserLayout from '@/components/layout/UserLayout.vue'
 import { FavoriteButton } from '@/components/common'
 import { getProductDetail, getCommentList } from '@/api/product'
@@ -220,15 +220,33 @@ const handleBuyNow = async () => {
     router.push('/login')
     return
   }
-  
+
   if (skus.value.length > 0 && !selectedSku.value) {
     ElMessage.warning('请选择商品规格')
     return
   }
-  
+
+  const productName = product.value?.name || '商品'
+  const price = currentPrice.value
+  const qty = quantity.value
+
   try {
-    await addToCart({ 
-      productId: productId.value, 
+    await ElMessageBox.confirm(
+      `商品名称：${productName}\n\n单价：¥${price.toFixed(2)}\n数量：${qty}\n\n合计：¥${(price * qty).toFixed(2)}`,
+      '确认购买',
+      {
+        confirmButtonText: '确认购买',
+        cancelButtonText: '取消',
+        type: 'warning'
+      }
+    )
+  } catch {
+    return
+  }
+
+  try {
+    await addToCart({
+      productId: productId.value,
       quantity: quantity.value,
       skuId: selectedSku.value?.id
     })

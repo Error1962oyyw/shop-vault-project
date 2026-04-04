@@ -12,12 +12,12 @@ import { LazyLoadDirective } from './directives'
 let app: ReturnType<typeof createApp> | null = null
 let pinia: ReturnType<typeof createPinia> | null = null
 
-const errorHandler = (err: unknown, instance: any, info: string) => {
+const errorHandler = (err: unknown, _instance: any, info: string) => {
   console.error('Vue Error:', err)
   console.error('Error Info:', info)
 }
 
-const warnHandler = (msg: string, instance: any, trace: string) => {
+const warnHandler = (msg: string, _instance: any, trace: string) => {
   console.warn('Vue Warning:', msg)
   console.warn('Trace:', trace)
 }

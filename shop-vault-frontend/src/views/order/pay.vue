@@ -4,17 +4,17 @@ import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import UserLayout from '@/components/layout/UserLayout.vue'
 import { payOrder, getOrderDetail } from '@/api/order'
-import type { Order } from '@/types/api'
+import type { OrderDetail } from '@/types/api'
 
 const route = useRoute()
 const router = useRouter()
 
 const loading = ref(true)
 const paying = ref(false)
-const order = ref<Order | null>(null)
+const order = ref<OrderDetail | null>(null)
 const countdown = ref(900)
 
-const orderNo = computed(() => route.params.orderNo as string)
+const orderId = computed(() => Number(route.params.orderNo))
 
 const formatTime = computed(() => {
   const minutes = Math.floor(countdown.value / 60)
@@ -24,7 +24,7 @@ const formatTime = computed(() => {
 
 const fetchOrder = async () => {
   try {
-    order.value = await getOrderDetail(orderNo.value)
+    order.value = await getOrderDetail(orderId.value)
   } catch (error) {
     console.error('获取订单失败', error)
     ElMessage.error('订单不存在')
@@ -37,9 +37,9 @@ const fetchOrder = async () => {
 const handlePay = async () => {
   paying.value = true
   try {
-    await payOrder(orderNo.value)
+    await payOrder(orderId.value, { paymentMethod: 'BALANCE' })
     ElMessage.success('支付成功')
-    router.push(`/order/success/${orderNo.value}`)
+    router.push(`/order/success/${route.params.orderNo}`)
   } catch (error) {
     console.error('支付失败', error)
   } finally {
@@ -99,23 +99,17 @@ onMounted(() => {
 
             <div class="mb-6">
               <h3 class="font-medium mb-4">商品信息</h3>
-              <div class="space-y-4">
-                <div 
-                  v-for="item in order.items" 
-                  :key="item.id"
-                  class="flex items-center gap-4"
-                >
-                  <img 
-                    :src="item.productImage" 
-                    :alt="item.productName"
-                    class="w-16 h-16 rounded object-cover"
-                  />
-                  <div class="flex-1 min-w-0">
-                    <h4 class="font-medium line-clamp-1">{{ item.productName }}</h4>
-                    <p class="text-gray-500 text-sm">¥{{ item.price.toFixed(2) }} × {{ item.quantity }}</p>
-                  </div>
-                  <span class="text-red-500 font-bold">¥{{ item.totalAmount.toFixed(2) }}</span>
+              <div class="flex items-center gap-4">
+                <img
+                  :src="order.productImage"
+                  :alt="order.productName"
+                  class="w-16 h-16 rounded object-cover"
+                />
+                <div class="flex-1 min-w-0">
+                  <h4 class="font-medium line-clamp-1">{{ order.productName }}</h4>
+                  <p class="text-gray-500 text-sm">¥{{ order.productPrice.toFixed(2) }} × {{ order.quantity }}</p>
                 </div>
+                <span class="text-red-500 font-bold">¥{{ order.totalAmount.toFixed(2) }}</span>
               </div>
             </div>
 
@@ -124,13 +118,9 @@ onMounted(() => {
                 <span class="text-gray-500">商品金额</span>
                 <span>¥{{ order.totalAmount.toFixed(2) }}</span>
               </div>
-              <div class="flex justify-between items-baseline mb-2">
-                <span class="text-gray-500">运费</span>
-                <span>¥{{ order.freightAmount.toFixed(2) }}</span>
-              </div>
-              <div v-if="order.discountAmount > 0" class="flex justify-between items-baseline mb-2">
-                <span class="text-gray-500">优惠</span>
-                <span class="text-red-500">-¥{{ order.discountAmount.toFixed(2) }}</span>
+              <div v-if="order.pointsAmount > 0" class="flex justify-between items-baseline mb-2">
+                <span class="text-gray-500">积分抵扣</span>
+                <span class="text-red-500">-¥{{ order.pointsAmount.toFixed(2) }}</span>
               </div>
               <div class="flex justify-between items-baseline text-xl">
                 <span class="font-bold">应付金额</span>

@@ -66,6 +66,12 @@ const router = createRouter({
       meta: { requiresAuth: true }
     },
     {
+      path: '/orders/:id',
+      name: 'OrderDetail',
+      component: () => import('@/views/orders/detail.vue'),
+      meta: { requiresAuth: true }
+    },
+    {
       path: '/order/pay/:orderNo',
       name: 'OrderPay',
       component: () => import('@/views/order/pay.vue'),
@@ -202,11 +208,29 @@ const router = createRouter({
 
 router.beforeEach(async (to, _from, next) => {
   const userStore = useUserStore()
-  
+
   if (to.meta.requiresAdmin && !userStore.isAdmin) {
-    ElMessage.warning('请先登录管理员账号')
-    next({ name: 'AdminLogin' })
-    return
+    if (to.path !== '/admin/login') {
+      if (!userStore.token) {
+        ElMessage.warning('请先登录管理员账号')
+        next({ name: 'AdminLogin' })
+        return
+      }
+
+      try {
+        await userStore.fetchUserInfo()
+        if (!userStore.isAdmin) {
+          ElMessage.error('该账号没有管理员权限')
+          next({ name: 'AdminLogin' })
+          return
+        }
+      } catch (error) {
+        ElMessage.warning('登录已过期，请重新登录')
+        userStore.clearToken()
+        next({ name: 'AdminLogin' })
+        return
+      }
+    }
   }
   
   if (to.meta.requiresAuth) {
@@ -243,15 +267,16 @@ router.beforeEach(async (to, _from, next) => {
     return
   }
   
-  if (userStore.token && !userStore.userInfo && !to.meta.guest) {
+  if (userStore.token && !userStore.userInfo) {
     try {
       await userStore.fetchUserInfo()
     } catch (error) {
+      console.error('恢复用户信息失败', error)
       userStore.clearToken()
       userStore.setIsGuest(true)
     }
   }
-  
+
   next()
 })
 

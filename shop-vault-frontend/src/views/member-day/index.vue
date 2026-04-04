@@ -340,18 +340,24 @@ onUnmounted(() => {
 .event-badge {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  background: rgba(255, 255, 255, 0.2);
+  gap: 6px;
+  background: rgba(0, 0, 0, 0.15);
   backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
   padding: 8px 20px;
   border-radius: 24px;
   font-size: 14px;
   font-weight: 500;
   margin-bottom: 24px;
+  white-space: nowrap;
+  border: 1px solid rgba(255, 255, 255, 0.3);
 }
 
 .badge-icon {
-  font-size: 18px;
+  font-size: 16px;
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
   animation: pulse 2s ease-in-out infinite;
 }
 
@@ -591,8 +597,16 @@ onUnmounted(() => {
   min-width: 200px;
 }
 
+.rule-item span {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .rule-icon {
-  font-size: 16px;
+  font-size: 14px;
+  width: 16px;
+  height: 16px;
   color: #52c41a;
   flex-shrink: 0;
 }

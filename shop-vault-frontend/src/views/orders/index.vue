@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { Clock, Document, List } from '@element-plus/icons-vue'
@@ -30,13 +30,60 @@ const selectedOrder = ref<OrderDetail | null>(null)
 const selectedPaymentMethod = ref('')
 const paymentLoading = ref(false)
 
+const countdownMap = ref<Record<number, { hours: number; minutes: number; seconds: number; expired: boolean }>>({})
+
 const canPay = (order: OrderDetail) => {
   return order.status === 0 && (!order.expireTime || new Date(order.expireTime) > new Date())
 }
 
 const canCancel = (order: OrderDetail) => {
-  return order.status === 0
+  return order.status === 0 && (!order.expireTime || new Date(order.expireTime) > new Date())
 }
+
+const getOrderDisplayName = (order: OrderDetail) => {
+  if (order.productName && order.productName !== 'VIP会员') return order.productName
+  if (order.orderType === 1) return 'VIP会员'
+  if (order.orderType === 2) return 'SVIP年卡'
+  if (order.orderType === 3) return '积分兑换商品'
+  return '商品'
+}
+
+const getProductMetaText = (order: OrderDetail): string[] => {
+  const meta: string[] = []
+  if (order.quantity) meta.push(`数量: ${order.quantity}`)
+  if (order.orderType === 1) meta.push('类型: VIP会员')
+  else if (order.orderType === 2) meta.push('类型: SVIP年卡')
+  else if (order.orderType === 3) meta.push('类型: 积分兑换')
+  if (order.status === 0 && !order.paymentMethodName) meta.push('状态: 待付款')
+  if (order.status === 4) meta.push('状态: 已关闭')
+  if (order.paymentMethodName && [1, 2].includes(order.status)) meta.push(`支付方式: ${order.paymentMethodName}`)
+  return meta
+}
+
+const getCountdown = (order: OrderDetail) => {
+  if (!order.expireTime || order.status !== 0) return null
+  if (!countdownMap.value[order.id]) updateCountdown(order)
+  return countdownMap.value[order.id]
+}
+
+const updateCountdown = (order: OrderDetail) => {
+  if (!order.expireTime) return
+  const now = new Date().getTime()
+  const end = new Date(order.expireTime).getTime()
+  const diff = end - now
+
+  if (diff <= 0) {
+    countdownMap.value[order.id] = { hours: 0, minutes: 0, seconds: 0, expired: true }
+    return
+  }
+
+  const hours = Math.floor(diff / (1000 * 60 * 60))
+  const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60))
+  const seconds = Math.floor((diff % (1000 * 60)) / 1000)
+  countdownMap.value[order.id] = { hours, minutes, seconds, expired: false }
+}
+
+let countdownTimer: ReturnType<typeof setInterval> | null = null
 
 const fetchOrders = async () => {
   loading.value = true
@@ -48,6 +95,11 @@ const fetchOrders = async () => {
     })
     orders.value = res.records
     total.value = res.total
+    orders.value.forEach(order => {
+      if (order.status === 0 && order.expireTime) {
+        updateCountdown(order)
+      }
+    })
   } catch (error) {
     console.error('获取订单列表失败', error)
     ElMessage.error('获取订单列表失败')
@@ -122,7 +174,7 @@ const getStatusClass = (status: number) => {
 const getOrderTypeLabel = (type: number) => {
   switch (type) {
     case 1: return 'VIP购买'
-    case 2: return 'SVIP购买'
+    case 2: return 'VIP购买'
     case 3: return '积分兑换'
     default: return '普通商品'
   }
@@ -138,6 +190,20 @@ const isPointsOrder = (order: OrderDetail) => {
 
 onMounted(() => {
   fetchOrders()
+  countdownTimer = setInterval(() => {
+    orders.value.forEach(order => {
+      if (order.status === 0 && order.expireTime) {
+        updateCountdown(order)
+      }
+    })
+  }, 1000)
+})
+
+onUnmounted(() => {
+  if (countdownTimer) {
+    clearInterval(countdownTimer)
+    countdownTimer = null
+  }
 })
 </script>
 
@@ -192,10 +258,9 @@ onMounted(() => {
               <img :src="order.productImage" :alt="order.productName" />
             </div>
             <div class="product-detail">
-              <h3 class="product-name">{{ order.productName || 'VIP会员' }}</h3>
+              <h3 class="product-name">{{ getOrderDisplayName(order) }}</h3>
               <p class="product-meta">
-                <span v-if="order.quantity">数量: {{ order.quantity }}</span>
-                <span v-if="order.paymentMethodName">支付方式: {{ order.paymentMethodName }}</span>
+                <span v-for="(meta, idx) in getProductMetaText(order)" :key="idx">{{ meta }}</span>
               </p>
             </div>
           </div>
@@ -206,7 +271,6 @@ onMounted(() => {
               <span class="amount-value">{{ order.pointsAmount }}</span>
             </div>
             <div v-else class="money-amount">
-              <span class="amount-label">¥</span>
               <span class="amount-value">{{ formatMoney(order.payAmount) }}</span>
             </div>
           </div>
@@ -215,8 +279,12 @@ onMounted(() => {
         <div class="order-footer">
           <div class="expire-tip" v-if="order.status === 0 && order.expireTime">
             <el-icon><Clock /></el-icon>
-            {{ new Date(order.expireTime) > new Date() ? '剩余' : '已' }} 
-            {{ formatDateTime(order.expireTime) }} {{ new Date(order.expireTime) > new Date() ? '自动取消' : '过期' }}
+            <template v-if="getCountdown(order) && !getCountdown(order)!.expired">
+              剩余 {{ getCountdown(order)!.hours }}小时{{ getCountdown(order)!.minutes }}分钟{{ getCountdown(order)!.seconds > 0 ? getCountdown(order)!.seconds + '秒' : '' }} 自动取消订单
+            </template>
+            <template v-else>
+              订单已过期
+            </template>
           </div>
           
           <div class="order-actions">
@@ -268,7 +336,7 @@ onMounted(() => {
               {{ selectedOrder.pointsAmount }} 积分
             </span>
             <span v-else class="highlight">
-              ¥{{ formatMoney(selectedOrder.payAmount) }}
+              {{ formatMoney(selectedOrder.payAmount) }}
             </span>
           </p>
         </div>
@@ -495,11 +563,6 @@ onMounted(() => {
 
 .order-amount {
   text-align: right;
-}
-
-.amount-label {
-  font-size: 13px;
-  color: #6b7280;
 }
 
 .amount-value {

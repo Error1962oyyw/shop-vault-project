@@ -45,11 +45,28 @@ const handleDeleteSelected = async () => {
   await handleDelete(selectedItems.value.map(item => item.id))
 }
 
-const handleCheckout = () => {
+const handleCheckout = async () => {
   if (selectedItems.value.length === 0) {
     ElMessage.warning('请选择要结算的商品')
     return
   }
+
+  const itemCount = selectedItems.value.reduce((sum, item) => sum + item.quantity, 0)
+
+  try {
+    await ElMessageBox.confirm(
+      `已选 ${selectedItems.value.length} 件商品，共 ${itemCount} 件\n\n应付金额：¥${selectedAmount.value.toFixed(2)}`,
+      '确认结算',
+      {
+        confirmButtonText: '去结算',
+        cancelButtonText: '取消',
+        type: 'info'
+      }
+    )
+  } catch {
+    return
+  }
+
   const ids = selectedItems.value.map(item => item.id).join(',')
   router.push(`/checkout?cartIds=${ids}`)
 }

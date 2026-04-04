@@ -7,7 +7,6 @@ import UserLayout from '@/components/layout/UserLayout.vue'
 import { signIn, getPointsRecords, getAvailableCoupons, receiveCoupon, getMyCoupons, getSignInStatus } from '@/api/marketing'
 import { getProfile, rechargeBalance } from '@/api/user'
 import { getVipInfo, getVipHistory } from '@/api/vip'
-import { createVipOrder, payOrder } from '@/api/order'
 import type { PointsRecord, CouponTemplate, UserCoupon } from '@/types/api'
 import type { VipInfo, VipMembership } from '@/api/vip'
 
@@ -160,51 +159,31 @@ const handleClaimCoupon = async (couponId: number) => {
 const handlePurchaseVip = async (type: number) => {
   const card = vipCards.find(c => c.type === type)
   if (!card) return
-  
+
+  const benefitsText = card.benefits.map(b => `· ${b}`).join('\n')
+
   try {
     await ElMessageBox.confirm(
-      `确认购买${card.name}？\n\n价格：¥${card.price}\n⚠️ VIP/SVIP购买不享受会员折扣优惠`,
-      '购买确认',
+      `商品名称：${card.name}\n\n价格：¥${card.price}\n有效期：${card.duration}\n\n会员权益：\n${benefitsText}`,
+      '确认购买',
       {
-        confirmButtonText: '确认下单',
+        confirmButtonText: '确认购买',
         cancelButtonText: '取消',
-        type: 'info'
+        type: 'warning'
       }
     )
-    
-    exchangeLoading.value = true
-    try {
-      const res = await createVipOrder({ vipType: type, paymentMethod: 'BALANCE' })
-      
-      if (res.orderId) {
-        try {
-          await payOrder(res.orderId, { paymentMethod: 'BALANCE' })
-          ElMessage.success(`${card.name}购买成功！`)
-          await fetchUserInfo()
-          await fetchVipInfo()
-          await fetchVipHistory()
-        } catch (payError: any) {
-          const payMsg = payError?.response?.data?.msg || payError?.message || ''
-          if (payMsg.includes('余额不足')) {
-            ElMessageBox.alert(
-              `账户余额不足！\n\n当前余额：¥${userInfo.value.balance || 0}\n需要金额：¥${card.price}\n\n请先充值后再完成支付。`,
-              '支付失败',
-              { confirmButtonText: '我知道了', type: 'warning' }
-            )
-          } else {
-            ElMessage.error(payMsg || '支付失败，请重试')
-          }
-        }
-      }
-    } catch (error: any) {
-      const msg = error?.response?.data?.msg || error?.message || '下单失败'
-      ElMessage.error(msg)
-    } finally {
-      exchangeLoading.value = false
-    }
   } catch {
-    // 用户取消
+    return
   }
+
+  router.push({
+    path: '/checkout',
+    query: {
+      vipType: String(type),
+      price: String(card.price),
+      name: card.name
+    }
+  })
 }
 
 const handleRecharge = async () => {
@@ -514,7 +493,7 @@ onMounted(() => {
                         <el-tag :type="getStatusColor(record.status)" size="small">
                           {{ getStatusText(record.status) }}
                         </el-tag>
-                        <div class="history-cost">{{ record.pointsCost }}积分</div>
+                        <div v-if="record.pointsCost > 0" class="history-cost">{{ record.pointsCost }}积分</div>
                       </div>
                     </div>
                   </div>
@@ -897,7 +876,6 @@ onMounted(() => {
 
 .status-discount {
   text-align: center;
-  background: rgba(255, 255, 255, 0.5);
   padding: 12px 20px;
   border-radius: 12px;
 }
@@ -1157,12 +1135,12 @@ onMounted(() => {
 }
 
 .vip-card {
-  background: #f9fafb;
+  background: #fff;
   border-radius: 20px;
   padding: 24px;
   position: relative;
   transition: all 0.3s ease;
-  border: 2px solid transparent;
+  border: 2px solid #e5e7eb;
   z-index: 1;
 }
 
@@ -1309,6 +1287,7 @@ onMounted(() => {
   font-size: 14px;
   color: #374151;
   margin-bottom: 8px;
+  background: transparent;
 }
 
 .check-icon {

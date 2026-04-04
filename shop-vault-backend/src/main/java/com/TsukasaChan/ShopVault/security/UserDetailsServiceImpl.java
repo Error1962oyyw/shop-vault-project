@@ -29,11 +29,11 @@ public class UserDetailsServiceImpl implements UserDetailsService {
                 .eq(User::getEmail, identifier));
 
         if (user == null) {
-            throw new UsernameNotFoundException("用户不存在");
+            throw new UsernameNotFoundException("邮箱不存在");
         }
 
         if (user.getStatus() != null && user.getStatus() == 0) {
-            throw new DisabledException("您的账号已被暂停使用");
+            throw new DisabledException("账户已被暂停");
         }
 
         List<GrantedAuthority> authorities = new ArrayList<>();

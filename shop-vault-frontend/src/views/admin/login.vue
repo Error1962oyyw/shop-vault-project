@@ -37,16 +37,49 @@ const handleLogin = async () => {
     if (valid) {
       loading.value = true
       try {
+        console.log('[Admin Login] Starting admin login for:', loginForm.username);
         const tokenResponse = await adminLogin(loginForm)
+        console.log('[Admin Login] Token received:', {
+          hasAccessToken: !!tokenResponse.accessToken,
+          tokenLength: tokenResponse.accessToken?.length
+        });
         userStore.setToken(tokenResponse.accessToken)
-        ElMessage.success('登录成功')
-        
+        console.log('[Admin Login] Token stored');
+
         try {
-          await userStore.fetchUserInfo()
+          console.log('[Admin Login] Fetching admin info...');
+          const userInfo = await userStore.fetchUserInfo()
+          console.log('[Admin Login] User info fetched:', {
+            userId: userInfo?.id,
+            username: userInfo?.username,
+            role: userInfo?.role,
+            isAdmin: userStore.isAdmin
+          });
+
+          if (!userStore.isAdmin) {
+            console.error('[Admin Login Error] User is not admin:', userInfo);
+            ElMessage.error('该账号没有管理员权限')
+            userStore.clearToken()
+            loading.value = false
+            return
+          }
+
+          console.log('[Admin Login] Admin verification passed');
+          ElMessage.success('登录成功')
         } catch (fetchError) {
-          console.warn('获取管理员信息失败，但登录成功', fetchError)
+          console.error('[Admin Login Error] Failed to fetch/verify admin info:', fetchError);
+          console.error('[Admin Login Error] Details:', {
+            message: fetchError?.message,
+            response: fetchError?.response?.data,
+            status: fetchError?.response?.status
+          });
+          userStore.clearToken()
+          ElMessage.error('登录失败，无法验证管理员身份')
+          loading.value = false
+          return
         }
-        
+
+        console.log('[Admin Login] Redirecting to /admin');
         router.push('/admin')
       } catch (error: any) {
         let errorMsg = '登录失败，请重试'

@@ -290,30 +290,20 @@ export interface CouponTemplate {
   value: number;
   minAmount: number;
   maxAmount?: number;
+  maxDiscount?: number;
   discount?: number;
   totalCount: number;
   usedCount: number;
   perUserLimit: number;
   startTime: string;
   endTime: string;
-  status: number;
+  validStartTime?: string;
+  validEndTime?: string;
+  status?: number;
   categoryId?: number;
   productId?: number;
   description?: string;
   createTime: string;
-}
-
-export interface CouponTemplate {
-  id: number;
-  name: string;
-  type: number;
-  value: number;
-  discount?: number;
-  minAmount: number;
-  maxDiscount?: number;
-  validStartTime?: string;
-  validEndTime?: string;
-  status?: number;
 }
 
 export interface UserCoupon {
@@ -476,7 +466,7 @@ export interface OrderDetail {
   paymentMethod: string;
   paymentMethodName: string;
   expireTime: string;
-  paymentTime: string;
+  payTime?: string;
   createTime: string;
   closeTime: string;
   closeReason: string;
@@ -489,6 +479,8 @@ export interface OrderDetail {
   productImage: string;
   quantity: number;
   productPrice: number;
+  discountAmount?: number;
+  freightAmount?: number;
   remark: string;
 }
 
