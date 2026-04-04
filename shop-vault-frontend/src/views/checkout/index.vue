@@ -10,13 +10,13 @@ import {
   Warning,
   ShoppingCart
 } from '@element-plus/icons-vue'
-import { getAddressList, getProfile } from '@/api/user'
+import { getAddressList } from '@/api/user'
 import { getCartList } from '@/api/cart'
 import { cartCheckout, buyNow, createVipOrder, createPointsExchangeOrder, getUserOrders } from '@/api/order'
 import { getApplicableCoupons, getBestCoupon, getCurrentMemberDay } from '@/api/marketing'
 import { useUserStore } from '@/stores/user'
 import { formatMoney } from '@/utils/format'
-import type { Address, CartItem, UserCoupon, MemberDay, OrderDetail } from '@/types/api'
+import type { Address, CartItem, UserCoupon, MemberDay } from '@/types/api'
 
 const route = useRoute()
 const router = useRouter()
