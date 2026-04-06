@@ -160,26 +160,14 @@ const handlePurchaseVip = async (type: number) => {
   const card = vipCards.find(c => c.type === type)
   if (!card) return
 
-  const benefitsHtml = card.benefits.map(b => `<div style="display:flex;align-items:center;gap:6px;padding:3px 0;font-size:13px;color:#374151;"><span style="color:#10b981;">✓</span>${b}</div>`).join('')
-
   try {
     await ElMessageBox.confirm(
-      `<div style="padding:8px 0;">
-        <div style="display:flex;justify-content:space-between;padding:8px 0;font-size:14px;"><span style="color:#6b7280;">商品名称</span><span style="color:#374151;font-weight:500;">${card.name}</span></div>
-        <div style="display:flex;justify-content:space-between;padding:8px 0;font-size:14px;"><span style="color:#6b7280;">价格</span><span style="color:#f59e0b;font-weight:700;font-size:16px;">¥${card.price}</span></div>
-        <div style="display:flex;justify-content:space-between;padding:8px 0;font-size:14px;"><span style="color:#6b7280;">有效期</span><span style="color:#374151;font-weight:500;">${card.duration}</span></div>
-        <div style="margin-top:12px;padding-top:12px;border-top:1px solid #f3f4f6;">
-          <div style="font-size:13px;color:#6b7280;margin-bottom:6px;">会员权益</div>
-          ${benefitsHtml}
-        </div>
-      </div>`,
+      `商品名称：${card.name}\n价格：¥${card.price}\n有效期：${card.duration}\n\n会员权益：${card.benefits.map(b => '✓ ' + b).join('\n')}`,
       '确认购买',
       {
         confirmButtonText: '确认购买',
         cancelButtonText: '取消',
-        type: 'warning',
-        dangerouslyUseHTMLString: true,
-        customClass: 'purchase-confirm-box'
+        type: 'warning'
       }
     )
   } catch {

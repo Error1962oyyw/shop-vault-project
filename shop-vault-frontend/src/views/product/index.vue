@@ -232,21 +232,12 @@ const handleBuyNow = async () => {
 
   try {
     await ElMessageBox.confirm(
-      `<div style="padding:8px 0;">
-        <div style="display:flex;justify-content:space-between;padding:8px 0;font-size:14px;"><span style="color:#6b7280;">商品名称</span><span style="color:#374151;font-weight:500;">${productName}</span></div>
-        <div style="display:flex;justify-content:space-between;padding:8px 0;font-size:14px;"><span style="color:#6b7280;">单价</span><span style="color:#374151;font-weight:500;">¥${price.toFixed(2)}</span></div>
-        <div style="display:flex;justify-content:space-between;padding:8px 0;font-size:14px;"><span style="color:#6b7280;">数量</span><span style="color:#374151;font-weight:500;">${qty}</span></div>
-        <div style="margin-top:12px;padding-top:12px;border-top:1px solid #f3f4f6;">
-          <div style="display:flex;justify-content:space-between;font-size:15px;"><span style="color:#1f2937;font-weight:600;">合计</span><span style="color:#ef4444;font-weight:700;font-size:18px;">¥${(price * qty).toFixed(2)}</span></div>
-        </div>
-      </div>`,
+      `商品名称：${productName}\n单价：¥${price.toFixed(2)}\n数量：${qty}\n合计：¥${(price * qty).toFixed(2)}`,
       '确认购买',
       {
         confirmButtonText: '确认购买',
         cancelButtonText: '取消',
-        type: 'warning',
-        dangerouslyUseHTMLString: true,
-        customClass: 'purchase-confirm-box'
+        type: 'warning'
       }
     )
   } catch {

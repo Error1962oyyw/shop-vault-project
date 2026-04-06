@@ -55,19 +55,12 @@ const handleCheckout = async () => {
 
   try {
     await ElMessageBox.confirm(
-      `<div style="padding:8px 0;">
-        <div style="display:flex;justify-content:space-between;padding:8px 0;font-size:14px;"><span style="color:#6b7280;">已选商品</span><span style="color:#374151;font-weight:500;">${selectedItems.value.length} 件 / 共 ${itemCount} 件</span></div>
-        <div style="margin-top:12px;padding-top:12px;border-top:1px solid #f3f4f6;">
-          <div style="display:flex;justify-content:space-between;font-size:15px;"><span style="color:#1f2937;font-weight:600;">应付金额</span><span style="color:#ef4444;font-weight:700;font-size:18px;">¥${selectedAmount.value.toFixed(2)}</span></div>
-        </div>
-      </div>`,
+      `已选 ${selectedItems.value.length} 件商品，共 ${itemCount} 件\n应付金额：¥${selectedAmount.value.toFixed(2)}`,
       '确认结算',
       {
         confirmButtonText: '去结算',
         cancelButtonText: '取消',
-        type: 'info',
-        dangerouslyUseHTMLString: true,
-        customClass: 'purchase-confirm-box'
+        type: 'info'
       }
     )
   } catch {
