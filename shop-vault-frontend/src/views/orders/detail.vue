@@ -137,9 +137,11 @@ const handleConfirmPay = async () => {
     userBalance.value = profile.balance ?? 0
     await fetchOrderDetail()
   } catch (error: any) {
-    console.error('支付失败', error)
-    const msg = error?.response?.data?.msg || error?.message || '支付失败'
-    ElMessage.error(msg)
+    if (error !== 'cancel') {
+      console.error('支付失败', error)
+      const msg = error?.response?.data?.msg || error?.message || '支付失败'
+      ElMessage.error(msg)
+    }
   } finally {
     paying.value = false
   }
