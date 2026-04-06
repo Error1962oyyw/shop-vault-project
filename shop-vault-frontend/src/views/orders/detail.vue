@@ -9,12 +9,12 @@ import {
   Money,
   Wallet,
   CreditCard,
-  ChatDotRound,
   CircleCheck,
   Warning,
   Close
 } from '@element-plus/icons-vue'
 import { getOrderDetail, payOrder, cancelOrder } from '@/api/order'
+import { getProfile } from '@/api/user'
 import { formatMoney, formatDateTime } from '@/utils/format'
 import type { OrderDetail } from '@/types/api'
 import UserLayout from '@/components/layout/UserLayout.vue'
@@ -25,9 +25,12 @@ const router = useRouter()
 const loading = ref(false)
 const order = ref<OrderDetail | null>(null)
 const paying = ref(false)
-const selectedPaymentMethod = ref<'BALANCE' | 'ALIPAY' | 'WECHAT'>('BALANCE')
+const selectedPaymentMethod = ref<'BALANCE' | 'DIRECT'>('BALANCE')
+const userBalance = ref(0)
 
 const orderId = computed(() => Number(route.params.id))
+
+const orderAmount = computed(() => order.value?.payAmount || order.value?.totalAmount || 0)
 
 const isExpired = computed(() => {
   if (!order.value) return false
@@ -41,9 +44,36 @@ const isOrderPayable = computed(() => {
   return order.value.status === 0 && !isExpired.value
 })
 
+const isBalanceSufficient = computed(() => userBalance.value >= orderAmount.value)
+
+const balanceShortfall = computed(() => Math.max(0, orderAmount.value - userBalance.value))
+
+const balancePaymentAmount = computed(() => {
+  if (selectedPaymentMethod.value === 'BALANCE') {
+    return isBalanceSufficient.value ? orderAmount.value : userBalance.value
+  }
+  return 0
+})
+
+const directPaymentAmount = computed(() => {
+  if (selectedPaymentMethod.value === 'DIRECT') {
+    return orderAmount.value
+  }
+  if (selectedPaymentMethod.value === 'BALANCE') {
+    return isBalanceSufficient.value ? 0 : balanceShortfall.value
+  }
+  return 0
+})
+
+const effectivePaymentMethod = computed(() => {
+  if (selectedPaymentMethod.value === 'DIRECT') return 'DIRECT'
+  if (isBalanceSufficient.value) return 'BALANCE'
+  return 'COMBO'
+})
+
 const closeReasonText = computed(() => {
   if (!order.value) return '该订单已被取消'
-  if (isExpired.value) return '该订单因超时未付款已自动关闭'
+  if (isExpired.value) return '用户在24小时内未支付，系统自动取消订单'
   return order.value.closeReason || '该订单已被取消'
 })
 
@@ -54,12 +84,6 @@ const statusMap: Record<number, { label: string; class: string; icon: any }> = {
   3: { label: '已完成', class: 'status-completed', icon: CircleCheck },
   4: { label: '已关闭', class: 'status-closed', icon: Close }
 }
-
-const paymentMethods = [
-  { value: 'BALANCE', label: '余额支付', icon: Wallet, desc: '使用账户余额支付' },
-  { value: 'ALIPAY', label: '支付宝', icon: CreditCard, desc: '推荐使用支付宝快捷支付' },
-  { value: 'WECHAT', label: '微信支付', icon: ChatDotRound, desc: '使用微信扫码支付' }
-]
 
 const getOrderDisplayName = (orderData: OrderDetail) => {
   if (orderData.productName && orderData.productName !== 'VIP会员') return orderData.productName
@@ -82,6 +106,8 @@ const fetchOrderDetail = async () => {
   loading.value = true
   try {
     order.value = await getOrderDetail(orderId.value)
+    const profile = await getProfile()
+    userBalance.value = profile.balance ?? 0
   } catch (error) {
     console.error('获取订单详情失败', error)
     ElMessage.error('订单不存在或加载失败')
@@ -94,20 +120,58 @@ const fetchOrderDetail = async () => {
 const handlePay = async () => {
   if (!order.value) return
 
+  const method = effectivePaymentMethod.value
+
+  let htmlContent = ''
+  if (method === 'BALANCE') {
+    htmlContent = `
+      <div style="padding: 8px 0;">
+        <div style="display:flex;justify-content:space-between;padding:8px 0;font-size:14px;"><span style="color:#6b7280;">支付方式</span><span style="color:#374151;font-weight:500;">余额支付</span></div>
+        <div style="display:flex;justify-content:space-between;padding:8px 0;font-size:14px;"><span style="color:#6b7280;">订单金额</span><span style="color:#f59e0b;font-weight:700;font-size:16px;">${formatMoney(orderAmount.value)}</span></div>
+        <div style="display:flex;justify-content:space-between;padding:8px 0;font-size:14px;margin-top:4px;border-top:1px solid #f3f4f6;padding-top:12px;"><span style="color:#1f2937;font-weight:600;font-size:15px;">余额变动</span><span style="color:#ef4444;font-weight:700;font-size:16px;">${formatMoney(userBalance.value)} → ${formatMoney(userBalance.value - orderAmount.value)}</span></div>
+      </div>
+      <div style="margin-top:16px;padding:12px 14px;background:#fef3c7;border-radius:8px;font-size:13px;color:#92400e;line-height:1.6;display:flex;align-items:flex-start;gap:6px;">
+        支付后账户余额将变为 <strong>${formatMoney(userBalance.value - orderAmount.value)}</strong>
+      </div>
+    `
+  } else if (method === 'COMBO') {
+    htmlContent = `
+      <div style="padding: 8px 0;">
+        <div style="display:flex;justify-content:space-between;padding:8px 0;font-size:14px;"><span style="color:#6b7280;">支付方式</span><span style="color:#f59e0b;font-weight:600;">组合支付（余额不足）</span></div>
+        <div style="margin:12px 0;padding:14px 18px;background:#fffbeb;border:1px solid #fcd34d;border-radius:10px;">
+          <div style="display:flex;justify-content:space-between;padding:4px 0;font-size:14px;color:#374151;"><span>余额扣除</span><span>${formatMoney(balancePaymentAmount.value)}</span></div>
+          <div style="display:flex;justify-content:space-between;padding:4px 0;font-size:14px;color:#374151;"><span>直接支付</span><span>${formatMoney(directPaymentAmount.value)}</span></div>
+          <div style="border-top:1px solid #f3f4f6;margin:8px 0;"></div>
+          <div style="display:flex;justify-content:space-between;padding:4px 0;font-size:15px;color:#1f2937;font-weight:700;"><span>合计应付</span><span>${formatMoney(orderAmount.value)}</span></div>
+        </div>
+      </div>
+      <div style="margin-top:16px;padding:12px 14px;background:#fef3c7;border-radius:8px;font-size:13px;color:#92400e;line-height:1.6;">
+        当前余额 ${formatMoney(userBalance.value)}，还差 ${formatMoney(balanceShortfall.value)}<br/>系统将自动采用组合支付方式完成订单。
+      </div>
+    `
+  } else {
+    htmlContent = `
+      <div style="padding: 8px 0;">
+        <div style="display:flex;justify-content:space-between;padding:8px 0;font-size:14px;"><span style="color:#6b7280;">支付方式</span><span style="color:#374151;font-weight:500;">直接支付</span></div>
+        <div style="display:flex;justify-content:space-between;padding:8px 0;font-size:14px;margin-top:4px;border-top:1px solid #f3f4f6;padding-top:12px;"><span style="color:#1f2937;font-weight:600;font-size:15px;">应付金额</span><span style="color:#ef4444;font-weight:700;font-size:18px;">${formatMoney(orderAmount.value)}</span></div>
+      </div>
+    `
+  }
+
   try {
-    await ElMessageBox.confirm(
-      `确认使用${paymentMethods.find(m => m.value === selectedPaymentMethod.value)?.label}支付 ${formatMoney(order.value.payAmount)}？`,
-      '支付确认',
-      {
-        confirmButtonText: '确认支付',
-        cancelButtonText: '取消',
-        type: 'info'
-      }
-    )
+    await ElMessageBox.confirm(htmlContent, '支付确认', {
+      confirmButtonText: '确认支付',
+      cancelButtonText: '取消',
+      type: method === 'COMBO' ? 'warning' : 'info',
+      dangerouslyUseHTMLString: true,
+      customClass: 'pay-confirm-box'
+    })
 
     paying.value = true
-    await payOrder(orderId.value, { paymentMethod: selectedPaymentMethod.value })
+    await payOrder(orderId.value, { paymentMethod: method })
     ElMessage.success('支付成功')
+    const profile = await getProfile()
+    userBalance.value = profile.balance ?? 0
     await fetchOrderDetail()
   } catch (error: any) {
     if (error !== 'cancel') {
@@ -307,23 +371,71 @@ onMounted(() => {
                   选择支付方式
                 </div>
               </template>
+
+              <!-- 余额显示 -->
+              <div class="balance-display">
+                <span class="balance-label">账户余额</span>
+                <span :class="['balance-amount', { insufficient: !isBalanceSufficient }]">{{ formatMoney(userBalance) }}</span>
+              </div>
+
+              <!-- 支付方式选项 -->
               <div class="payment-methods">
                 <div
-                  v-for="method in paymentMethods"
-                  :key="method.value"
-                  :class="['method-option', { active: selectedPaymentMethod === method.value }]"
-                  @click="selectedPaymentMethod = method.value as any"
+                  :class="['method-option', { active: selectedPaymentMethod === 'BALANCE' }]"
+                  @click="selectedPaymentMethod = 'BALANCE'"
                 >
-                  <el-icon class="method-icon"><component :is="method.icon" /></el-icon>
+                  <el-icon class="method-icon"><Wallet /></el-icon>
                   <div class="method-info">
-                    <span class="method-name">{{ method.label }}</span>
-                    <span class="method-desc">{{ method.desc }}</span>
+                    <span class="method-name">余额支付</span>
+                    <span class="method-desc">(当前余额: {{ formatMoney(userBalance) }})</span>
                   </div>
                   <div class="method-check">
-                    <span v-if="selectedPaymentMethod === method.value" class="check-dot"></span>
+                    <span v-if="selectedPaymentMethod === 'BALANCE'" class="check-dot"></span>
+                  </div>
+                </div>
+                <div
+                  :class="['method-option', { active: selectedPaymentMethod === 'DIRECT' }]"
+                  @click="selectedPaymentMethod = 'DIRECT'"
+                >
+                  <el-icon class="method-icon"><CreditCard /></el-icon>
+                  <div class="method-info">
+                    <span class="method-name">直接支付</span>
+                    <span class="method-desc">模拟付款（测试用）</span>
+                  </div>
+                  <div class="method-check">
+                    <span v-if="selectedPaymentMethod === 'DIRECT'" class="check-dot"></span>
                   </div>
                 </div>
               </div>
+
+              <!-- 金额明细 -->
+              <div v-if="effectivePaymentMethod === 'COMBO'" class="combo-detail">
+                <div class="combo-row">
+                  <span>余额支付</span>
+                  <span>{{ formatMoney(balancePaymentAmount) }}</span>
+                </div>
+                <div class="combo-row">
+                  <span>直接支付</span>
+                  <span>{{ formatMoney(directPaymentAmount) }}</span>
+                </div>
+                <el-divider style="margin: 8px 0" />
+                <div class="combo-row total">
+                  <span>合计应付</span>
+                  <span>{{ formatMoney(orderAmount) }}</span>
+                </div>
+              </div>
+
+              <!-- 余额不足提示 -->
+              <div v-if="!isBalanceSufficient && selectedPaymentMethod === 'BALANCE'" class="insufficient-tip">
+                <el-alert type="warning" :closable="false" show-icon>
+                  <template #title>余额不足</template>
+                  当前余额 {{ formatMoney(userBalance) }}，还差 {{ formatMoney(balanceShortfall) }}
+                  <br />
+                  将自动采用组合支付：余额扣除 {{ formatMoney(userBalance) }} + 直接支付 {{ formatMoney(balanceShortfall) }}
+                </el-alert>
+              </div>
+
+              <!-- 操作按钮 -->
               <div class="payment-actions">
                 <el-button size="large" @click="handleCancel">取消订单</el-button>
                 <el-button
@@ -333,19 +445,9 @@ onMounted(() => {
                   class="pay-btn"
                   @click="handlePay"
                 >
-                  立即支付 {{ formatMoney(order.payAmount || order.totalAmount || 0) }}
+                  立即支付 {{ formatMoney(orderAmount) }}
                 </el-button>
               </div>
-              <el-alert
-                v-if="selectedPaymentMethod === 'BALANCE'"
-                type="info"
-                :closable="false"
-                show-icon
-                class="balance-tip"
-              >
-                <template #title>余额不足？</template>
-                您可以切换到支付宝或微信支付完成订单，或前往个人中心充值。
-              </el-alert>
             </el-card>
           </template>
 
@@ -792,6 +894,61 @@ onMounted(() => {
 
 .balance-tip {
   border-radius: 8px;
+}
+
+/* 余额显示 */
+.balance-display {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  background: #f9fafb;
+  border-radius: 8px;
+  margin-bottom: 16px;
+}
+
+.balance-label {
+  font-size: 14px;
+  color: #6b7280;
+}
+
+.balance-amount {
+  font-size: 18px;
+  font-weight: 700;
+  color: #10b981;
+}
+
+.balance-amount.insufficient {
+  color: #ef4444;
+}
+
+/* 组合支付明细 */
+.combo-detail {
+  margin: 16px 0;
+  padding: 14px 18px;
+  background: #fffbeb;
+  border: 1px solid #fcd34d;
+  border-radius: 10px;
+}
+
+.combo-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 14px;
+  padding: 4px 0;
+  color: #374151;
+}
+
+.combo-row.total {
+  font-weight: 700;
+  font-size: 15px;
+  color: #1f2937;
+  padding-top: 4px;
+}
+
+.insufficient-tip {
+  margin: 12px 0 16px;
 }
 
 .closed-card {

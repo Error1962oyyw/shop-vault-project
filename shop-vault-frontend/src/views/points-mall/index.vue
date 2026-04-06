@@ -94,15 +94,23 @@ const handleExchange = async (product: PointsProduct) => {
   const isPhysicalProduct = product.type === 1
   
   try {
+    const noticeHtml = isPhysicalProduct
+      ? '<div style="margin-top:16px;padding:12px 14px;background:#fef3c7;border-radius:8px;font-size:13px;color:#92400e;line-height:1.6;">注意：积分兑换实物商品不支持退换货等售后服务。</div>'
+      : ''
+
     await ElMessageBox.confirm(
-      isPhysicalProduct 
-        ? `确定使用 ${product.pointsCost} 积分兑换「${product.name}」？\n\n注意：积分兑换商品不支持退换货等售后服务。`
-        : `确定使用 ${product.pointsCost} 积分兑换「${product.name}」？`,
+      `<div style="padding:8px 0;">
+        <div style="display:flex;justify-content:space-between;padding:8px 0;font-size:14px;"><span style="color:#6b7280;">兑换商品</span><span style="color:#374151;font-weight:500;">${product.name}</span></div>
+        <div style="display:flex;justify-content:space-between;padding:8px 0;font-size:14px;"><span style="color:#6b7280;">所需积分</span><span style="color:#f59e0b;font-weight:700;font-size:16px;">${product.pointsCost} 积分</span></div>
+        ${noticeHtml}
+      </div>`,
       '确认兑换',
       {
         confirmButtonText: '确认兑换',
         cancelButtonText: '取消',
-        type: 'warning'
+        type: 'warning',
+        dangerouslyUseHTMLString: true,
+        customClass: 'purchase-confirm-box'
       }
     )
   } catch {

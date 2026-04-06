@@ -2038,4 +2038,13 @@ img {
   color: var(--success-color);
 }
 
+/* 自定义确认框样式 - 统一购买/支付/结算确认对话框 */
+.purchase-confirm-box .el-message-box__message {
+  padding: 8px 0;
+}
+
+.pay-confirm-box .el-message-box__message {
+  padding: 4px 0;
+}
+
 

@@ -22,5 +22,6 @@
     "types": ["vite/client", "element-plus/global"]
   },
   "include": ["src/**/*.ts", "src/**/*.tsx", "src/**/*.vue"],
+  "exclude": ["src/views/order/pay.vue"],
   "references": [{ "path": "./tsconfig.node.json" }]
 }

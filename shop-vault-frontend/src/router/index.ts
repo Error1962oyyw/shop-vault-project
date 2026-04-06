@@ -2,6 +2,31 @@ import { createRouter, createWebHistory } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { ElMessage } from 'element-plus'
 
+const SESSION_TIMEOUT = 30 * 60 * 1000
+const ACTIVITY_KEY = 'last_activity_time'
+
+const updateActivityTime = () => {
+  localStorage.setItem(ACTIVITY_KEY, String(Date.now()))
+}
+
+const isSessionExpired = (): boolean => {
+  const lastActivity = localStorage.getItem(ACTIVITY_KEY)
+  if (!lastActivity) return false
+  return Date.now() - Number(lastActivity) > SESSION_TIMEOUT
+}
+
+const clearSession = () => {
+  localStorage.removeItem(ACTIVITY_KEY)
+}
+
+if (typeof window !== 'undefined') {
+  const activityEvents = ['click', 'keydown', 'scroll', 'touchstart', 'mousemove']
+  activityEvents.forEach(event => {
+    window.addEventListener(event, updateActivityTime, { passive: true })
+  })
+  updateActivityTime()
+}
+
 const router = createRouter({
   history: createWebHistory(),
   routes: [
@@ -69,12 +94,6 @@ const router = createRouter({
       path: '/orders/:id',
       name: 'OrderDetail',
       component: () => import('@/views/orders/detail.vue'),
-      meta: { requiresAuth: true }
-    },
-    {
-      path: '/order/pay/:orderNo',
-      name: 'OrderPay',
-      component: () => import('@/views/order/pay.vue'),
       meta: { requiresAuth: true }
     },
     {
@@ -240,6 +259,16 @@ router.beforeEach(async (to, _from, next) => {
       next({ name: 'Login', query: { redirect: to.fullPath } })
       return
     }
+
+    if (isSessionExpired()) {
+      userStore.clearToken()
+      clearSession()
+      userStore.setIsGuest(true)
+      ElMessage.warning('登录已过期（30分钟未操作），请重新登录')
+      next({ name: 'Login', query: { redirect: to.fullPath } })
+      return
+    }
+    updateActivityTime()
     
     if (userStore.token && !userStore.userInfo) {
       try {

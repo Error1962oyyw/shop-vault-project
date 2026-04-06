@@ -280,7 +280,7 @@ const handleNormalOrder = async () => {
     }
 
     ElMessage.success('订单创建成功，请在24小时内完成支付')
-    router.push(`/order/pay/${orderNo}`)
+    router.push(`/orders/${orderNo}`)
   } catch (error: any) {
     const msg = error?.response?.data?.msg || error?.message || '提交订单失败'
     ElMessage.error(msg)
@@ -312,7 +312,7 @@ const handleVipOrPointsOrder = async () => {
     }
 
     ElMessage.success('订单创建成功，请在24小时内完成支付')
-    router.push(`/order/pay/${orderId}`)
+    router.push(`/orders/${orderId}`)
   } catch (error: any) {
     const msg = error?.response?.data?.msg || error?.message || '下单失败'
     ElMessage.error(msg)
@@ -555,7 +555,7 @@ onMounted(async () => {
         </div>
         <div class="confirm-notice">
           <el-icon><Warning /></el-icon>
-          订单提交后将进入待支付状态，请在 <strong>24小时</strong> 内完成支付，超时未支付将自动取消并释放库存。
+          订单提交后将进入待支付状态，请在 24 小时内完成支付，超时未支付将自动取消并释放库存。
         </div>
       </div>
       <template #footer>
@@ -1097,7 +1097,7 @@ onMounted(async () => {
   border-radius: 8px;
   font-size: 13px;
   color: #92400e;
-  line-height: 1.6;
+  line-height: 1.8;
   display: flex;
   align-items: flex-start;
   gap: 6px;
