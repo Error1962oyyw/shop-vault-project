@@ -102,8 +102,9 @@ public class JwtUtils {
         return generateToken(username);
     }
 
+    @Deprecated
     public String getNewRefreshToken(String oldRefreshToken) {
-        return null;
+        throw new UnsupportedOperationException("该方法已废弃，请使用refreshTokens方法");
     }
 
     public RefreshResult refreshTokens(String refreshToken) {

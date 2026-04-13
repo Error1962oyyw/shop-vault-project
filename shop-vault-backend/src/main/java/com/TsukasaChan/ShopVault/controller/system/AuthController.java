@@ -55,15 +55,12 @@ public class AuthController {
 
     private void checkRateLimit(String prefix, String key) {
         String rateKey = prefix + key;
-        String countStr = redisTemplate.opsForValue().get(rateKey);
-        int count = countStr != null ? Integer.parseInt(countStr) : 0;
-        if (count >= RATE_LIMIT_PER_MINUTE) {
-            throw new RuntimeException("操作过于频繁，请稍后再试");
+        Long count = redisTemplate.opsForValue().increment(rateKey);
+        if (count != null && count == 1) {
+            redisTemplate.expire(rateKey, 60, TimeUnit.SECONDS);
         }
-        if (count == 0) {
-            redisTemplate.opsForValue().set(rateKey, "1", 60, TimeUnit.SECONDS);
-        } else {
-            redisTemplate.opsForValue().increment(rateKey);
+        if (count != null && count > RATE_LIMIT_PER_MINUTE) {
+            throw new RuntimeException("操作过于频繁，请稍后再试");
         }
     }
 
