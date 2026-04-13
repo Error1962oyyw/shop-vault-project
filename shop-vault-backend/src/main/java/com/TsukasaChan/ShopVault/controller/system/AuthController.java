@@ -59,7 +59,7 @@ public class AuthController {
         if (count != null && count == 1) {
             redisTemplate.expire(rateKey, 60, TimeUnit.SECONDS);
         }
-        if (count != null && count > RATE_LIMIT_PER_MINUTE) {
+        if (count != null && count >= RATE_LIMIT_PER_MINUTE) {
             throw new RuntimeException("操作过于频繁，请稍后再试");
         }
     }
