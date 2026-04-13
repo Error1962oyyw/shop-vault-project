@@ -22,9 +22,10 @@ public class FavoriteController extends BaseController {
      */
     @LogOperation(module = "商品模块", action = "用户收藏/取消收藏")
     @PostMapping("/toggle/{productId}")
-    public Result<String> toggleFavorite(@PathVariable Long productId) {
+    public Result<Boolean> toggleFavorite(@PathVariable Long productId) {
         Long userId = getCurrentUserId();
-        return Result.success(favoriteService.toggleFavorite(userId, productId));
+        boolean isFavorited = favoriteService.toggleFavorite(userId, productId);
+        return Result.success(isFavorited);
     }
 
     /**

@@ -170,7 +170,7 @@ public class LocalFileService {
             log.info("文件上传成功: {}", relativePath);
         } catch (IOException e) {
             log.error("文件上传失败", e);
-            throw new RuntimeException("文件上传至本地存储失败: " + e.getMessage(), e);
+            throw new RuntimeException("文件上传失败，请稍后重试");
         }
 
         return urlPrefix + "/" + relativePath;
@@ -203,7 +203,7 @@ public class LocalFileService {
             log.info("头像上传成功: userId={}, path={}", userId, relativePath);
         } catch (IOException e) {
             log.error("头像上传失败", e);
-            throw new RuntimeException("头像上传失败: " + e.getMessage(), e);
+            throw new RuntimeException("头像上传失败，请稍后重试");
         }
 
         return urlPrefix + "/" + relativePath;
@@ -232,7 +232,7 @@ public class LocalFileService {
             log.info("聊天图片上传成功: messageId={}, path={}", messageId, relativePath);
         } catch (IOException e) {
             log.error("聊天图片上传失败", e);
-            throw new RuntimeException("聊天图片上传失败: " + e.getMessage(), e);
+            throw new RuntimeException("聊天图片上传失败，请稍后重试");
         }
 
         return urlPrefix + "/" + relativePath;

@@ -52,13 +52,13 @@ public class ProductController extends BaseController {
 
     @GetMapping("/list")
     public Result<?> getProductList(
-            @RequestParam(defaultValue = "1") Integer current,
-            @RequestParam(defaultValue = "10") Integer size,
+            @RequestParam(defaultValue = "1") Integer pageNum,
+            @RequestParam(defaultValue = "10") Integer pageSize,
             @RequestParam(required = false) String keyword,
             @RequestParam(required = false) Long categoryId,
             @RequestParam(required = false, defaultValue = "default") String sortBy,
             @RequestParam(required = false, defaultValue = "desc") String sortOrder) {
-        return Result.success(productService.getProductPageWithCategory(current, size, keyword, categoryId, sortBy, sortOrder));
+        return Result.success(productService.getProductPageWithCategory(pageNum, pageSize, keyword, categoryId, sortBy, sortOrder));
     }
 
     @PostMapping("/yolo-search")

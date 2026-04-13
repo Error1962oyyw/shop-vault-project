@@ -39,6 +39,7 @@ public class JwtUtils {
 
     private final RedisTemplate<String, Object> redisTemplate;
     private static final String REFRESH_TOKEN_KEY = "refresh_token:";
+    private static final String TOKEN_BLACKLIST_KEY = "token_blacklist:";
 
     public JwtUtils(RedisTemplate<String, Object> redisTemplate) {
         this.redisTemplate = redisTemplate;
@@ -98,12 +99,15 @@ public class JwtUtils {
         }
         
         generateRefreshToken(username);
-        
         return generateToken(username);
     }
 
     public String getNewRefreshToken(String oldRefreshToken) {
-        Map<String, String> tokenData = getAndDeleteTokenData(oldRefreshToken);
+        return null;
+    }
+
+    public RefreshResult refreshTokens(String refreshToken) {
+        Map<String, String> tokenData = getAndDeleteTokenData(refreshToken);
         
         if (tokenData == null) {
             return null;
@@ -114,7 +118,10 @@ public class JwtUtils {
             return null;
         }
         
-        return generateRefreshToken(username);
+        String newRefreshToken = generateRefreshToken(username);
+        String newAccessToken = generateToken(username);
+        
+        return new RefreshResult(newAccessToken, newRefreshToken);
     }
 
     public boolean validateRefreshToken(String refreshToken) {
@@ -144,8 +151,29 @@ public class JwtUtils {
     }
 
     public boolean validateToken(String token, String username) {
+        if (isTokenBlacklisted(token)) {
+            return false;
+        }
         String extractedUsername = extractUsername(token);
         return extractedUsername.equals(username) && !isTokenExpired(token);
+    }
+
+    public void blacklistToken(String token) {
+        try {
+            Claims claims = extractAllClaims(token);
+            long remainingTime = claims.getExpiration().getTime() - System.currentTimeMillis();
+            if (remainingTime > 0) {
+                String key = TOKEN_BLACKLIST_KEY + token;
+                redisTemplate.opsForValue().set(key, true, remainingTime, TimeUnit.MILLISECONDS);
+            }
+        } catch (Exception e) {
+            log.warn("Failed to blacklist token: {}", e.getMessage());
+        }
+    }
+
+    public boolean isTokenBlacklisted(String token) {
+        String key = TOKEN_BLACKLIST_KEY + token;
+        return Boolean.TRUE.equals(redisTemplate.hasKey(key));
     }
 
     private boolean isTokenExpired(String token) {
@@ -179,4 +207,6 @@ public class JwtUtils {
         
         return tokenData;
     }
+
+    public record RefreshResult(String accessToken, String refreshToken) {}
 }

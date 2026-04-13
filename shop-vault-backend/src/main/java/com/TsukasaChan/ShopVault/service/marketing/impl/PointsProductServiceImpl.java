@@ -15,6 +15,7 @@ import com.TsukasaChan.ShopVault.service.order.OrderItemService;
 import com.TsukasaChan.ShopVault.service.order.OrderService;
 import com.TsukasaChan.ShopVault.service.product.ProductService;
 import com.TsukasaChan.ShopVault.service.system.UserService;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -98,11 +99,23 @@ public class PointsProductServiceImpl extends ServiceImpl<PointsProductMapper, P
             throw new RuntimeException("商品库存不足");
         }
 
-        user.setPoints(user.getPoints() - pointsProduct.getPointsCost());
-        userService.updateById(user);
+        int updated = userService.getBaseMapper().update(null,
+                new LambdaUpdateWrapper<User>()
+                        .setSql("points = points - " + pointsProduct.getPointsCost())
+                        .eq(User::getId, userId)
+                        .ge(User::getPoints, pointsProduct.getPointsCost()));
+        if (updated == 0) {
+            throw new RuntimeException("积分不足，兑换需要 " + pointsProduct.getPointsCost() + " 积分");
+        }
 
-        pointsProduct.setStock(pointsProduct.getStock() - 1);
-        this.updateById(pointsProduct);
+        int stockUpdated = getBaseMapper().update(null,
+                new LambdaUpdateWrapper<PointsProduct>()
+                        .setSql("stock = stock - 1")
+                        .eq(PointsProduct::getId, productId)
+                        .gt(PointsProduct::getStock, 0));
+        if (stockUpdated == 0) {
+            throw new RuntimeException("商品库存不足");
+        }
 
         PointsRecord record = new PointsRecord();
         record.setUserId(userId);

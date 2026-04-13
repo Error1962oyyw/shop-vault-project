@@ -9,6 +9,8 @@ import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Service;
 
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 
@@ -27,9 +29,11 @@ public class VerificationService {
     private static final String CODE_PREFIX = "verify:code:";
     private static final String RATE_LIMIT_PREFIX = "verify:rate:";
     private static final String DAILY_LIMIT_PREFIX = "verify:daily:";
+    private static final String VERIFY_ATTEMPT_PREFIX = "verify:attempt:";
     private static final int CODE_EXPIRE_MINUTES = 5;
     private static final int RATE_LIMIT_SECONDS = 60;
     private static final int DAILY_LIMIT = 10;
+    private static final int MAX_VERIFY_ATTEMPTS = 5;
 
     public void sendVerificationCode(String email) {
         String rateLimitKey = RATE_LIMIT_PREFIX + email;
@@ -79,10 +83,27 @@ public class VerificationService {
         if (email == null || inputCode == null) {
             return true;
         }
-        String savedCode = redisTemplate.opsForValue().get(CODE_PREFIX + email);
-        if (savedCode != null && savedCode.equals(inputCode)) {
+        String attemptKey = VERIFY_ATTEMPT_PREFIX + email;
+        String attemptStr = redisTemplate.opsForValue().get(attemptKey);
+        int attempts = attemptStr != null ? Integer.parseInt(attemptStr) : 0;
+        if (attempts >= MAX_VERIFY_ATTEMPTS) {
             redisTemplate.delete(CODE_PREFIX + email);
+            return true;
+        }
+        String savedCode = redisTemplate.opsForValue().get(CODE_PREFIX + email);
+        if (savedCode != null && MessageDigest.isEqual(
+                savedCode.getBytes(StandardCharsets.UTF_8),
+                inputCode.getBytes(StandardCharsets.UTF_8))) {
+            redisTemplate.delete(CODE_PREFIX + email);
+            redisTemplate.delete(attemptKey);
             return false;
+        }
+        if (savedCode != null) {
+            if (attempts == 0) {
+                redisTemplate.opsForValue().set(attemptKey, "1", CODE_EXPIRE_MINUTES, TimeUnit.MINUTES);
+            } else {
+                redisTemplate.opsForValue().increment(attemptKey);
+            }
         }
         return true;
     }

@@ -4,6 +4,7 @@ import com.TsukasaChan.ShopVault.annotation.LogOperation;
 import com.TsukasaChan.ShopVault.common.Result;
 import com.TsukasaChan.ShopVault.controller.BaseController;
 import com.TsukasaChan.ShopVault.dto.PasswordUpdateDto;
+import com.TsukasaChan.ShopVault.dto.UpdateProfileDto;
 import com.TsukasaChan.ShopVault.entity.marketing.BalanceRecord;
 import com.TsukasaChan.ShopVault.entity.system.User;
 import com.TsukasaChan.ShopVault.integration.LocalFileService;
@@ -33,7 +34,13 @@ public class UserController extends BaseController {
 
     @LogOperation(module = "个人中心", action = "修改个人资料")
     @PutMapping("/profile")
-    public Result<String> updateProfile(@RequestBody User updateInfo) {
+    public Result<String> updateProfile(@RequestBody UpdateProfileDto dto) {
+        User updateInfo = new User();
+        updateInfo.setNickname(dto.getNickname());
+        updateInfo.setPhone(dto.getPhone());
+        updateInfo.setAvatar(dto.getAvatar());
+        updateInfo.setGender(dto.getGender());
+        updateInfo.setBirthday(dto.getBirthday());
         userService.updateProfile(getCurrentUserId(), updateInfo);
         return Result.success("资料修改成功");
     }

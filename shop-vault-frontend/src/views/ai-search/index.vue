@@ -58,62 +58,42 @@ const processFile = async (file: File) => {
   if (!validateFile(file)) return
 
   uploadProgress.value = 0
+  uploadedImage.value = URL.createObjectURL(file)
+  uploadProgress.value = 50
 
-  const reader = new FileReader()
+  loading.value = true
+  searchResult.value = null
+  allMatchedProducts.value.clear()
+  selectedCategoryId.value = null
+  errorMessage.value = ''
 
-  reader.onprogress = (e) => {
-    if (e.lengthComputable) {
-      uploadProgress.value = Math.round((e.loaded / e.total) * 50)
+  try {
+    const result = await yoloSearch(file)
+    uploadProgress.value = 80
+    searchResult.value = result
+
+    if (result.success && result.matchedCategories && result.matchedCategories.length > 0) {
+      const categoryIds = result.matchedCategories.map(c => c.id)
+      await Promise.all(categoryIds.map(cid => fetchMatchedProducts(cid)))
+      uploadProgress.value = 100
+      ElMessage.success(`识别成功！发现${result.matchedCategories.length}种物品`)
+    } else if (result.hotCategories && result.hotCategories.length > 0) {
+      uploadProgress.value = 100
+      ElMessage.warning(result.message || '未识别到匹配的商品分类')
+    } else {
+      uploadProgress.value = 100
+      errorMessage.value = result.message || '未识别到相关物品，请尝试其他图片'
+      ElMessage.warning(errorMessage.value)
     }
-  }
-
-  reader.onload = async (e) => {
-    uploadedImage.value = e.target?.result as string
-    uploadProgress.value = 50
-
-    loading.value = true
-    searchResult.value = null
-    allMatchedProducts.value.clear()
-    selectedCategoryId.value = null
-    errorMessage.value = ''
-
-    try {
-      const result = await yoloSearch(file)
-      uploadProgress.value = 80
-      searchResult.value = result
-
-      if (result.success && result.matchedCategories && result.matchedCategories.length > 0) {
-        const categoryIds = result.matchedCategories.map(c => c.id)
-        await Promise.all(categoryIds.map(cid => fetchMatchedProducts(cid)))
-        uploadProgress.value = 100
-        ElMessage.success(`识别成功！发现${result.matchedCategories.length}种物品`)
-      } else if (result.hotCategories && result.hotCategories.length > 0) {
-        uploadProgress.value = 100
-        ElMessage.warning(result.message || '未识别到匹配的商品分类')
-      } else {
-        uploadProgress.value = 100
-        errorMessage.value = result.message || '未识别到相关物品，请尝试其他图片'
-        ElMessage.warning(errorMessage.value)
-      }
-    } catch (error: any) {
-      console.error('AI识别失败', error)
-      errorMessage.value = error?.response?.data?.msg || '识别失败，请重试'
-      ElMessage.error(errorMessage.value)
-    } finally {
-      loading.value = false
-      setTimeout(() => {
-        uploadProgress.value = 0
-      }, 1000)
-    }
-  }
-
-  reader.onerror = () => {
-    errorMessage.value = '图片读取失败，请重试'
+  } catch (error: any) {
+    errorMessage.value = error?.response?.data?.msg || '识别失败，请重试'
     ElMessage.error(errorMessage.value)
+  } finally {
     loading.value = false
+    setTimeout(() => {
+      uploadProgress.value = 0
+    }, 1000)
   }
-
-  reader.readAsDataURL(file)
 }
 
 const handleFileChange = (event: Event) => {

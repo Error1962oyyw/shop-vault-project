@@ -8,6 +8,7 @@ import com.TsukasaChan.ShopVault.service.marketing.ActivityService;
 import com.TsukasaChan.ShopVault.service.marketing.CouponTemplateService;
 import com.TsukasaChan.ShopVault.service.marketing.UserCouponService;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.TsukasaChan.ShopVault.mapper.marketing.UserCouponMapper;
 import lombok.RequiredArgsConstructor;
@@ -137,16 +138,19 @@ public class UserCouponServiceImpl extends ServiceImpl<UserCouponMapper, UserCou
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void expireCoupons() {
-        List<UserCoupon> expiredCoupons = list(new LambdaQueryWrapper<UserCoupon>()
+        long count = count(new LambdaQueryWrapper<UserCoupon>()
                 .eq(UserCoupon::getStatus, 0)
                 .lt(UserCoupon::getExpireTime, LocalDateTime.now()));
-        
-        for (UserCoupon coupon : expiredCoupons) {
-            coupon.setStatus(2);
-            updateById(coupon);
+
+        if (count > 0) {
+            getBaseMapper().update(null,
+                    new LambdaUpdateWrapper<UserCoupon>()
+                            .set(UserCoupon::getStatus, 2)
+                            .eq(UserCoupon::getStatus, 0)
+                            .lt(UserCoupon::getExpireTime, LocalDateTime.now()));
         }
-        
-        log.info("已处理{}张过期优惠券", expiredCoupons.size());
+
+        log.info("已处理{}张过期优惠券", count);
     }
 
     @Override

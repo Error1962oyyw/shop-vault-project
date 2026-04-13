@@ -17,5 +17,7 @@ public interface CommentService extends IService<Comment> {
 
     List<Comment> getCommentsByProductId(Long productId);
 
+    IPage<Comment> getCommentsByProductIdPaged(Long productId, Integer pageNum, Integer pageSize);
+
     IPage<Comment> getCommentPage(Integer pageNum, Integer pageSize);
 }

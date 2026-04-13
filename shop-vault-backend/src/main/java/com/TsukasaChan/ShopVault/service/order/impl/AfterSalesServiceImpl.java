@@ -3,17 +3,20 @@ package com.TsukasaChan.ShopVault.service.order.impl;
 import com.TsukasaChan.ShopVault.dto.AfterSalesApplyDto;
 import com.TsukasaChan.ShopVault.dto.AfterSalesHandleDto;
 import com.TsukasaChan.ShopVault.dto.ReturnLogisticsDto;
+import com.TsukasaChan.ShopVault.entity.marketing.BalanceRecord;
 import com.TsukasaChan.ShopVault.entity.order.AfterSales;
 import com.TsukasaChan.ShopVault.entity.order.Order;
 import com.TsukasaChan.ShopVault.entity.system.MessagePush;
 import com.TsukasaChan.ShopVault.entity.system.User;
 import com.TsukasaChan.ShopVault.mapper.order.AfterSalesMapper;
+import com.TsukasaChan.ShopVault.service.marketing.BalanceRecordService;
 import com.TsukasaChan.ShopVault.service.order.AfterSalesService;
 import com.TsukasaChan.ShopVault.service.order.OrderItemService;
 import com.TsukasaChan.ShopVault.service.order.OrderService;
 import com.TsukasaChan.ShopVault.service.system.MessagePushService;
 import com.TsukasaChan.ShopVault.service.system.UserService;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -38,6 +41,7 @@ public class AfterSalesServiceImpl extends ServiceImpl<AfterSalesMapper, AfterSa
     private final OrderItemService orderItemService;
     private final ObjectMapper objectMapper;
     private final MessagePushService messagePushService;
+    private final BalanceRecordService balanceRecordService;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -70,16 +74,10 @@ public class AfterSalesServiceImpl extends ServiceImpl<AfterSalesMapper, AfterSa
         User user = userService.getById(userId);
         if (order.getStatus() == 1 && user.getCreditScore() >= 90 && dto.getType() == AfterSales.TYPE_REFUND_ONLY) {
             AfterSales afterSales = createAfterSales(dto, order, userId);
-            afterSales.setStatus(AfterSales.STATUS_COMPLETED);
+            processRefund(afterSales, order, user, afterSales.getRefundAmount());
             afterSales.setMerchantReply("信誉极好，系统自动秒退款");
-            afterSales.setMerchantHandleTime(LocalDateTime.now());
-            this.save(afterSales);
-
-            order.setStatus(4);
-            order.setCloseTime(LocalDateTime.now());
+            this.updateById(afterSales);
             orderService.updateById(order);
-
-            orderItemService.restoreInventoryByOrderId(order.getId());
             return;
         }
 
@@ -116,7 +114,7 @@ public class AfterSalesServiceImpl extends ServiceImpl<AfterSalesMapper, AfterSa
             }
         }
         
-        afterSales.setRefundAmount(dto.getRefundAmount() != null ? dto.getRefundAmount() : order.getPayAmount());
+        afterSales.setRefundAmount(order.getPayAmount());
         
         if (order.getReceiveTime() != null) {
             int earnedPoints = order.getPayAmount().multiply(new BigDecimal("100")).intValue();
@@ -167,17 +165,47 @@ public class AfterSalesServiceImpl extends ServiceImpl<AfterSalesMapper, AfterSa
         afterSales.setStatus(AfterSales.STATUS_COMPLETED);
         afterSales.setRefundAmount(refundAmount != null ? refundAmount : order.getPayAmount());
 
+        BigDecimal balanceBefore = user.getBalance() != null ? user.getBalance() : BigDecimal.ZERO;
+        userService.updateBalanceWithLock(user.getId(), afterSales.getRefundAmount());
+        User updatedUser = userService.getById(user.getId());
+        BigDecimal balanceAfter = updatedUser.getBalance() != null ? updatedUser.getBalance() : BigDecimal.ZERO;
+
+        balanceRecordService.recordBalanceChange(
+                user.getId(),
+                afterSales.getRefundAmount(),
+                balanceBefore,
+                balanceAfter,
+                BalanceRecord.TYPE_REFUND,
+                "售后退款",
+                afterSales.getId()
+        );
+
         if (order.getReceiveTime() != null && afterSales.getRefundPoints() != null) {
             int pointsToDeduct = afterSales.getRefundPoints();
             if (user.getPoints() >= pointsToDeduct) {
-                user.setPoints(user.getPoints() - pointsToDeduct);
+                int updated = userService.getBaseMapper().update(null,
+                        new LambdaUpdateWrapper<User>()
+                                .setSql("points = points - " + pointsToDeduct)
+                                .eq(User::getId, user.getId())
+                                .ge(User::getPoints, pointsToDeduct));
+                if (updated == 0) {
+                    userService.getBaseMapper().update(null,
+                            new LambdaUpdateWrapper<User>()
+                                    .setSql("points = 0")
+                                    .eq(User::getId, user.getId()));
+                    int missingPoints = pointsToDeduct - user.getPoints();
+                    BigDecimal deductMoney = new BigDecimal(missingPoints).divide(new BigDecimal("100"), 2, RoundingMode.HALF_UP);
+                    afterSales.setRefundAmount(afterSales.getRefundAmount().subtract(deductMoney).max(BigDecimal.ZERO));
+                }
             } else {
                 int missingPoints = pointsToDeduct - user.getPoints();
                 BigDecimal deductMoney = new BigDecimal(missingPoints).divide(new BigDecimal("100"), 2, RoundingMode.HALF_UP);
-                user.setPoints(0);
+                userService.getBaseMapper().update(null,
+                        new LambdaUpdateWrapper<User>()
+                                .setSql("points = 0")
+                                .eq(User::getId, user.getId()));
                 afterSales.setRefundAmount(afterSales.getRefundAmount().subtract(deductMoney).max(BigDecimal.ZERO));
             }
-            userService.updateById(user);
         }
 
         order.setStatus(4);
@@ -263,5 +291,16 @@ public class AfterSalesServiceImpl extends ServiceImpl<AfterSalesMapper, AfterSa
         return this.list(new LambdaQueryWrapper<AfterSales>()
                 .orderByAsc(AfterSales::getStatus)
                 .orderByDesc(AfterSales::getCreateTime));
+    }
+
+    @Override
+    public List<AfterSales> getAfterSalesByStatus(Integer status) {
+        LambdaQueryWrapper<AfterSales> wrapper = new LambdaQueryWrapper<AfterSales>()
+                .orderByAsc(AfterSales::getStatus)
+                .orderByDesc(AfterSales::getCreateTime);
+        if (status != null) {
+            wrapper.eq(AfterSales::getStatus, status);
+        }
+        return this.list(wrapper);
     }
 }

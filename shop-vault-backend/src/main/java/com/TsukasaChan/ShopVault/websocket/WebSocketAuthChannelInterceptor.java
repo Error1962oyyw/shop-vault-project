@@ -51,7 +51,8 @@ public class WebSocketAuthChannelInterceptor implements ChannelInterceptor {
                     log.warn("WebSocket连接认证失败: {}", e.getMessage());
                 }
             } else {
-                log.debug("WebSocket连接无token，允许匿名连接");
+                log.warn("WebSocket连接无token，拒绝匿名连接");
+                throw new org.springframework.messaging.MessagingException("未认证的WebSocket连接");
             }
         }
 

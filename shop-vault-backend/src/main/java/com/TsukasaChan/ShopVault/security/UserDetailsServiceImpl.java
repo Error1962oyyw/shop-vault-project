@@ -41,10 +41,11 @@ public class UserDetailsServiceImpl implements UserDetailsService {
             authorities.add(new SimpleGrantedAuthority("ROLE_" + user.getRole().toUpperCase()));
         }
 
-        return new org.springframework.security.core.userdetails.User(
+        return new CustomUserDetails(
                 user.getUsername(),
                 user.getPassword(),
-                authorities
+                authorities,
+                user.getId()
         );
     }
 }

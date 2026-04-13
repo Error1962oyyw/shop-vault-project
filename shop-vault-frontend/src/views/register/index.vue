@@ -74,26 +74,27 @@ const handleSendCode = async () => {
 }
 
 const handleRegister = async () => {
-  await formRef.value.validate(async (valid: boolean) => {
-    if (valid) {
-      loading.value = true
-      try {
-        await register({
-          username: registerForm.nickname,
-          email: registerForm.email,
-          code: registerForm.code,
-          password: registerForm.password
-        })
-        ElMessage.success('注册成功，请登录')
-        router.push('/login')
-      } catch (error: any) {
-        const msg = error?.response?.data?.msg || error?.message || '注册失败，请重试'
-        ElMessage.error(msg)
-      } finally {
-        loading.value = false
-      }
-    }
-  })
+  try {
+    await formRef.value.validate()
+  } catch {
+    return
+  }
+
+  loading.value = true
+  try {
+    await register({
+      email: registerForm.email,
+      code: registerForm.code,
+      password: registerForm.password
+    })
+    ElMessage.success('注册成功，请登录')
+    router.push('/login')
+  } catch (error: any) {
+    const msg = error?.response?.data?.msg || error?.message || '注册失败，请重试'
+    ElMessage.error(msg)
+  } finally {
+    loading.value = false
+  }
 }
 
 const goToLogin = () => {

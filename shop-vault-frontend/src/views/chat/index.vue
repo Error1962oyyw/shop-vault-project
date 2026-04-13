@@ -1,11 +1,16 @@
 <script setup lang="ts">
-import { ref, onMounted, nextTick, computed } from 'vue'
+import { ref, onMounted, onUnmounted, nextTick, computed } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Picture, Service } from '@element-plus/icons-vue'
 import UserLayout from '@/components/layout/UserLayout.vue'
 import { getChatHistory, sendMessage, sendImageMessage } from '@/api/chat'
 import { useUserStore } from '@/stores/user'
+import { extractErrorMessage } from '@/composables/useErrorMessage'
+import { API_BASE_URL } from '@/api/constants'
 import type { ChatMessage } from '@/types/api'
+
+const POLL_INTERVAL = 5000
+let pollTimer: ReturnType<typeof setInterval> | null = null
 
 const userStore = useUserStore()
 
@@ -18,15 +23,31 @@ const imageInputRef = ref<HTMLInputElement | null>(null)
 
 const currentUserId = computed(() => userStore.userInfo?.id)
 
-const fetchMessages = async () => {
-  loading.value = true
+const fetchMessages = async (silent = false) => {
+  if (!silent) loading.value = true
   try {
-    messages.value = await getChatHistory()
-    scrollToBottom()
+    const newMessages = await getChatHistory()
+    const hasNew = newMessages.length > messages.value.length
+    messages.value = newMessages
+    if (hasNew || !silent) scrollToBottom()
   } catch (error) {
-    console.error('获取聊天记录失败', error)
+    if (!silent) {
+      ElMessage.error(extractErrorMessage(error, '获取聊天记录失败'))
+    }
   } finally {
     loading.value = false
+  }
+}
+
+const startPolling = () => {
+  if (pollTimer) return
+  pollTimer = setInterval(() => fetchMessages(true), POLL_INTERVAL)
+}
+
+const stopPolling = () => {
+  if (pollTimer) {
+    clearInterval(pollTimer)
+    pollTimer = null
   }
 }
 
@@ -41,7 +62,7 @@ const handleSend = async () => {
     await sendMessage({ content })
     await fetchMessages()
   } catch (error) {
-    console.error('发送消息失败', error)
+    ElMessage.error(extractErrorMessage(error, '发送消息失败'))
   } finally {
     sending.value = false
   }
@@ -73,9 +94,8 @@ const handleImageChange = async (event: Event) => {
     await sendImageMessage(file)
     await fetchMessages()
     ElMessage.success('图片发送成功')
-  } catch (error: any) {
-    const msg = error?.response?.data?.msg || error?.message || '图片发送失败'
-    ElMessage.error(msg)
+  } catch (error) {
+    ElMessage.error(extractErrorMessage(error, '图片发送失败'))
   } finally {
     sending.value = false
     if (target) {
@@ -114,15 +134,13 @@ const isImageMessage = (msg: ChatMessage) => {
 const getFullImageUrl = (url: string) => {
   if (!url) return ''
   if (url.startsWith('http')) return url
-  const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:9090'
-  return baseUrl + url
+  return API_BASE_URL + url
 }
 
 const getAvatarUrl = (url: string) => {
   if (!url) return ''
   if (url.startsWith('http')) return url
-  const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:9090'
-  return baseUrl + url
+  return API_BASE_URL + url
 }
 
 const getSenderAvatar = (msg: ChatMessage) => {
@@ -142,6 +160,11 @@ const handleImageClick = (imageUrl: string) => {
 
 onMounted(() => {
   fetchMessages()
+  startPolling()
+})
+
+onUnmounted(() => {
+  stopPolling()
 })
 </script>
 

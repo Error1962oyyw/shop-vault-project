@@ -16,6 +16,7 @@ import com.TsukasaChan.ShopVault.service.order.OrderItemService;
 import com.TsukasaChan.ShopVault.service.order.OrderService;
 import com.TsukasaChan.ShopVault.service.product.ProductService;
 import com.TsukasaChan.ShopVault.service.system.UserService;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
@@ -71,12 +72,23 @@ public class ActivityServiceImpl extends ServiceImpl<ActivityMapper, Activity> i
             throw new RuntimeException("积分不足，兑换需要 " + activity.getPointCost() + " 积分");
         }
 
-        // 3. 扣除积分与库存
-        user.setPoints(user.getPoints() - activity.getPointCost());
-        userService.updateById(user);
+        int pointsUpdated = userService.getBaseMapper().update(null,
+                new LambdaUpdateWrapper<User>()
+                        .setSql("points = points - " + activity.getPointCost())
+                        .eq(User::getId, userId)
+                        .ge(User::getPoints, activity.getPointCost()));
+        if (pointsUpdated == 0) {
+            throw new RuntimeException("积分不足，兑换需要 " + activity.getPointCost() + " 积分");
+        }
 
-        product.setStock(product.getStock() - 1);
-        productService.updateById(product);
+        int stockUpdated = productService.getBaseMapper().update(null,
+                new LambdaUpdateWrapper<Product>()
+                        .setSql("stock = stock - 1")
+                        .eq(Product::getId, product.getId())
+                        .gt(Product::getStock, 0));
+        if (stockUpdated == 0) {
+            throw new RuntimeException("抱歉，该兑换商品已被抢空");
+        }
 
         // 4. 记录积分流水
         PointsRecord record = new PointsRecord();

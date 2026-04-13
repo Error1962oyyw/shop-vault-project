@@ -72,6 +72,12 @@ const effectivePaymentMethod = computed(() => {
   return 'COMBO'
 })
 
+const payButtonAmount = computed(() => {
+  if (selectedPaymentMethod.value === 'DIRECT') return orderAmount.value
+  if (isBalanceSufficient.value) return orderAmount.value
+  return balanceShortfall.value
+})
+
 const closeReasonText = computed(() => {
   if (!order.value) return '该订单已被取消'
   if (isExpired.value) return '用户在24小时内未支付，系统自动取消订单'
@@ -408,7 +414,7 @@ onMounted(() => {
                   class="pay-btn"
                   @click="handlePrePay"
                 >
-                  立即支付 {{ formatMoney(orderAmount) }}
+                  立即支付 {{ formatMoney(payButtonAmount) }}
                 </el-button>
               </div>
             </el-card>

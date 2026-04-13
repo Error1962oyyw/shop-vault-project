@@ -100,6 +100,16 @@ public class CommentServiceImpl extends ServiceImpl<CommentMapper, Comment> impl
     }
 
     @Override
+    public IPage<Comment> getCommentsByProductIdPaged(Long productId, Integer pageNum, Integer pageSize) {
+        Page<Comment> page = QueryHelper.createPage(pageNum, pageSize);
+        return this.page(page, QueryHelper.build(wrapper -> wrapper
+                .eq(Comment::getProductId, productId)
+                .eq(Comment::getAuditStatus, EntityConstants.Status.ENABLED)
+                .orderByDesc(Comment::getLikes)
+                .orderByDesc(Comment::getCreateTime)));
+    }
+
+    @Override
     public IPage<Comment> getCommentPage(Integer pageNum, Integer pageSize) {
         Page<Comment> page = QueryHelper.createPage(pageNum, pageSize);
         return this.page(page, QueryHelper.build(wrapper -> wrapper

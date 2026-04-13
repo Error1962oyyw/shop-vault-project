@@ -2,6 +2,7 @@ package com.TsukasaChan.ShopVault.service.order.impl;
 
 import com.TsukasaChan.ShopVault.common.VipConstants;
 import com.TsukasaChan.ShopVault.util.OrderNoGenerator;
+import com.TsukasaChan.ShopVault.dto.BuyNowDto;
 import com.TsukasaChan.ShopVault.dto.CreateOrderDto;
 import com.TsukasaChan.ShopVault.dto.OrderDetailDto;
 import com.TsukasaChan.ShopVault.entity.order.Order;
@@ -10,7 +11,11 @@ import com.TsukasaChan.ShopVault.entity.order.PaymentRecord;
 import com.TsukasaChan.ShopVault.entity.system.User;
 import com.TsukasaChan.ShopVault.entity.marketing.PointsProduct;
 import com.TsukasaChan.ShopVault.mapper.order.OrderMapper;
-import com.TsukasaChan.ShopVault.service.order.*;
+import com.TsukasaChan.ShopVault.service.order.OrderCreationService;
+import com.TsukasaChan.ShopVault.service.order.OrderItemService;
+import com.TsukasaChan.ShopVault.service.order.OrderLifecycleService;
+import com.TsukasaChan.ShopVault.service.order.PaymentRecordService;
+import com.TsukasaChan.ShopVault.service.order.UnifiedOrderService;
 import com.TsukasaChan.ShopVault.service.system.UserService;
 import com.TsukasaChan.ShopVault.service.marketing.PointsProductService;
 import com.TsukasaChan.ShopVault.service.marketing.PointsRecordService;
@@ -33,7 +38,8 @@ import java.util.List;
 @RequiredArgsConstructor
 public class UnifiedOrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements UnifiedOrderService {
 
-    private final OrderService orderService;
+    private final OrderCreationService orderCreationService;
+    private final OrderLifecycleService orderLifecycleService;
     private final OrderItemService orderItemService;
     private final PaymentRecordService paymentRecordService;
     private final UserService userService;
@@ -245,6 +251,94 @@ public class UnifiedOrderServiceImpl extends ServiceImpl<OrderMapper, Order> imp
 
     @Override
     @Transactional(rollbackFor = Exception.class)
+    public boolean payOrderByDirect(Long userId, Long orderId) {
+        Order order = getById(orderId);
+        if (order == null || !order.getUserId().equals(userId)) {
+            throw new RuntimeException("订单不存在");
+        }
+
+        if (order.getStatus() != Order.STATUS_PENDING_PAYMENT) {
+            throw new RuntimeException("订单状态不正确");
+        }
+
+        if (order.getExpireTime() != null && LocalDateTime.now().isAfter(order.getExpireTime())) {
+            throw new RuntimeException("订单已过期");
+        }
+
+        PaymentRecord record = paymentRecordService.getByOrderNo(order.getOrderNo());
+        if (record == null) {
+            throw new RuntimeException("支付记录不存在");
+        }
+
+        order.setStatus(Order.STATUS_PENDING_DELIVERY);
+        order.setPaymentMethod(Order.PAYMENT_METHOD_DIRECT);
+        order.setPaymentTime(LocalDateTime.now());
+        updateById(order);
+
+        paymentRecordService.updatePaymentSuccess(record.getId(), null);
+
+        if (order.getOrderType() == Order.ORDER_TYPE_VIP || order.getOrderType() == Order.ORDER_TYPE_SVIP) {
+            processVipOrderAfterPayment(order);
+        }
+
+        log.info("直接支付成功, orderNo={}, userId={}", order.getOrderNo(), userId);
+        return true;
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public boolean payOrderByCombo(Long userId, Long orderId) {
+        Order order = getById(orderId);
+        if (order == null || !order.getUserId().equals(userId)) {
+            throw new RuntimeException("订单不存在");
+        }
+
+        if (order.getStatus() != Order.STATUS_PENDING_PAYMENT) {
+            throw new RuntimeException("订单状态不正确");
+        }
+
+        if (order.getExpireTime() != null && LocalDateTime.now().isAfter(order.getExpireTime())) {
+            throw new RuntimeException("订单已过期");
+        }
+
+        User user = userService.getById(userId);
+        if (user == null) {
+            throw new RuntimeException("用户不存在");
+        }
+
+        BigDecimal balanceAmount = user.getBalance() != null ? user.getBalance() : BigDecimal.ZERO;
+        BigDecimal payAmount = order.getPayAmount();
+        if (balanceAmount.compareTo(payAmount) >= 0) {
+            throw new RuntimeException("余额充足，请使用余额支付");
+        }
+
+        PaymentRecord record = paymentRecordService.getByOrderNo(order.getOrderNo());
+        if (record == null) {
+            throw new RuntimeException("支付记录不存在");
+        }
+
+        boolean updated = userService.updateBalanceWithLock(userId, balanceAmount.negate());
+        if (!updated) {
+            throw new RuntimeException("余额扣除失败");
+        }
+
+        order.setStatus(Order.STATUS_PENDING_DELIVERY);
+        order.setPaymentMethod(Order.PAYMENT_METHOD_COMBO);
+        order.setPaymentTime(LocalDateTime.now());
+        updateById(order);
+
+        paymentRecordService.updatePaymentSuccess(record.getId(), null);
+
+        if (order.getOrderType() == Order.ORDER_TYPE_VIP || order.getOrderType() == Order.ORDER_TYPE_SVIP) {
+            processVipOrderAfterPayment(order);
+        }
+
+        log.info("组合支付成功, orderNo={}, userId={}, balanceUsed={}", order.getOrderNo(), userId, balanceAmount);
+        return true;
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
     public boolean payOrderByPoints(Long userId, Long orderId) {
         Order order = getById(orderId);
         if (order == null || !order.getUserId().equals(userId)) {
@@ -309,7 +403,7 @@ public class UnifiedOrderServiceImpl extends ServiceImpl<OrderMapper, Order> imp
         List<Order> expiredOrders = getExpiredOrders();
         for (Order order : expiredOrders) {
             try {
-                orderService.cancelOrder(order.getOrderNo(), order.getUserId());
+                orderLifecycleService.cancelOrder(order.getOrderNo(), order.getUserId());
                 log.info("订单超时自动取消, orderNo={}", order.getOrderNo());
             } catch (Exception e) {
                 log.error("取消超时订单失败, orderNo={}", order.getOrderNo(), e);
@@ -328,6 +422,10 @@ public class UnifiedOrderServiceImpl extends ServiceImpl<OrderMapper, Order> imp
             payOrderByBalance(order.getUserId(), orderId);
         } else if (Order.PAYMENT_METHOD_POINTS.equals(paymentMethod)) {
             payOrderByPoints(order.getUserId(), orderId);
+        } else if (Order.PAYMENT_METHOD_DIRECT.equals(paymentMethod)) {
+            payOrderByDirect(order.getUserId(), orderId);
+        } else if (Order.PAYMENT_METHOD_COMBO.equals(paymentMethod)) {
+            payOrderByCombo(order.getUserId(), orderId);
         }
     }
 
@@ -336,6 +434,20 @@ public class UnifiedOrderServiceImpl extends ServiceImpl<OrderMapper, Order> imp
         return list(new LambdaQueryWrapper<Order>()
                 .eq(Order::getStatus, Order.STATUS_PENDING_PAYMENT)
                 .lt(Order::getExpireTime, LocalDateTime.now()));
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public Order createOrderFromCart(Long userId, List<Long> cartItemIds, Long userCouponId) {
+        String orderNo = orderCreationService.cartCheckout(userId, cartItemIds, userCouponId);
+        return getOrderByNo(orderNo);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public Order createBuyNowOrder(Long userId, BuyNowDto dto) {
+        String orderNo = orderCreationService.buyNow(userId, dto.getProductId(), dto.getQuantity(), dto.getUserCouponId());
+        return getOrderByNo(orderNo);
     }
 
     private void processVipOrderAfterPayment(Order order) {
@@ -397,6 +509,8 @@ public class UnifiedOrderServiceImpl extends ServiceImpl<OrderMapper, Order> imp
         return switch (paymentMethod) {
             case "BALANCE" -> "余额支付";
             case "POINTS" -> "积分支付";
+            case "DIRECT" -> "直接支付";
+            case "COMBO" -> "组合支付";
             case "ALIPAY" -> "支付宝";
             case "WECHAT" -> "微信支付";
             default -> "未知";

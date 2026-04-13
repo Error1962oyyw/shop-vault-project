@@ -23,12 +23,7 @@ public class AdminAfterSalesController extends BaseController {
     public Result<List<AfterSales>> getAdminAfterSalesList(
             @RequestParam(required = false) Integer status
     ) {
-        List<AfterSales> list = afterSalesService.getAllAfterSalesList();
-        if (status != null) {
-            list = list.stream()
-                    .filter(item -> item.getStatus().equals(status))
-                    .toList();
-        }
+        List<AfterSales> list = afterSalesService.getAfterSalesByStatus(status);
         return Result.success(list);
     }
 

@@ -33,76 +33,57 @@ const handleLogin = async () => {
   errorMessage.value = ''
   emailError.value = ''
   passwordError.value = ''
-  await formRef.value.validate(async (valid: boolean) => {
-    if (valid) {
-      loading.value = true
-      try {
-        console.log('[Admin Login] Starting admin login for:', loginForm.username);
-        const tokenResponse = await adminLogin(loginForm)
-        console.log('[Admin Login] Token received:', {
-          hasAccessToken: !!tokenResponse.accessToken,
-          tokenLength: tokenResponse.accessToken?.length
-        });
-        userStore.setToken(tokenResponse.accessToken)
-        console.log('[Admin Login] Token stored');
+  
+  try {
+    await formRef.value.validate()
+  } catch {
+    return
+  }
 
-        try {
-          console.log('[Admin Login] Fetching admin info...');
-          const userInfo = await userStore.fetchUserInfo()
-          console.log('[Admin Login] User info fetched:', {
-            userId: userInfo?.id,
-            username: userInfo?.username,
-            role: userInfo?.role,
-            isAdmin: userStore.isAdmin
-          });
+  loading.value = true
+  try {
+    const tokenResponse = await adminLogin(loginForm)
+    userStore.setToken(tokenResponse.accessToken, tokenResponse.refreshToken)
 
-          if (!userStore.isAdmin) {
-            console.error('[Admin Login Error] User is not admin:', userInfo);
-            ElMessage.error('该账号没有管理员权限')
-            userStore.clearToken()
-            loading.value = false
-            return
-          }
+    try {
+      await userStore.fetchUserInfo()
 
-          console.log('[Admin Login] Admin verification passed');
-          ElMessage.success('登录成功')
-        } catch (fetchError) {
-          console.error('[Admin Login Error] Failed to fetch/verify admin info:', fetchError);
-          console.error('[Admin Login Error] Details:', {
-            message: fetchError?.message,
-            response: fetchError?.response?.data,
-            status: fetchError?.response?.status
-          });
-          userStore.clearToken()
-          ElMessage.error('登录失败，无法验证管理员身份')
-          loading.value = false
-          return
-        }
-
-        console.log('[Admin Login] Redirecting to /admin');
-        router.push('/admin')
-      } catch (error: any) {
-        let errorMsg = '登录失败，请重试'
-        const msg = error?.response?.data?.msg || error?.message || ''
-        
-        if (msg.includes('用户不存在') || msg.includes('用户名不存在') || msg.includes('not found') || msg.includes('Not found')) {
-          errorMsg = '管理员账号不存在，请检查用户名'
-          emailError.value = '账号不存在'
-        } else if (msg.includes('密码错误') || msg.includes('密码不正确') || msg.includes('Invalid password') || msg.includes('密码不匹配')) {
-          errorMsg = '用户名或密码错误，请重新输入'
-          passwordError.value = '用户名或密码错误'
-        } else if (msg.includes('权限不足') || msg.includes('Permission denied') || msg.includes('Not admin')) {
-          errorMsg = '该账号没有管理员权限'
-        } else if (msg) {
-          errorMsg = msg
-        }
-        
-        errorMessage.value = errorMsg
-      } finally {
+      if (!userStore.isAdmin) {
+        ElMessage.error('该账号没有管理员权限')
+        userStore.clearToken()
         loading.value = false
+        return
       }
+
+      ElMessage.success('登录成功')
+    } catch (fetchError) {
+      userStore.clearToken()
+      ElMessage.error('登录失败，无法验证管理员身份')
+      loading.value = false
+      return
     }
-  })
+
+    router.push('/admin')
+  } catch (error: any) {
+    let errorMsg = '登录失败，请重试'
+    const msg = error?.response?.data?.msg || error?.message || ''
+    
+    if (msg.includes('用户不存在') || msg.includes('用户名不存在') || msg.includes('not found') || msg.includes('Not found')) {
+      errorMsg = '管理员账号不存在，请检查用户名'
+      emailError.value = '账号不存在'
+    } else if (msg.includes('密码错误') || msg.includes('密码不正确') || msg.includes('Invalid password') || msg.includes('密码不匹配')) {
+      errorMsg = '用户名或密码错误，请重新输入'
+      passwordError.value = '用户名或密码错误'
+    } else if (msg.includes('权限不足') || msg.includes('Permission denied') || msg.includes('Not admin')) {
+      errorMsg = '该账号没有管理员权限'
+    } else if (msg) {
+      errorMsg = msg
+    }
+    
+    errorMessage.value = errorMsg
+  } finally {
+    loading.value = false
+  }
 }
 
 const clearError = () => {

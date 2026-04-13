@@ -10,8 +10,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
-
 @RestController
 @RequestMapping("/api/comment")
 @RequiredArgsConstructor
@@ -29,8 +27,17 @@ public class CommentController extends BaseController {
      * 获取某商品的评价列表 (按点赞数降序，再按时间降序)
      */
     @GetMapping("/list/{productId}")
-    public Result<List<Comment>> getComments(@PathVariable Long productId) {
-        return Result.success(commentService.getCommentsByProductId(productId));
+    public Result<PageResult<Comment>> getComments(
+            @PathVariable Long productId,
+            @RequestParam(defaultValue = "1") Integer pageNum,
+            @RequestParam(defaultValue = "10") Integer pageSize) {
+        IPage<Comment> page = commentService.getCommentsByProductIdPaged(productId, pageNum, pageSize);
+        PageResult<Comment> result = new PageResult<>();
+        result.setRecords(page.getRecords());
+        result.setTotal(page.getTotal());
+        result.setSize(page.getSize());
+        result.setCurrent(page.getCurrent());
+        return Result.success(result);
     }
 
     /**

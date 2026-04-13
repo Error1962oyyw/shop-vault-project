@@ -24,10 +24,9 @@ const form = ref<CouponTemplateParams>({
   value: 10,
   minAmount: 0,
   totalCount: 100,
-  perUserLimit: 1,
-  startTime: '',
-  endTime: '',
-  description: ''
+  perLimit: 1,
+  validStartTime: '',
+  validEndTime: ''
 })
 
 const couponTypes = [
@@ -72,10 +71,9 @@ const handleCreate = () => {
     value: 10,
     minAmount: 0,
     totalCount: 100,
-    perUserLimit: 1,
-    startTime: '',
-    endTime: '',
-    description: ''
+    perLimit: 1,
+    validStartTime: '',
+    validEndTime: ''
   }
   showDialog.value = true
 }
@@ -89,16 +87,15 @@ const handleEdit = (row: CouponTemplate) => {
     value: row.value,
     minAmount: row.minAmount,
     totalCount: row.totalCount,
-    perUserLimit: row.perUserLimit,
-    startTime: row.startTime,
-    endTime: row.endTime,
-    description: row.description || ''
+    perLimit: row.perLimit || row.perUserLimit || 1,
+    validStartTime: row.validStartTime || row.startTime || '',
+    validEndTime: row.validEndTime || row.endTime || ''
   }
   showDialog.value = true
 }
 
 const handleSubmit = async () => {
-  if (!form.value.name || !form.value.startTime || !form.value.endTime) {
+  if (!form.value.name || !form.value.validStartTime || !form.value.validEndTime) {
     ElMessage.warning('请填写完整信息')
     return
   }
@@ -287,28 +284,20 @@ onMounted(() => {
           <el-input-number v-model="form.totalCount" :min="1" class="w-full" />
         </el-form-item>
         <el-form-item label="每人限领" required>
-          <el-input-number v-model="form.perUserLimit" :min="1" class="w-full" />
+          <el-input-number v-model="form.perLimit" :min="1" class="w-full" />
         </el-form-item>
         <el-form-item label="有效期" required>
           <el-date-picker
-            v-model="form.startTime"
+            v-model="form.validStartTime"
             type="datetime"
             placeholder="开始时间"
             class="w-full mb-2"
           />
           <el-date-picker
-            v-model="form.endTime"
+            v-model="form.validEndTime"
             type="datetime"
             placeholder="结束时间"
             class="w-full"
-          />
-        </el-form-item>
-        <el-form-item label="描述">
-          <el-input 
-            v-model="form.description" 
-            type="textarea"
-            :rows="2"
-            placeholder="优惠券使用说明"
           />
         </el-form-item>
       </el-form>

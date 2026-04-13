@@ -106,7 +106,7 @@ const goToProducts = () => {
 }
 
 const goToCoupons = () => {
-  router.push('/coupons')
+  router.push('/profile')
 }
 
 onMounted(() => {

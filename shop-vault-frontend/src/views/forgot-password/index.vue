@@ -70,29 +70,31 @@ const handleSendCode = async () => {
 }
 
 const handleNext = async () => {
-  await formRef.value.validate(async (valid: boolean) => {
-    if (valid) {
-      if (step.value === 1) {
-        step.value = 2
-      } else if (step.value === 2) {
-        loading.value = true
-        try {
-          await resetPassword({
-            email: form.email,
-            code: form.code,
-            newPassword: form.newPassword
-          })
-          ElMessage.success('密码重置成功，请登录')
-          router.push('/login')
-        } catch (error: any) {
-          const msg = error?.response?.data?.msg || error?.message || '重置密码失败'
-          ElMessage.error(msg)
-        } finally {
-          loading.value = false
-        }
-      }
+  try {
+    await formRef.value.validate()
+  } catch {
+    return
+  }
+
+  if (step.value === 1) {
+    step.value = 2
+  } else if (step.value === 2) {
+    loading.value = true
+    try {
+      await resetPassword({
+        email: form.email,
+        code: form.code,
+        newPassword: form.newPassword
+      })
+      ElMessage.success('密码重置成功，请登录')
+      router.push('/login')
+    } catch (error: any) {
+      const msg = error?.response?.data?.msg || error?.message || '重置密码失败'
+      ElMessage.error(msg)
+    } finally {
+      loading.value = false
     }
-  })
+  }
 }
 
 const goBack = () => {

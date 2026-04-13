@@ -14,9 +14,9 @@ interface UsePaginationOptions {
 
 interface UsePaginationReturn {
   pagination: PaginationState
-  currentPage: number
-  pageSize: number
-  total: number
+  currentPage: ComputedRef<number>
+  pageSize: ComputedRef<number>
+  total: ComputedRef<number>
   totalPages: ComputedRef<number>
   handleCurrentChange: (page: number) => void
   handleSizeChange: (size: number) => void
@@ -65,9 +65,9 @@ export function usePagination(options: UsePaginationOptions = {}): UsePagination
 
   return {
     pagination,
-    currentPage: pagination.current,
-    pageSize: pagination.size,
-    total: pagination.total,
+    currentPage: computed(() => pagination.current),
+    pageSize: computed(() => pagination.size),
+    total: computed(() => pagination.total),
     totalPages,
     handleCurrentChange,
     handleSizeChange,

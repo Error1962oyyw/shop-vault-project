@@ -6,6 +6,7 @@ import com.TsukasaChan.ShopVault.mapper.marketing.CouponTemplateMapper;
 import com.TsukasaChan.ShopVault.service.marketing.CouponTemplateService;
 import com.TsukasaChan.ShopVault.service.marketing.UserCouponService;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Lazy;
@@ -69,29 +70,48 @@ public class CouponTemplateServiceImpl extends ServiceImpl<CouponTemplateMapper,
     @Override
     @Transactional(rollbackFor = Exception.class)
     public boolean receiveCoupon(Long templateId, Long userId) {
-        if (!canReceive(templateId, userId)) {
+        CouponTemplate template = getById(templateId);
+        if (template == null || template.getStatus() != 1) {
             return false;
         }
-        
-        CouponTemplate template = getById(templateId);
-        
+
+        if (template.getValidType() == 1 && template.getValidEndTime() != null
+                && template.getValidEndTime().isBefore(LocalDateTime.now())) {
+            return false;
+        }
+
+        if (template.getPerLimit() != null && template.getPerLimit() > 0) {
+            long userReceived = userCouponService.count(new LambdaQueryWrapper<UserCoupon>()
+                    .eq(UserCoupon::getUserId, userId)
+                    .eq(UserCoupon::getCouponTemplateId, templateId));
+            if (userReceived >= template.getPerLimit()) {
+                return false;
+            }
+        }
+
+        int updated = getBaseMapper().update(null,
+                new LambdaUpdateWrapper<CouponTemplate>()
+                        .setSql("used_count = used_count + 1")
+                        .eq(CouponTemplate::getId, templateId)
+                        .apply("total_count - used_count > 0"));
+        if (updated == 0) {
+            return false;
+        }
+
         UserCoupon userCoupon = new UserCoupon();
         userCoupon.setUserId(userId);
         userCoupon.setCouponTemplateId(templateId);
         userCoupon.setStatus(0);
         userCoupon.setGetTime(LocalDateTime.now());
-        
+
         if (template.getValidType() == 1) {
             userCoupon.setExpireTime(template.getValidEndTime());
         } else if (template.getValidType() == 2 && template.getValidDays() != null) {
             userCoupon.setExpireTime(LocalDateTime.now().plusDays(template.getValidDays()));
         }
-        
+
         userCouponService.save(userCoupon);
-        
-        template.setUsedCount(template.getUsedCount() == null ? 1 : template.getUsedCount() + 1);
-        updateById(template);
-        
+
         log.info("用户{}领取优惠券{}", userId, templateId);
         return true;
     }

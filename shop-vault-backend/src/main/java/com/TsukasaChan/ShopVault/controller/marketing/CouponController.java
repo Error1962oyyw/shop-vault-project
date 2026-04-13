@@ -10,6 +10,7 @@ import com.TsukasaChan.ShopVault.service.marketing.UserCouponService;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
@@ -103,6 +104,7 @@ public class CouponController {
 @RestController
 @RequestMapping("/api/admin/coupons")
 @RequiredArgsConstructor
+@PreAuthorize("hasRole('ADMIN')")
 class CouponAdminController {
 
     private final CouponTemplateService couponTemplateService;

@@ -557,6 +557,29 @@ onMounted(() => {
   border-radius: var(--radius-sm);
 }
 
+@media (min-width: 768px) and (max-width: 1024px) {
+  .header-price,
+  .item-price {
+    width: 90px;
+  }
+  .header-quantity,
+  .item-quantity {
+    width: 120px;
+  }
+  .header-subtotal,
+  .item-subtotal {
+    width: 90px;
+  }
+  .header-action,
+  .item-action {
+    width: 80px;
+  }
+  .item-image {
+    width: 80px;
+    height: 80px;
+  }
+}
+
 @media (max-width: 768px) {
   .cart-header {
     padding: 16px;

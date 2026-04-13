@@ -1,5 +1,6 @@
 package com.TsukasaChan.ShopVault.service.order;
 
+import com.TsukasaChan.ShopVault.dto.BuyNowDto;
 import com.TsukasaChan.ShopVault.dto.CreateOrderDto;
 import com.TsukasaChan.ShopVault.dto.OrderDetailDto;
 import com.TsukasaChan.ShopVault.entity.order.Order;
@@ -24,6 +25,10 @@ public interface UnifiedOrderService extends IService<Order> {
 
     boolean payOrderByBalance(Long userId, Long orderId);
 
+    boolean payOrderByDirect(Long userId, Long orderId);
+
+    boolean payOrderByCombo(Long userId, Long orderId);
+
     boolean payOrderByPoints(Long userId, Long orderId);
 
     boolean cancelOrder(Long userId, Long orderId, String reason);
@@ -31,6 +36,10 @@ public interface UnifiedOrderService extends IService<Order> {
     void cancelExpiredOrders();
 
     void processOrderPayment(Long orderId, String paymentMethod);
+
+    Order createOrderFromCart(Long userId, List<Long> cartItemIds, Long userCouponId);
+
+    Order createBuyNowOrder(Long userId, BuyNowDto dto);
 
     List<Order> getExpiredOrders();
 }

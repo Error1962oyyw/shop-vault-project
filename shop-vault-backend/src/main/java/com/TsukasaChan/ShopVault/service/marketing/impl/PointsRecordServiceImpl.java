@@ -13,6 +13,10 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+
+import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
@@ -114,30 +118,28 @@ public class PointsRecordServiceImpl extends ServiceImpl<PointsRecordMapper, Poi
 
     @Override
     public int getConsecutiveSignInDays(Long userId) {
-        LocalDateTime today = LocalDateTime.now().toLocalDate().atStartOfDay();
+        java.time.LocalDate today = LocalDateTime.now().toLocalDate();
+        LocalDateTime maxLookback = today.atStartOfDay().minusDays(366);
+
+        List<PointsRecord> records = this.list(new LambdaQueryWrapper<PointsRecord>()
+                .eq(PointsRecord::getUserId, userId)
+                .eq(PointsRecord::getType, PointsRecord.TYPE_SIGN_IN)
+                .ge(PointsRecord::getCreateTime, maxLookback)
+                .lt(PointsRecord::getCreateTime, today.atStartOfDay())
+                .select(PointsRecord::getCreateTime)
+                .orderByDesc(PointsRecord::getCreateTime));
+
+        Set<java.time.LocalDate> signedDates = records.stream()
+                .map(r -> r.getCreateTime().toLocalDate())
+                .collect(Collectors.toSet());
+
         int consecutiveDays = 0;
-        LocalDateTime checkDate = today.minusDays(1);
-        
-        while (true) {
-            LocalDateTime dayStart = checkDate.toLocalDate().atStartOfDay();
-            LocalDateTime dayEnd = dayStart.plusDays(1);
-            
-            boolean hasRecord = this.count(new LambdaQueryWrapper<PointsRecord>()
-                    .eq(PointsRecord::getUserId, userId)
-                    .eq(PointsRecord::getType, PointsRecord.TYPE_SIGN_IN)
-                    .ge(PointsRecord::getCreateTime, dayStart)
-                    .lt(PointsRecord::getCreateTime, dayEnd)) > 0;
-            
-            if (hasRecord) {
-                consecutiveDays++;
-                checkDate = checkDate.minusDays(1);
-            } else {
-                break;
-            }
-            
-            if (consecutiveDays > 365) break;
+        java.time.LocalDate checkDate = today.minusDays(1);
+        while (signedDates.contains(checkDate)) {
+            consecutiveDays++;
+            checkDate = checkDate.minusDays(1);
         }
-        
+
         return consecutiveDays;
     }
     

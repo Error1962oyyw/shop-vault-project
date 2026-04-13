@@ -23,4 +23,6 @@ public interface AfterSalesService extends IService<AfterSales> {
     List<AfterSales> getMyAfterSalesList(Long userId);
 
     List<AfterSales> getAllAfterSalesList();
+
+    List<AfterSales> getAfterSalesByStatus(Integer status);
 }

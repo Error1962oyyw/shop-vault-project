@@ -2,8 +2,8 @@
 import { ref, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { Clock, Document, List } from '@element-plus/icons-vue'
-import { getUserOrders, cancelOrder, payOrder } from '@/api/order'
+import { Clock, List } from '@element-plus/icons-vue'
+import { getUserOrders, cancelOrder } from '@/api/order'
 import { formatMoney, formatDateTime } from '@/utils/format'
 import type { OrderDetail } from '@/types/api'
 import UserLayout from '@/components/layout/UserLayout.vue'
@@ -24,11 +24,6 @@ const statusTabs = [
   { label: '已完成', value: 3 },
   { label: '已关闭', value: 4 }
 ]
-
-const showPaymentDialog = ref(false)
-const selectedOrder = ref<OrderDetail | null>(null)
-const selectedPaymentMethod = ref('')
-const paymentLoading = ref(false)
 
 const countdownMap = ref<Record<number, { hours: number; minutes: number; seconds: number; expired: boolean }>>({})
 
@@ -119,33 +114,6 @@ const handlePageChange = (newPage: number) => {
   fetchOrders()
 }
 
-const openPaymentDialog = (order: OrderDetail) => {
-  selectedOrder.value = order
-  selectedPaymentMethod.value = ''
-  showPaymentDialog.value = true
-}
-
-const handlePayment = async () => {
-  if (!selectedPaymentMethod.value) {
-    ElMessage.warning('请选择支付方式')
-    return
-  }
-
-  if (!selectedOrder.value) return
-
-  paymentLoading.value = true
-  try {
-    await payOrder(selectedOrder.value.id, { paymentMethod: selectedPaymentMethod.value })
-    ElMessage.success('支付成功')
-    showPaymentDialog.value = false
-    fetchOrders()
-  } catch (error: any) {
-    ElMessage.error(error.message || '支付失败')
-  } finally {
-    paymentLoading.value = false
-  }
-}
-
 const handleCancel = async (order: OrderDetail) => {
   try {
     await cancelOrder(order.id, { reason: '用户主动取消' })
@@ -178,10 +146,6 @@ const getOrderTypeLabel = (type: number) => {
     case 3: return '积分兑换'
     default: return '普通商品'
   }
-}
-
-const isVipOrder = (order: OrderDetail) => {
-  return order.orderType === 1 || order.orderType === 2
 }
 
 const isPointsOrder = (order: OrderDetail) => {
@@ -301,7 +265,7 @@ onUnmounted(() => {
               v-if="canPay(order)" 
               type="primary" 
               size="small"
-              @click.stop="openPaymentDialog(order)"
+              @click.stop="viewOrderDetail(order.id)"
             >
               立即支付
             </el-button>
@@ -328,76 +292,6 @@ onUnmounted(() => {
       />
     </div>
 
-    <el-dialog v-model="showPaymentDialog" title="选择支付方式" width="400px">
-      <div v-if="selectedOrder" class="payment-dialog-content">
-        <div class="order-summary">
-          <p>订单金额: 
-            <span v-if="isPointsOrder(selectedOrder)" class="highlight">
-              {{ selectedOrder.pointsAmount }} 积分
-            </span>
-            <span v-else class="highlight">
-              {{ formatMoney(selectedOrder.payAmount) }}
-            </span>
-          </p>
-        </div>
-
-        <div class="payment-methods">
-          <template v-if="isPointsOrder(selectedOrder)">
-            <el-alert type="info" :closable="false" show-icon>
-              纯积分兑换，不支持混合支付
-            </el-alert>
-            <div 
-              :class="['payment-method-item', { active: selectedPaymentMethod === 'POINTS' }]"
-              @click="selectedPaymentMethod = 'POINTS'"
-            >
-              <span class="method-icon">🎁</span>
-              <span class="method-name">积分支付</span>
-              <el-icon v-if="selectedPaymentMethod === 'POINTS'" class="check-icon"><Document /></el-icon>
-            </div>
-          </template>
-          
-          <template v-else>
-            <el-alert v-if="isVipOrder(selectedOrder)" type="warning" :closable="false" show-icon>
-              VIP/SVIP购买不享受会员折扣优惠
-            </el-alert>
-            
-            <div 
-              :class="['payment-method-item', { active: selectedPaymentMethod === 'BALANCE' }]"
-              @click="selectedPaymentMethod = 'BALANCE'"
-            >
-              <span class="method-icon">💰</span>
-              <span class="method-name">余额支付</span>
-              <el-icon v-if="selectedPaymentMethod === 'BALANCE'" class="check-icon"><Document /></el-icon>
-            </div>
-            
-            <div 
-              :class="['payment-method-item', { active: selectedPaymentMethod === 'ALIPAY' }]"
-              @click="selectedPaymentMethod = 'ALIPAY'"
-            >
-              <span class="method-icon">📱</span>
-              <span class="method-name">支付宝</span>
-              <el-icon v-if="selectedPaymentMethod === 'ALIPAY'" class="check-icon"><Document /></el-icon>
-            </div>
-            
-            <div 
-              :class="['payment-method-item', { active: selectedPaymentMethod === 'WECHAT' }]"
-              @click="selectedPaymentMethod = 'WECHAT'"
-            >
-              <span class="method-icon">💚</span>
-              <span class="method-name">微信支付</span>
-              <el-icon v-if="selectedPaymentMethod === 'WECHAT'" class="check-icon"><Document /></el-icon>
-            </div>
-          </template>
-        </div>
-      </div>
-
-      <template #footer>
-        <el-button @click="showPaymentDialog = false">取消</el-button>
-        <el-button type="primary" :loading="paymentLoading" @click="handlePayment">
-          确认支付
-        </el-button>
-      </template>
-    </el-dialog>
     </div>
   </UserLayout>
 </template>
@@ -630,70 +524,5 @@ onUnmounted(() => {
   display: flex;
   justify-content: center;
   margin-top: 20px;
-}
-
-.payment-dialog-content {
-  padding: 10px 0;
-}
-
-.order-summary {
-  text-align: center;
-  padding: 16px;
-  background: #f9fafb;
-  border-radius: 8px;
-  margin-bottom: 20px;
-}
-
-.order-summary p {
-  margin: 0;
-  font-size: 14px;
-  color: #6b7280;
-}
-
-.highlight {
-  font-size: 20px;
-  font-weight: 600;
-  color: #ff4d4f;
-}
-
-.payment-methods {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.payment-method-item {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 16px;
-  border: 2px solid #e5e7eb;
-  border-radius: 12px;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.payment-method-item:hover {
-  border-color: #1677ff;
-}
-
-.payment-method-item.active {
-  border-color: #1677ff;
-  background: #e6f4ff;
-}
-
-.method-icon {
-  font-size: 24px;
-}
-
-.method-name {
-  flex: 1;
-  font-size: 15px;
-  font-weight: 500;
-}
-
-.check-icon {
-  color: #1677ff;
-  font-size: 20px;
 }
 </style>

@@ -1,3 +1,4 @@
+@import "tailwindcss";
 @import './styles/design-system.css';
 
 :root {
@@ -46,14 +47,14 @@
   --neutral-100: #f2f3f5;
   --neutral-200: #e5e6eb;
   --neutral-300: #d0d3d9;
-  --neutral-400: #86909c;
+  --neutral-400: #6b7280;
   --neutral-500: #4e5969;
   --neutral-600: #272e3b;
   --neutral-700: #1d2129;
   --neutral-800: #0f1419;
   --text-primary: #1d2129;
   --text-regular: #4e5969;
-  --text-secondary: #86909c;
+  --text-secondary: #6b7280;
   --text-placeholder: #86909c;
   --text-disabled: #c9cdd4;
   --text-on-primary: #ffffff;

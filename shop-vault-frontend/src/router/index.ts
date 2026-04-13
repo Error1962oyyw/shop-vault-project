@@ -6,21 +6,21 @@ const SESSION_TIMEOUT = 30 * 60 * 1000
 const ACTIVITY_KEY = 'last_activity_time'
 
 const updateActivityTime = () => {
-  localStorage.setItem(ACTIVITY_KEY, String(Date.now()))
+  sessionStorage.setItem(ACTIVITY_KEY, String(Date.now()))
 }
 
 const isSessionExpired = (): boolean => {
-  const lastActivity = localStorage.getItem(ACTIVITY_KEY)
+  const lastActivity = sessionStorage.getItem(ACTIVITY_KEY)
   if (!lastActivity) return false
   return Date.now() - Number(lastActivity) > SESSION_TIMEOUT
 }
 
 const clearSession = () => {
-  localStorage.removeItem(ACTIVITY_KEY)
+  sessionStorage.removeItem(ACTIVITY_KEY)
 }
 
 if (typeof window !== 'undefined') {
-  const activityEvents = ['click', 'keydown', 'scroll', 'touchstart', 'mousemove']
+  const activityEvents = ['click', 'keydown', 'scroll', 'touchstart']
   activityEvents.forEach(event => {
     window.addEventListener(event, updateActivityTime, { passive: true })
   })
@@ -121,11 +121,11 @@ const router = createRouter({
       meta: { requiresAuth: true }
     },
     {
-          path: '/member-day',
-          name: 'MemberDay',
-          component: () => import('@/views/member-day/index.vue'),
-          meta: { requiresAuth: true }
-        },
+      path: '/member-day',
+      name: 'MemberDay',
+      component: () => import('@/views/member-day/index.vue'),
+      meta: { requiresAuth: true }
+    },
     {
       path: '/messages',
       name: 'Messages',

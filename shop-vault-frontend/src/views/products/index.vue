@@ -193,6 +193,8 @@ const resetFilters = () => {
   fetchProducts()
 }
 
+let isRouteChange = false
+
 watch(() => route.query, (query) => {
   if (query.categoryId) {
     filters.categoryIds = [Number(query.categoryId)]
@@ -200,16 +202,19 @@ watch(() => route.query, (query) => {
   if (query.keyword) {
     filters.keyword = String(query.keyword)
   }
+  isRouteChange = true
   fetchProducts()
 }, { immediate: true })
 
 watch(() => pagination.current, () => {
-  fetchProducts()
+  if (!isRouteChange) {
+    fetchProducts()
+  }
+  isRouteChange = false
 })
 
 watch(() => pagination.size, () => {
   pagination.current = 1
-  fetchProducts()
 })
 
 onMounted(() => {

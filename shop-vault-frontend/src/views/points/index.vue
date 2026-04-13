@@ -224,7 +224,8 @@ const getPointsTypeColor = (type: string) => {
   return 'primary'
 }
 
-const formatDate = (date: string) => {
+const formatDate = (date: string | undefined) => {
+  if (!date) return ''
   return date ? date.split('T')[0] : ''
 }
 
@@ -518,7 +519,7 @@ onMounted(() => {
                       </div>
                       <div class="coupon-right">
                         <div class="coupon-name">{{ coupon.name }}</div>
-                        <div class="coupon-date">{{ formatDate(coupon.startTime) }} ~ {{ formatDate(coupon.endTime) }}</div>
+                        <div class="coupon-date">{{ formatDate(coupon.validStartTime || coupon.startTime) }} ~ {{ formatDate(coupon.validEndTime || coupon.endTime) }}</div>
                         <el-button type="warning" size="small" class="claim-btn" @click="handleClaimCoupon(coupon.id)">
                           立即领取
                         </el-button>

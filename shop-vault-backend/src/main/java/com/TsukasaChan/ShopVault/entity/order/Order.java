@@ -33,6 +33,8 @@ public class Order implements Serializable {
 
     public static final String PAYMENT_METHOD_BALANCE = "BALANCE";
     public static final String PAYMENT_METHOD_POINTS = "POINTS";
+    public static final String PAYMENT_METHOD_DIRECT = "DIRECT";
+    public static final String PAYMENT_METHOD_COMBO = "COMBO";
     public static final String PAYMENT_METHOD_ALIPAY = "ALIPAY";
     public static final String PAYMENT_METHOD_WECHAT = "WECHAT";
 

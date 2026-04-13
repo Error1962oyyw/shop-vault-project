@@ -6,7 +6,7 @@ import com.baomidou.mybatisplus.extension.service.IService;
 import java.util.List;
 
 public interface FavoriteService extends IService<Favorite> {
-    String toggleFavorite(Long userId, Long productId);
+    boolean toggleFavorite(Long userId, Long productId);
 
     List<Favorite> getMyFavorites(Long userId);
 }

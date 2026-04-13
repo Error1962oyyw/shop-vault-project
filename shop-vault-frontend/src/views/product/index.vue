@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, reactive } from 'vue'
+import { ref, computed, onMounted, reactive, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import DOMPurify from 'dompurify'
 import UserLayout from '@/components/layout/UserLayout.vue'
 import { FavoriteButton } from '@/components/common'
 import { getProductDetail, getCommentList } from '@/api/product'
@@ -39,6 +40,11 @@ const applicableCoupons = ref<UserCoupon[]>([])
 const memberDay = ref<MemberDay | null>(null)
 
 const productId = computed(() => Number(route.params.id))
+
+const sanitizedDetail = computed(() => {
+  const raw = product.value?.detail || product.value?.description || ''
+  return DOMPurify.sanitize(raw)
+})
 
 const currentPrice = computed(() => {
   if (selectedSku.value) {
@@ -266,6 +272,12 @@ const formatCouponValue = (coupon: UserCoupon) => {
 onMounted(() => {
   fetchProduct()
 })
+
+watch(() => route.params.id, (newId, oldId) => {
+  if (newId && newId !== oldId) {
+    fetchProduct()
+  }
+})
 </script>
 
 <template>
@@ -435,7 +447,7 @@ onMounted(() => {
           <div class="tabs-card">
             <el-tabs v-model="activeTab" class="product-tabs">
               <el-tab-pane label="商品详情" name="detail">
-                <div class="detail-content" v-html="product.detail || product.description"></div>
+                <div class="detail-content" v-html="sanitizedDetail"></div>
               </el-tab-pane>
               
               <el-tab-pane label="用户评价" name="comments">
@@ -527,7 +539,8 @@ onMounted(() => {
 }
 
 .product-gallery {
-  width: 440px;
+  max-width: 440px;
+  width: 100%;
   flex-shrink: 0;
 }
 

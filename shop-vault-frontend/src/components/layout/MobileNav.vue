@@ -72,7 +72,7 @@ const navigate = (path: string) => {
   align-items: center;
   justify-content: center;
   flex: 1;
-  padding: 4px 0;
+  padding: 8px 0;
   cursor: pointer;
   transition: all 0.2s;
   color: var(--text-secondary);

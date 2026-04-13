@@ -43,7 +43,6 @@ mybatis-plus:
   mapper-locations: classpath*:/com/TsukasaChan/ShopVault/mapper/**/*.xml
   type-aliases-package: com.TsukasaChan.ShopVault.entity
   configuration:
-    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
     map-underscore-to-camel-case: true
 
 shop-vault:
@@ -65,5 +64,5 @@ shop-vault:
 
 logging:
   level:
-    com.shopvault: debug
-    org.springframework: info
+    com.TsukasaChan.ShopVault: info
+    org.springframework: warn

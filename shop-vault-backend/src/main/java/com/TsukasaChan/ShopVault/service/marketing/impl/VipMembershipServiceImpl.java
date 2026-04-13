@@ -12,6 +12,7 @@ import com.TsukasaChan.ShopVault.service.marketing.UserVipInfoService;
 import com.TsukasaChan.ShopVault.service.marketing.VipMembershipService;
 import com.TsukasaChan.ShopVault.service.system.UserService;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import lombok.RequiredArgsConstructor;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -65,12 +66,14 @@ public class VipMembershipServiceImpl extends ServiceImpl<VipMembershipMapper, V
             throw new RuntimeException("该VIP类型不支持积分兑换");
         }
 
-        if (user.getPoints() < pointsCost) {
+        int updated = userService.getBaseMapper().update(null,
+                new LambdaUpdateWrapper<User>()
+                        .setSql("points = points - " + pointsCost)
+                        .eq(User::getId, userId)
+                        .ge(User::getPoints, pointsCost));
+        if (updated == 0) {
             throw new RuntimeException("积分不足，兑换需要 " + pointsCost + " 积分");
         }
-
-        user.setPoints(user.getPoints() - pointsCost);
-        userService.updateById(user);
 
         PointsRecord record = new PointsRecord();
         record.setUserId(userId);
@@ -149,10 +152,14 @@ public class VipMembershipServiceImpl extends ServiceImpl<VipMembershipMapper, V
         }
 
         if ("points".equals(paymentMethod)) {
-            if (user.getPoints() < pointsCost) {
+            int updated = userService.getBaseMapper().update(null,
+                    new LambdaUpdateWrapper<User>()
+                            .setSql("points = points - " + pointsCost)
+                            .eq(User::getId, userId)
+                            .ge(User::getPoints, pointsCost));
+            if (updated == 0) {
                 throw new RuntimeException("积分不足，需要 " + pointsCost + " 积分");
             }
-            user.setPoints(user.getPoints() - pointsCost);
             
             PointsRecord record = new PointsRecord();
             record.setUserId(userId);
@@ -161,18 +168,20 @@ public class VipMembershipServiceImpl extends ServiceImpl<VipMembershipMapper, V
             record.setDescription(description);
             pointsRecordService.save(record);
         } else if ("balance".equals(paymentMethod)) {
-            BigDecimal userBalance = user.getBalance() != null ? user.getBalance() : BigDecimal.ZERO;
-            if (userBalance.compareTo(balanceCost) < 0) {
+            balanceBefore = user.getBalance() != null ? user.getBalance() : BigDecimal.ZERO;
+            int updated = userService.getBaseMapper().update(null,
+                    new LambdaUpdateWrapper<User>()
+                            .setSql("balance = balance - {0}", balanceCost)
+                            .eq(User::getId, userId)
+                            .ge(User::getBalance, balanceCost));
+            if (updated == 0) {
                 throw new RuntimeException("余额不足，需要 ¥" + balanceCost);
             }
-            balanceBefore = userBalance;
-            balanceAfter = userBalance.subtract(balanceCost);
-            user.setBalance(balanceAfter);
+            User updatedUser = userService.getById(userId);
+            balanceAfter = updatedUser.getBalance() != null ? updatedUser.getBalance() : BigDecimal.ZERO;
         } else {
             throw new RuntimeException("无效的支付方式");
         }
-
-        userService.updateById(user);
 
         VipMembership membership = new VipMembership();
         membership.setUserId(userId);

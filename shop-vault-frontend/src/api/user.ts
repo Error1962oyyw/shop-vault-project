@@ -18,8 +18,7 @@ export const updateProfile = (data: Partial<UserInfo>) => {
 };
 
 export interface PasswordUpdateParams {
-  email: string;
-  code: string;
+  oldPassword: string;
   newPassword: string;
 }
 

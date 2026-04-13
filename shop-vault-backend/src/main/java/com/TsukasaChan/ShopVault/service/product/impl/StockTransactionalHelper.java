@@ -55,7 +55,7 @@ public class StockTransactionalHelper {
     public void restoreStockTransactional(Long productId, Integer quantity) {
         productService.getBaseMapper().update(null,
                 new LambdaUpdateWrapper<Product>()
-                        .setSql("stock = stock + " + quantity)
+                        .setSql("stock = stock + {0}", quantity)
                         .eq(Product::getId, productId));
 
         refreshStockCache(productId);

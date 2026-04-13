@@ -423,7 +423,7 @@ onUnmounted(() => {
                   class="hot-product-item"
                 >
                   <span class="product-rank" :class="'rank-' + (index + 1)">{{ index + 1 }}</span>
-                  <img v-if="product.productImage" :src="product.productImage" class="product-image" />
+                  <img v-if="product.productImage" :src="product.productImage" class="product-image" alt="商品图片" />
                   <div class="product-info">
                     <span class="product-name">{{ product.productName }}</span>
                     <span class="product-sales">销量: {{ product.sales }}</span>

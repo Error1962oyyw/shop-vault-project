@@ -9,4 +9,6 @@ export * from './dashboard';
 export * from './message';
 export * from './onboarding';
 export * from './admin';
+export * from './spec';
+export * from './vip';
 export * from './constants';

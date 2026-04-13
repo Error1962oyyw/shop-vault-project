@@ -14,11 +14,14 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.security.SecureRandom;
 import java.util.List;
 
 @Service
 @RequiredArgsConstructor
 public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements UserService {
+
+    private static final SecureRandom SECURE_RANDOM = new SecureRandom();
 
     private final PasswordEncoder passwordEncoder;
     private final VerificationService verificationService;
@@ -33,10 +36,10 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         }
 
         User user = new User();
-        user.setUsername("sv_user_" + cn.hutool.core.util.RandomUtil.randomNumbers(8));
+        user.setUsername("sv_user_" + String.format("%08d", SECURE_RANDOM.nextInt(100000000)));
         user.setEmail(email);
         user.setPassword(passwordEncoder.encode(password));
-        user.setNickname("小铺用户_" + cn.hutool.core.util.RandomUtil.randomString(4));
+        user.setNickname("小铺用户_" + String.format("%04x", SECURE_RANDOM.nextInt(0x10000)));
         user.setRole("USER");
         user.setPoints(0);
         user.setBalance(new BigDecimal("0.00"));
@@ -143,7 +146,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
     public boolean updateBalanceWithLock(Long userId, BigDecimal amount) {
         LambdaUpdateWrapper<User> updateWrapper = new LambdaUpdateWrapper<>();
         updateWrapper.eq(User::getId, userId)
-                .setSql("balance = IFNULL(balance, 0) + " + amount);
+                .setSql("balance = IFNULL(balance, 0) + {0}", amount);
         return update(updateWrapper);
     }
 }

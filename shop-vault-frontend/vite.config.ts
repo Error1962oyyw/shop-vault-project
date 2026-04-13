@@ -97,12 +97,13 @@ export default defineConfig({
     }
   },
   server: {
-    port: 9898,
+    port: 5173,
+    host: '127.0.0.1',
     strictPort: false,
     hmr: {
       overlay: true,
       timeout: 30000,
-      clientPort: 9898
+      clientPort: 5173
     },
     watch: {
       usePolling: false,
@@ -117,7 +118,7 @@ export default defineConfig({
           proxy.on('error', (err, _req, _res) => {
             console.log('[Proxy Error]', err.message);
           });
-          proxy.on('proxyReq', (proxyReq, req, _res) => {
+          proxy.on('proxyReq', (_proxyReq, req, _res) => {
             if (req.url?.includes('/auth/') || req.url?.includes('/user/profile')) {
               console.log(`[Proxy] ${req.method} ${req.url} → http://localhost:9090`);
             }
@@ -127,7 +128,14 @@ export default defineConfig({
     }
   },
   build: {
-    chunkSizeWarningLimit: 1500
+    chunkSizeWarningLimit: 1500,
+    minify: 'terser',
+    terserOptions: {
+      compress: {
+        drop_console: process.env.NODE_ENV === 'production',
+        drop_debugger: process.env.NODE_ENV === 'production'
+      }
+    }
   },
   optimizeDeps: {
     include: ['element-plus', '@element-plus/icons-vue', 'pinia', 'vue-router'],

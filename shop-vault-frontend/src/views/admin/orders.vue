@@ -27,8 +27,8 @@ const fetchOrders = async () => {
     const tab = tabs.find(t => t.value === activeTab.value)
     const res: PageResult<Order> = await getAdminOrderList({
       status: tab?.status,
-      pageNum: pagination.current,
-      pageSize: pagination.size
+      page: pagination.current,
+      size: pagination.size
     })
     orders.value = res.records
     pagination.total = res.total

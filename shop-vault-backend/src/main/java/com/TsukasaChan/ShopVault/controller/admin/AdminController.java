@@ -4,8 +4,8 @@ import com.TsukasaChan.ShopVault.common.PageResult;
 import com.TsukasaChan.ShopVault.common.Result;
 import com.TsukasaChan.ShopVault.controller.BaseController;
 import com.TsukasaChan.ShopVault.entity.system.User;
-import com.TsukasaChan.ShopVault.mapper.system.UserMapper;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.TsukasaChan.ShopVault.service.system.UserService;
@@ -13,6 +13,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.math.BigDecimal;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -22,7 +23,6 @@ import java.util.Map;
 public class AdminController extends BaseController {
 
     private final UserService userService;
-    private final UserMapper userMapper;
 
     @GetMapping("/users")
     @PreAuthorize("hasRole('ADMIN')")
@@ -45,7 +45,7 @@ public class AdminController extends BaseController {
         }
 
         wrapper.orderByDesc(User::getCreateTime);
-        IPage<User> pageResult = userMapper.selectPage(page, wrapper);
+        IPage<User> pageResult = userService.page(page, wrapper);
 
         PageResult<Map<String, Object>> result = new PageResult<>();
         result.setRecords(pageResult.getRecords().stream().map(user -> {
@@ -101,26 +101,31 @@ public class AdminController extends BaseController {
             return Result.error("用户不存在");
         }
 
-        Integer pointsChange = params.get("pointsChange") != null 
+        Integer pointsChange = params.get("pointsChange") != null
             ? ((Number) params.get("pointsChange")).intValue() : 0;
-        Double balanceChange = params.get("balanceChange") != null 
-            ? ((Number) params.get("balanceChange")).doubleValue() : 0.0;
+        BigDecimal balanceChange = params.get("balanceChange") != null
+            ? new BigDecimal(params.get("balanceChange").toString()) : BigDecimal.ZERO;
 
         if (pointsChange != 0) {
-            int newPoints = Math.max(0, (user.getPoints() != null ? user.getPoints() : 0) + pointsChange);
-            user.setPoints(newPoints);
-        }
-
-        if (balanceChange != 0) {
-            java.math.BigDecimal currentBalance = user.getBalance() != null ? user.getBalance() : java.math.BigDecimal.ZERO;
-            java.math.BigDecimal newBalance = currentBalance.add(java.math.BigDecimal.valueOf(balanceChange));
-            if (newBalance.compareTo(java.math.BigDecimal.ZERO) < 0) {
-                newBalance = java.math.BigDecimal.ZERO;
+            int updated = userService.getBaseMapper().update(null,
+                    new LambdaUpdateWrapper<User>()
+                            .setSql("points = GREATEST(0, points + " + pointsChange + ")")
+                            .eq(User::getId, userId));
+            if (updated == 0) {
+                return Result.error("积分调整失败");
             }
-            user.setBalance(newBalance);
         }
 
-        userService.updateById(user);
+        if (balanceChange.compareTo(BigDecimal.ZERO) != 0) {
+            int updated = userService.getBaseMapper().update(null,
+                    new LambdaUpdateWrapper<User>()
+                            .setSql("balance = GREATEST(0, balance + {0})", balanceChange)
+                            .eq(User::getId, userId));
+            if (updated == 0) {
+                return Result.error("余额调整失败");
+            }
+        }
+
         return Result.success("调整成功");
     }
 }

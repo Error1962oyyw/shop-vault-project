@@ -100,10 +100,6 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(RuntimeException.class)
     public ResponseEntity<Result<String>> handleRuntimeException(RuntimeException e) {
         log.error("业务异常: ", e);
-        String message = e.getMessage();
-        if (message != null && !message.isEmpty()) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Result.error(500, message));
-        }
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Result.error(500, "操作失败，请稍后再试"));
     }
 

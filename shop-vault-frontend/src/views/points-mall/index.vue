@@ -288,7 +288,7 @@ onMounted(() => {
         <el-icon class="preview-arrow prev" @click="handlePreviewChange(-1)">
           <svg viewBox="0 0 1024 1024"><path fill="currentColor" d="M604.8 533.248L384 754.4l45.248 45.248L695.296 533.6 429.248 267.552 384 312.8l220.8 220.448z"/></svg>
         </el-icon>
-        <img :src="previewImage" class="preview-image" />
+        <img :src="previewImage" class="preview-image" alt="商品预览图" />
         <el-icon class="preview-arrow next" @click="handlePreviewChange(1)">
           <svg viewBox="0 0 1024 1024"><path fill="currentColor" d="M604.8 533.248L384 754.4l45.248 45.248L695.296 533.6 429.248 267.552 384 312.8l220.8 220.448z"/></svg>
         </el-icon>

@@ -4,8 +4,6 @@ import type {
   CouponTemplateParams, 
   ProductSku, 
   SkuCreateParams,
-  Spec,
-  SpecCreateParams,
   YoloMapping,
   PageResult,
   AfterSales,
@@ -134,65 +132,6 @@ export const addSkuStock = (id: number, quantity: number) => {
   });
 };
 
-export const getSpecs = () => {
-  return request<Spec[]>({
-    url: '/api/admin/specs',
-    method: 'get'
-  });
-};
-
-export const getSpecById = (id: number) => {
-  return request<Spec>({
-    url: `/api/admin/specs/${id}`,
-    method: 'get'
-  });
-};
-
-export const createSpec = (data: SpecCreateParams) => {
-  return request<Spec>({
-    url: '/api/admin/specs',
-    method: 'post',
-    data
-  });
-};
-
-export const updateSpec = (id: number, data: SpecCreateParams) => {
-  return request<Spec>({
-    url: `/api/admin/specs/${id}`,
-    method: 'put',
-    data
-  });
-};
-
-export const deleteSpec = (id: number) => {
-  return request<void>({
-    url: `/api/admin/specs/${id}`,
-    method: 'delete'
-  });
-};
-
-export const getSpecValues = (specId: number) => {
-  return request<{ id: number; specId: number; value: string; sort: number }[]>({
-    url: `/api/admin/specs/${specId}/values`,
-    method: 'get'
-  });
-};
-
-export const addSpecValue = (specId: number, data: { value: string; sort?: number }) => {
-  return request<{ id: number; specId: number; value: string; sort: number }>({
-    url: `/api/admin/specs/${specId}/values`,
-    method: 'post',
-    data
-  });
-};
-
-export const deleteSpecValue = (valueId: number) => {
-  return request<void>({
-    url: `/api/admin/specs/values/${valueId}`,
-    method: 'delete'
-  });
-};
-
 export const getYoloMappings = () => {
   return request<YoloMapping[]>({
     url: '/api/yolo-mapping/list',
@@ -246,15 +185,15 @@ export const toggleYoloMapping = (id: number) => {
 
 export const handleAfterSales = (data: AfterSalesHandleParams) => {
   return request<string>({
-    url: `/api/admin/after-sales/${data.orderNo}/resolve`,
+    url: `/api/admin/after-sales/${data.id}/resolve`,
     method: 'post',
     data: { status: data.agree ? 1 : 2, refundAmount: data.refundAmount }
   });
 };
 
-export const confirmReturn = (params: { orderNo: string; isAgree: boolean; remark?: string }) => {
+export const confirmReturn = (params: { id: number; isAgree: boolean; remark?: string }) => {
   return request<string>({
-    url: `/api/admin/after-sales/${params.orderNo}/resolve`,
+    url: `/api/admin/after-sales/${params.id}/resolve`,
     method: 'post',
     data: { status: params.isAgree ? 1 : 2 }
   });

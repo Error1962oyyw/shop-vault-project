@@ -28,6 +28,6 @@ export const deleteCartItems = (ids: number[]) => {
   return request<void>({
     url: '/api/cart/delete',
     method: 'delete',
-    data: { ids }
+    data: ids
   });
 };

@@ -29,27 +29,27 @@ export function useBreakpoint() {
   const updateBreakpoint = () => {
     const width = window.innerWidth
     
-    if (width < breakpoints.xs) {
+    if (width < breakpoints.sm) {
       currentBreakpoint.value = 'xs'
       isMobile.value = true
       isTablet.value = false
       isDesktop.value = false
-    } else if (width < breakpoints.sm) {
+    } else if (width < breakpoints.md) {
       currentBreakpoint.value = 'sm'
       isMobile.value = true
       isTablet.value = false
       isDesktop.value = false
-    } else if (width < breakpoints.md) {
+    } else if (width < breakpoints.lg) {
       currentBreakpoint.value = 'md'
       isMobile.value = false
       isTablet.value = true
       isDesktop.value = false
-    } else if (width < breakpoints.lg) {
+    } else if (width < breakpoints.xl) {
       currentBreakpoint.value = 'lg'
       isMobile.value = false
-      isTablet.value = true
-      isDesktop.value = false
-    } else if (width < breakpoints.xl) {
+      isTablet.value = false
+      isDesktop.value = true
+    } else if (width < breakpoints['2xl']) {
       currentBreakpoint.value = 'xl'
       isMobile.value = false
       isTablet.value = false

@@ -2,6 +2,8 @@ package com.TsukasaChan.ShopVault.controller.order;
 
 import com.TsukasaChan.ShopVault.common.Result;
 import com.TsukasaChan.ShopVault.common.VipConstants;
+import com.TsukasaChan.ShopVault.dto.BuyNowDto;
+import com.TsukasaChan.ShopVault.dto.CartCheckoutDto;
 import com.TsukasaChan.ShopVault.dto.CreateOrderDto;
 import com.TsukasaChan.ShopVault.dto.OrderDetailDto;
 import com.TsukasaChan.ShopVault.entity.order.Order;
@@ -126,6 +128,10 @@ public class UnifiedOrderController extends BaseController {
                 success = unifiedOrderService.payOrderByBalance(userId, orderId);
             } else if ("POINTS".equals(paymentMethod)) {
                 success = unifiedOrderService.payOrderByPoints(userId, orderId);
+            } else if ("DIRECT".equals(paymentMethod)) {
+                success = unifiedOrderService.payOrderByDirect(userId, orderId);
+            } else if ("COMBO".equals(paymentMethod)) {
+                success = unifiedOrderService.payOrderByCombo(userId, orderId);
             } else {
                 return Result.error(400, "不支持的支付方式");
             }
@@ -154,6 +160,30 @@ public class UnifiedOrderController extends BaseController {
             return Result.success();
         } catch (RuntimeException e) {
             log.error("取消订单失败, orderId={}, error={}", orderId, e.getMessage());
+            return Result.error(400, e.getMessage());
+        }
+    }
+
+    @PostMapping("/checkout")
+    public Result<Map<String, Object>> cartCheckout(@RequestBody CartCheckoutDto dto) {
+        Long userId = getCurrentUserId();
+        try {
+            Order order = unifiedOrderService.createOrderFromCart(userId, dto.getCartItemIds(), dto.getUserCouponId());
+            return Result.success(buildOrderResult(order));
+        } catch (RuntimeException e) {
+            log.error("购物车结算失败, userId={}, error={}", userId, e.getMessage());
+            return Result.error(400, e.getMessage());
+        }
+    }
+
+    @PostMapping("/buy-now")
+    public Result<Map<String, Object>> buyNow(@RequestBody BuyNowDto dto) {
+        Long userId = getCurrentUserId();
+        try {
+            Order order = unifiedOrderService.createBuyNowOrder(userId, dto);
+            return Result.success(buildOrderResult(order));
+        } catch (RuntimeException e) {
+            log.error("直接购买失败, userId={}, error={}", userId, e.getMessage());
             return Result.error(400, e.getMessage());
         }
     }

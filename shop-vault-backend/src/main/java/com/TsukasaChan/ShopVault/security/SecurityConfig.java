@@ -34,7 +34,6 @@ public class SecurityConfig {
                                 "/api/product/detail/**",
                                 "/api/product/yolo-search",
                                 "/api/product/hot-categories",
-                                "/api/upload/image",
                                 "/api/recommendation/guess-you-like",
                                 "/uploads/**",
                                 "/ws/**",

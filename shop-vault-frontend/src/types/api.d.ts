@@ -272,9 +272,8 @@ export interface AdminLoginParams {
 }
 
 export interface RegisterParams {
-  username: string;
-  password: string;
   email: string;
+  password: string;
   code: string;
 }
 
@@ -289,20 +288,21 @@ export interface CouponTemplate {
   type: number;
   value: number;
   minAmount: number;
-  maxAmount?: number;
   maxDiscount?: number;
   discount?: number;
   totalCount: number;
   usedCount: number;
-  perUserLimit: number;
-  startTime: string;
-  endTime: string;
+  perLimit: number;
+  perUserLimit?: number;
   validStartTime?: string;
   validEndTime?: string;
+  startTime?: string;
+  endTime?: string;
+  scopeType?: number;
+  scopeIds?: string;
+  validType?: number;
+  validDays?: number;
   status?: number;
-  categoryId?: number;
-  productId?: number;
-  description?: string;
   createTime: string;
 }
 
@@ -359,10 +359,8 @@ export interface MessagePush {
 }
 
 export interface OnboardingStatus {
-  completed: boolean;
-  skipped: boolean;
-  selectedCategories: number[];
-  currentStep: number;
+  isFirstLogin: boolean;
+  hasCompletedOnboarding: boolean;
 }
 
 export interface ProductSku {
@@ -492,16 +490,18 @@ export interface CouponTemplateParams {
   name: string;
   type: number;
   value: number;
-  minAmount: number;
-  maxAmount?: number;
   discount?: number;
+  minAmount: number;
+  maxDiscount?: number;
   totalCount: number;
-  perUserLimit: number;
-  startTime: string;
-  endTime: string;
-  categoryId?: number;
-  productId?: number;
-  description?: string;
+  perLimit: number;
+  scopeType?: number;
+  scopeIds?: string;
+  validType?: number;
+  validStartTime?: string;
+  validEndTime?: string;
+  validDays?: number;
+  status?: number;
 }
 
 export interface SkuCreateParams {
@@ -530,7 +530,7 @@ export interface ReturnLogisticsParams {
 }
 
 export interface AfterSalesHandleParams {
-  orderNo: string;
+  id: number;
   agree: boolean;
   refundAmount?: number;
   remark?: string;

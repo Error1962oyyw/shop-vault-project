@@ -5,7 +5,6 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import UserLayout from '@/components/layout/UserLayout.vue'
 import { getProfile, updateProfile, updatePassword, getAddressList, addAddress, updateAddress, deleteAddress, setDefaultAddress, uploadAvatar } from '@/api/user'
 import { regionOptions } from '@/utils/region'
-import { sendCode } from '@/api/auth'
 import { getSignInStatus, signIn } from '@/api/marketing'
 import { useUserStore } from '@/stores/user'
 import type { UserInfo, Address } from '@/types/api'
@@ -38,14 +37,9 @@ const originalProfileForm = ref({
 
 const passwordStep = ref(1)
 const passwordForm = ref({
-  email: '',
-  code: '',
+  oldPassword: '',
   newPassword: '',
   confirmPassword: ''
-})
-const countdown = ref(0)
-const canSendCode = computed(() => {
-  return passwordForm.value.email && countdown.value === 0
 })
 
 const avatarUrl = computed(() => {
@@ -107,9 +101,6 @@ const fetchProfile = async () => {
       birthday: userInfo.value.birthday || ''
     }
     originalProfileForm.value = { ...profileForm.value }
-    if (userInfo.value?.email) {
-      passwordForm.value.email = userInfo.value.email
-    }
   } catch (error) {
     console.error('获取用户信息失败', error)
   } finally {
@@ -233,31 +224,10 @@ const handleAvatarChange = async (event: Event) => {
   }
 }
 
-const handleSendCode = async () => {
-  if (!passwordForm.value.email) {
-    ElMessage.warning('请输入邮箱')
-    return
-  }
-  try {
-    await sendCode(passwordForm.value.email)
-    ElMessage.success('验证码已发送')
-    countdown.value = 60
-    const timer = setInterval(() => {
-      countdown.value--
-      if (countdown.value <= 0) {
-        clearInterval(timer)
-      }
-    }, 1000)
-  } catch (error: any) {
-    const msg = error?.response?.data?.msg || error?.message || '发送验证码失败'
-    ElMessage.error(msg)
-  }
-}
-
 const handleNextPasswordStep = async () => {
   if (passwordStep.value === 1) {
-    if (!passwordForm.value.code) {
-      ElMessage.warning('请输入验证码')
+    if (!passwordForm.value.oldPassword) {
+      ElMessage.warning('请输入当前密码')
       return
     }
     passwordStep.value = 2
@@ -266,21 +236,19 @@ const handleNextPasswordStep = async () => {
       ElMessage.error('两次输入的密码不一致')
       return
     }
-    if (passwordForm.value.newPassword.length < 6) {
-      ElMessage.error('密码长度至少6个字符')
+    if (passwordForm.value.newPassword.length < 8) {
+      ElMessage.error('密码长度至少8个字符')
       return
     }
     try {
       await updatePassword({
-        email: passwordForm.value.email,
-        code: passwordForm.value.code,
+        oldPassword: passwordForm.value.oldPassword,
         newPassword: passwordForm.value.newPassword
       })
       ElMessage.success('密码修改成功')
       passwordStep.value = 1
       passwordForm.value = { 
-        email: userInfo.value?.email || '', 
-        code: '', 
+        oldPassword: '', 
         newPassword: '', 
         confirmPassword: '' 
       }
@@ -527,31 +495,16 @@ onMounted(() => {
                     <div class="step-line"></div>
                     <div class="step-dot"></div>
                   </div>
-                  <p class="step-hint">步骤一：验证邮箱</p>
+                  <p class="step-hint">步骤一：输入当前密码</p>
                   <el-form label-position="top" class="profile-form">
-                    <el-form-item label="邮箱">
+                    <el-form-item label="当前密码">
                       <el-input 
-                        v-model="passwordForm.email" 
-                        placeholder="请输入邮箱"
+                        v-model="passwordForm.oldPassword" 
+                        type="password"
+                        show-password
+                        placeholder="请输入当前密码"
                         class="form-input"
-                        disabled
                       />
-                    </el-form-item>
-                    <el-form-item label="验证码">
-                      <div class="code-input-wrapper">
-                        <el-input 
-                          v-model="passwordForm.code" 
-                          placeholder="请输入验证码"
-                          class="code-input"
-                        />
-                        <el-button 
-                          :disabled="!canSendCode"
-                          @click="handleSendCode"
-                          class="code-btn"
-                        >
-                          {{ countdown > 0 ? `${countdown}s` : '获取验证码' }}
-                        </el-button>
-                      </div>
                     </el-form-item>
                     <el-form-item>
                       <el-button type="primary" @click="handleNextPasswordStep" class="save-btn">
