@@ -101,6 +101,10 @@ export interface Order {
   receiverName: string;
   receiverPhone: string;
   receiverAddress: string;
+  receiverSnapshot: string;
+  productName: string;
+  productImage: string;
+  userId: number;
   paymentTime: string;
   deliveryTime: string;
   receiveTime: string;
@@ -109,6 +113,7 @@ export interface Order {
   orderType: number;
   isPointsExchange: number;
   afterSalesDisabled: number;
+  isDeleted: number;
 }
 
 export interface OrderItem {
@@ -275,6 +280,7 @@ export interface RegisterParams {
   email: string;
   password: string;
   code: string;
+  nickname: string;
 }
 
 export interface SendCodeParams {
@@ -336,6 +342,7 @@ export interface MemberDay {
   discountRate: number;
   pointsMultiplier: number;
   status: number;
+  activityType: number;
   benefits: MemberDayBenefit[];
 }
 

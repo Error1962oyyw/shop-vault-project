@@ -269,6 +269,7 @@ CREATE TABLE `oms_order` (
     `is_points_exchange` TINYINT(1) DEFAULT 0 COMMENT '是否积分兑换: 0否 1是',
     `after_sales_disabled` TINYINT(1) DEFAULT 0 COMMENT '售后是否禁用: 0否 1是',
     `remark` VARCHAR(500) DEFAULT NULL COMMENT '订单备注',
+    `is_deleted` TINYINT(1) DEFAULT 0 COMMENT '是否删除: 0否 1是',
     `create_time` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     `update_time` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
     PRIMARY KEY (`id`),
@@ -278,7 +279,8 @@ CREATE TABLE `oms_order` (
     KEY `idx_status_create` (`status`, `create_time`),
     KEY `idx_user_status` (`user_id`, `status`),
     KEY `idx_order_type` (`order_type`),
-    KEY `idx_expire_time` (`expire_time`)
+    KEY `idx_expire_time` (`expire_time`),
+    KEY `idx_is_deleted` (`is_deleted`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='订单主表';
 
 -- ----------------------------

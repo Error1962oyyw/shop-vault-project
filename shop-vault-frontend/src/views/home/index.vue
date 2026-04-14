@@ -4,7 +4,8 @@ import { useRouter } from 'vue-router'
 import {
   Search, Shop, Camera, MagicStick, Coin,
   TrendCharts, ArrowRight, Calendar as CalendarIcon, CircleCheck,
-  Goods, Ticket, Timer
+  Goods, Ticket, Timer,
+  ShoppingCart, House, ShoppingBag, Monitor, Football
 } from '@element-plus/icons-vue'
 import UserLayout from '@/components/layout/UserLayout.vue'
 import { ProductCard } from '@/components/common'
@@ -14,6 +15,10 @@ import { getMyMessages } from '@/api/message'
 import { useUserStore } from '@/stores/user'
 import { ElMessage } from 'element-plus'
 import type { Product, Category, Activity } from '@/types/api'
+
+const categoryIconMap: Record<string, any> = {
+  ShoppingCart, House, ShoppingBag, Monitor, Football, Goods
+}
 
 const router = useRouter()
 const userStore = useUserStore()
@@ -306,7 +311,7 @@ onMounted(() => {
           >
             <div class="category-icon-wrapper">
               <el-icon class="category-icon">
-                <component :is="category.icon || 'Goods'" />
+                <component :is="categoryIconMap[category.icon] || categoryIconMap.Goods" />
               </el-icon>
             </div>
             <span class="category-name">{{ category.name }}</span>

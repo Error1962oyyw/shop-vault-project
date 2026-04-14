@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { getUserList, updateUserStatus } from '@/api/admin'
-import { Search, Lock, Unlock, Edit } from '@element-plus/icons-vue'
+import { getUserList, updateUserStatus, deleteUser } from '@/api/admin'
+import { Search, Lock, Unlock, Edit, Delete } from '@element-plus/icons-vue'
 import { usePagination } from '@/composables'
 import { AdminPageLayout } from '@/components/admin'
 import { getAvatarUrl } from '@/utils/format'
@@ -78,6 +78,27 @@ const handleToggleStatus = async (user: UserItem) => {
   } catch (error: any) {
     if (error !== 'cancel') {
       console.error(`${action}失败`, error)
+    }
+  }
+}
+
+const handleDeleteUser = async (user: UserItem) => {
+  try {
+    await ElMessageBox.confirm(
+      `确定要删除用户"${user.nickname || user.username}"吗？此操作将删除该用户的所有数据，且不可恢复！`,
+      '删除用户',
+      {
+        confirmButtonText: '确认删除',
+        cancelButtonText: '取消',
+        type: 'error'
+      }
+    )
+    await deleteUser(user.id)
+    ElMessage.success('用户删除成功')
+    fetchUsers()
+  } catch (error: any) {
+    if (error !== 'cancel') {
+      ElMessage.error(error?.response?.data?.msg || '删除失败')
     }
   }
 }
@@ -193,7 +214,7 @@ onMounted(() => {
         </template>
       </el-table-column>
       <el-table-column prop="createTime" label="注册时间" width="180" />
-      <el-table-column label="操作" width="160" align="center">
+      <el-table-column label="操作" width="220" align="center">
         <template #default="{ row }">
           <el-button
             type="primary"
@@ -216,6 +237,16 @@ onMounted(() => {
               <Unlock v-else />
             </el-icon>
             {{ row.status === 1 ? '暂停' : '启用' }}
+          </el-button>
+          <el-button
+            v-if="row.role !== 'ADMIN'"
+            type="danger"
+            link
+            size="small"
+            @click="handleDeleteUser(row)"
+          >
+            <el-icon class="mr-1"><Delete /></el-icon>
+            删除
           </el-button>
         </template>
       </el-table-column>

@@ -11,9 +11,10 @@ import {
   CreditCard,
   CircleCheck,
   Warning,
-  Close
+  Close,
+  Medal
 } from '@element-plus/icons-vue'
-import { getOrderDetail, payOrder, cancelOrder } from '@/api/order'
+import { getOrderDetail, payOrder, cancelOrder, deleteOrder } from '@/api/order'
 import { getProfile } from '@/api/user'
 import { formatMoney, formatDateTime } from '@/utils/format'
 import type { OrderDetail } from '@/types/api'
@@ -175,6 +176,25 @@ const handleCancel = async () => {
   }
 }
 
+const handleDelete = async () => {
+  if (!order.value) return
+  try {
+    await ElMessageBox.confirm('确认删除该订单？删除后无法恢复。', '删除确认', {
+      confirmButtonText: '确认删除',
+      cancelButtonText: '再想想',
+      type: 'warning'
+    })
+    await deleteOrder(orderId.value)
+    ElMessage.success('订单已删除')
+    router.push('/orders')
+  } catch (error: any) {
+    if (error !== 'cancel') {
+      const msg = error?.response?.data?.msg || error?.message || '删除失败'
+      ElMessage.error(msg)
+    }
+  }
+}
+
 const goBack = () => {
   router.push('/orders')
 }
@@ -233,10 +253,15 @@ onMounted(() => {
               </template>
               <div class="product-detail">
                 <img
+                  v-if="order.productImage"
                   :src="order.productImage"
                   :alt="getOrderDisplayName(order)"
                   class="product-image"
                 />
+                <div v-else class="product-image-fallback" :class="order.orderType === 1 || order.orderType === 2 ? 'vip' : ''">
+                  <el-icon :size="32"><Medal /></el-icon>
+                  <span>{{ order.orderType === 2 ? 'SVIP' : 'VIP' }}</span>
+                </div>
                 <div class="product-info">
                   <h3 class="product-name">{{ getOrderDisplayName(order) }}</h3>
                   <p class="product-meta">
@@ -425,8 +450,17 @@ onMounted(() => {
             <el-result :icon="isExpired ? 'warning' : 'info'" :title="isExpired ? '订单已过期' : '订单已关闭'" :sub-title="closeReasonText">
               <template #extra>
                 <el-button type="primary" @click="router.push('/products')">去购物</el-button>
+                <el-button type="danger" plain @click="handleDelete">删除订单</el-button>
               </template>
             </el-result>
+          </el-card>
+
+          <!-- 已完成订单操作 -->
+          <el-card v-if="order.status === 3" class="completed-card" shadow="never">
+            <div class="completed-actions">
+              <el-button type="primary" @click="router.push('/products')">继续购物</el-button>
+              <el-button type="danger" plain @click="handleDelete">删除订单</el-button>
+            </div>
           </el-card>
 
           <!-- 过期但状态未更新的提示 -->
@@ -686,6 +720,27 @@ onMounted(() => {
   object-fit: cover;
   border: 1px solid #e5e7eb;
   flex-shrink: 0;
+}
+
+.product-image-fallback {
+  width: 88px;
+  height: 88px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: #9ca3af;
+  font-size: 12px;
+  font-weight: 600;
+  flex-shrink: 0;
+  gap: 2px;
+}
+
+.product-image-fallback.vip {
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+  color: #fff;
 }
 
 .product-info {
@@ -994,6 +1049,17 @@ onMounted(() => {
 .closed-card {
   border-radius: 12px;
   text-align: center;
+}
+
+.completed-card {
+  border-radius: 12px;
+}
+
+.completed-actions {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  padding: 8px 0;
 }
 
 .expire-notice {

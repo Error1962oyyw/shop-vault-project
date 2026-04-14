@@ -5,6 +5,7 @@ import { ElMessage } from 'element-plus'
 import { User, Lock, Setting, Warning } from '@element-plus/icons-vue'
 import { adminLogin } from '@/api/auth'
 import { useUserStore } from '@/stores/user'
+import { parseLoginError } from '@/utils/auth'
 
 const router = useRouter()
 const userStore = useUserStore()
@@ -65,22 +66,9 @@ const handleLogin = async () => {
 
     router.push('/admin')
   } catch (error: any) {
-    let errorMsg = '登录失败，请重试'
-    const msg = error?.response?.data?.msg || error?.message || ''
-    
-    if (msg.includes('用户不存在') || msg.includes('用户名不存在') || msg.includes('not found') || msg.includes('Not found')) {
-      errorMsg = '管理员账号不存在，请检查用户名'
-      emailError.value = '账号不存在'
-    } else if (msg.includes('密码错误') || msg.includes('密码不正确') || msg.includes('Invalid password') || msg.includes('密码不匹配')) {
-      errorMsg = '用户名或密码错误，请重新输入'
-      passwordError.value = '用户名或密码错误'
-    } else if (msg.includes('权限不足') || msg.includes('Permission denied') || msg.includes('Not admin')) {
-      errorMsg = '该账号没有管理员权限'
-    } else if (msg) {
-      errorMsg = msg
-    }
-    
-    errorMessage.value = errorMsg
+    const { errorMessage: errMsg, passwordError: pwdErr } = parseLoginError(error)
+    errorMessage.value = errMsg
+    passwordError.value = pwdErr
   } finally {
     loading.value = false
   }

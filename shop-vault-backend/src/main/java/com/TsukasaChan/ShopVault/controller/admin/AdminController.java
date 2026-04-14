@@ -128,4 +128,18 @@ public class AdminController extends BaseController {
 
         return Result.success("调整成功");
     }
+
+    @DeleteMapping("/users/{userId}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public Result<String> deleteUser(@PathVariable Long userId) {
+        User user = userService.getById(userId);
+        if (user == null) {
+            return Result.error("用户不存在");
+        }
+        if ("ADMIN".equals(user.getRole())) {
+            return Result.error("无法删除管理员账号");
+        }
+        userService.removeById(userId);
+        return Result.success("用户删除成功");
+    }
 }

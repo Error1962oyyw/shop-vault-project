@@ -2,11 +2,12 @@
 import { ref, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { Clock, List } from '@element-plus/icons-vue'
-import { getUserOrders, cancelOrder } from '@/api/order'
+import { Clock, List, Medal, Search } from '@element-plus/icons-vue'
+import { getUserOrders, cancelOrder, deleteOrder } from '@/api/order'
 import { formatMoney, formatDateTime } from '@/utils/format'
 import type { OrderDetail } from '@/types/api'
 import UserLayout from '@/components/layout/UserLayout.vue'
+import { ElMessageBox } from 'element-plus'
 
 const router = useRouter()
 const loading = ref(false)
@@ -15,6 +16,7 @@ const currentStatus = ref<number | undefined>(undefined)
 const total = ref(0)
 const page = ref(1)
 const size = ref(10)
+const searchKeyword = ref('')
 
 const statusTabs = [
   { label: '全部', value: undefined },
@@ -33,6 +35,10 @@ const canPay = (order: OrderDetail) => {
 
 const canCancel = (order: OrderDetail) => {
   return order.status === 0 && (!order.expireTime || new Date(order.expireTime) > new Date())
+}
+
+const canDelete = (order: OrderDetail) => {
+  return order.status === 3 || order.status === 4
 }
 
 const getOrderDisplayName = (order: OrderDetail) => {
@@ -86,7 +92,8 @@ const fetchOrders = async () => {
     const res = await getUserOrders({
       status: currentStatus.value,
       page: page.value,
-      size: size.value
+      size: size.value,
+      keyword: searchKeyword.value || undefined
     })
     orders.value = res.records
     total.value = res.total
@@ -109,8 +116,19 @@ const handleStatusChange = (status: number | undefined) => {
   fetchOrders()
 }
 
+const handleSearch = () => {
+  page.value = 1
+  fetchOrders()
+}
+
 const handlePageChange = (newPage: number) => {
   page.value = newPage
+  fetchOrders()
+}
+
+const handleSizeChange = (newSize: number) => {
+  size.value = newSize
+  page.value = 1
   fetchOrders()
 }
 
@@ -121,6 +139,23 @@ const handleCancel = async (order: OrderDetail) => {
     fetchOrders()
   } catch (error: any) {
     ElMessage.error(error.message || '取消失败')
+  }
+}
+
+const handleDelete = async (order: OrderDetail) => {
+  try {
+    await ElMessageBox.confirm('确认删除该订单？删除后无法恢复。', '删除确认', {
+      confirmButtonText: '确认删除',
+      cancelButtonText: '再想想',
+      type: 'warning'
+    })
+    await deleteOrder(order.id)
+    ElMessage.success('订单已删除')
+    fetchOrders()
+  } catch (error: any) {
+    if (error !== 'cancel') {
+      ElMessage.error(error?.response?.data?.msg || error?.message || '删除失败')
+    }
   }
 }
 
@@ -192,6 +227,22 @@ onUnmounted(() => {
       </div>
     </div>
 
+    <div class="search-bar">
+      <el-input
+        v-model="searchKeyword"
+        placeholder="搜索订单号、商品名称"
+        clearable
+        @keyup.enter="handleSearch"
+        @clear="handleSearch"
+        class="search-input"
+      >
+        <template #prefix>
+          <el-icon><Search /></el-icon>
+        </template>
+      </el-input>
+      <el-button type="primary" @click="handleSearch">搜索</el-button>
+    </div>
+
     <div class="orders-list" v-loading="loading">
       <div v-if="orders.length === 0" class="empty-orders">
         <el-empty description="暂无订单">
@@ -220,6 +271,10 @@ onUnmounted(() => {
           <div class="product-info">
             <div class="product-image" v-if="order.productImage">
               <img :src="order.productImage" :alt="order.productName" />
+            </div>
+            <div class="product-image-fallback" v-else-if="order.orderType === 1 || order.orderType === 2">
+              <el-icon :size="20"><Medal /></el-icon>
+              <span>{{ order.orderType === 2 ? 'SVIP' : 'VIP' }}</span>
             </div>
             <div class="product-detail">
               <h3 class="product-name">{{ getOrderDisplayName(order) }}</h3>
@@ -277,18 +332,29 @@ onUnmounted(() => {
             >
               确认收货
             </el-button>
+            <el-button 
+              v-if="canDelete(order)" 
+              type="danger" 
+              plain 
+              size="small"
+              @click.stop="handleDelete(order)"
+            >
+              删除订单
+            </el-button>
           </div>
         </div>
       </div>
     </div>
 
-    <div class="pagination-wrapper" v-if="total > size">
+    <div class="pagination-wrapper" v-if="total > 0">
       <el-pagination
         :current-page="page"
         :page-size="size"
+        :page-sizes="[5, 10, 20, 50]"
         :total="total"
-        layout="prev, pager, next"
+        layout="total, sizes, prev, pager, next, jumper"
         @current-change="handlePageChange"
+        @size-change="handleSizeChange"
       />
     </div>
 
@@ -353,6 +419,21 @@ onUnmounted(() => {
 .tab-item.active {
   background: #1677ff;
   color: #fff;
+}
+
+.search-bar {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 20px;
+  padding: 12px;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.search-input {
+  flex: 1;
+  max-width: 400px;
 }
 
 .orders-list {
@@ -432,6 +513,21 @@ onUnmounted(() => {
   width: 100%;
   height: 100%;
   object-fit: cover;
+}
+
+.product-image-fallback {
+  width: 80px;
+  height: 80px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 600;
+  gap: 2px;
 }
 
 .product-detail {

@@ -3,6 +3,8 @@ import { ref, onMounted, computed } from 'vue'
 import UserLayout from '@/components/layout/UserLayout.vue'
 import { getMyMessages, markMessageRead } from '@/api/message'
 import { ElMessage } from 'element-plus'
+import { Bell, Document, Present, Ticket, ChatDotRound } from '@element-plus/icons-vue'
+import type { Component } from 'vue'
 import type { MessagePush } from '@/types/api'
 
 const messages = ref<MessagePush[]>([])
@@ -82,14 +84,14 @@ const getMessageTypeClass = (type: number) => {
   }
 }
 
-const getMessageTypeIcon = (type: number) => {
-  switch (type) {
-    case 1: return 'Bell'
-    case 2: return 'Document'
-    case 3: return 'Present'
-    case 4: return 'Ticket'
-    default: return 'Message'
+const getMessageTypeIcon = (type: number): Component => {
+  const icons: Record<number, Component> = {
+    1: Bell,
+    2: Document,
+    3: Present,
+    4: Ticket
   }
+  return icons[type] || ChatDotRound
 }
 
 const formatTime = (date: string) => {

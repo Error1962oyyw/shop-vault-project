@@ -59,7 +59,7 @@ public class AuthController {
         if (count != null && count == 1) {
             redisTemplate.expire(rateKey, 60, TimeUnit.SECONDS);
         }
-        if (count != null && count >= RATE_LIMIT_PER_MINUTE) {
+        if (count != null && count > RATE_LIMIT_PER_MINUTE) {
             throw new RuntimeException("操作过于频繁，请稍后再试");
         }
     }
@@ -75,9 +75,6 @@ public class AuthController {
             Authentication auth = authenticationManager.authenticate(
                     new UsernamePasswordAuthenticationToken(dto.getEmail(), dto.getPassword())
             );
-
-            boolean isAdmin = auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
-            if (isAdmin) return Result.error(403, "管理员请从后台入口登录！");
 
             loginSecurityService.recordLoginSuccess(dto.getEmail());
 
@@ -187,7 +184,7 @@ public class AuthController {
         if (verificationService.isCodeInvalid(dto.getEmail(), dto.getCode())) {
             return Result.error(400, "验证码错误或已过期");
         }
-        userService.registerWithEmail(dto.getEmail(), dto.getPassword());
+        userService.registerWithEmail(dto.getEmail(), dto.getPassword(), dto.getNickname());
         return Result.success("注册成功！");
     }
 

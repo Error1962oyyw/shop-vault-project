@@ -8,7 +8,8 @@ import {
   Goods,
   Ticket,
   Warning,
-  ShoppingCart
+  ShoppingCart,
+  Medal
 } from '@element-plus/icons-vue'
 import { getAddressList } from '@/api/user'
 import { getCartList } from '@/api/cart'
@@ -395,7 +396,10 @@ onMounted(async () => {
 
             <template v-if="isVipOrder || isPointsOrder">
               <div class="vip-product-card">
-                <div class="vip-icon-box">{{ isVipOrder ? 'VIP' : '积分' }}</div>
+                <div class="vip-icon-box" :class="vipType === 3 ? 'svip' : 'vip'">
+                  <el-icon :size="32"><Medal /></el-icon>
+                  <span class="vip-label">{{ vipType === 3 ? 'SVIP' : 'VIP' }}</span>
+                </div>
                 <div class="vip-info">
                   <h3 class="vip-name">{{ vipName || orderTypeLabel }}</h3>
                   <p class="vip-desc">{{ isVipOrder ? '享受会员专属权益和优惠' : '使用积分兑换商品' }}</p>
@@ -722,17 +726,30 @@ onMounted(async () => {
 }
 
 .vip-icon-box {
-  width: 56px;
-  height: 56px;
-  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
-  border-radius: 12px;
+  width: 80px;
+  height: 80px;
+  border-radius: 16px;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
   color: #fff;
-  font-weight: 800;
-  font-size: 16px;
   flex-shrink: 0;
+  gap: 2px;
+}
+
+.vip-icon-box.vip {
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+}
+
+.vip-icon-box.svip {
+  background: linear-gradient(135deg, #722ed1 0%, #531dab 100%);
+}
+
+.vip-label {
+  font-weight: 800;
+  font-size: 12px;
+  letter-spacing: 1px;
 }
 
 .vip-info {

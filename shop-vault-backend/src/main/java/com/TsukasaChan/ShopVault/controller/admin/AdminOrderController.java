@@ -26,11 +26,27 @@ public class AdminOrderController extends BaseController {
     public Result<PageResult<Order>> getAdminOrderList(
             @RequestParam(defaultValue = "1") Integer pageNum,
             @RequestParam(defaultValue = "10") Integer pageSize,
-            @RequestParam(required = false) Integer status
+            @RequestParam(required = false) Integer status,
+            @RequestParam(required = false) String orderNo,
+            @RequestParam(required = false) Long userId,
+            @RequestParam(required = false) String startTime,
+            @RequestParam(required = false) String endTime
     ) {
         LambdaQueryWrapper<Order> wrapper = new LambdaQueryWrapper<>();
         if (status != null) {
             wrapper.eq(Order::getStatus, status);
+        }
+        if (StringUtils.hasText(orderNo)) {
+            wrapper.like(Order::getOrderNo, orderNo);
+        }
+        if (userId != null) {
+            wrapper.eq(Order::getUserId, userId);
+        }
+        if (StringUtils.hasText(startTime)) {
+            wrapper.ge(Order::getCreateTime, LocalDateTime.parse(startTime));
+        }
+        if (StringUtils.hasText(endTime)) {
+            wrapper.le(Order::getCreateTime, LocalDateTime.parse(endTime));
         }
         wrapper.orderByDesc(Order::getCreateTime);
         
@@ -99,6 +115,19 @@ public class AdminOrderController extends BaseController {
         order.setDeliveryTime(LocalDateTime.now());
         orderService.updateById(order);
         return Result.success("发货成功");
+    }
+
+    @DeleteMapping("/{orderNo}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public Result<String> deleteOrder(@PathVariable String orderNo) {
+        Order order = orderService.getOne(new LambdaQueryWrapper<Order>()
+                .eq(Order::getOrderNo, orderNo));
+        if (order == null) {
+            return Result.error(404, "订单不存在");
+        }
+        order.setIsDeleted(1);
+        orderService.updateById(order);
+        return Result.success("订单删除成功");
     }
 
     @lombok.Data

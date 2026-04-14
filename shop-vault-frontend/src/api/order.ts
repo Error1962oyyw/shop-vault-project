@@ -35,7 +35,7 @@ export const createPointsExchangeOrder = (data: { productId: number; quantity?: 
   });
 };
 
-export const getUserOrders = (params: { status?: number; page?: number; size?: number }) => {
+export const getUserOrders = (params: { status?: number; page?: number; size?: number; keyword?: string }) => {
   return request<PageResult<OrderDetail>>({
     url: '/api/orders',
     method: 'get',
@@ -66,6 +66,13 @@ export const cancelOrder = (orderId: number, data?: { reason?: string }) => {
   });
 };
 
+export const deleteOrder = (orderId: number) => {
+  return request<void>({
+    url: `/api/orders/${orderId}`,
+    method: 'delete'
+  });
+};
+
 export const cartCheckout = (data: { addressId: number; couponId?: number; pointsUsed?: number; remark?: string }) => {
   return request<{ orderId: number; orderNo: string }>({
     url: '/api/orders/checkout',
@@ -82,7 +89,7 @@ export const buyNow = (data: { productId: number; skuId?: number; quantity: numb
   });
 };
 
-export const getAdminOrderList = (params: { status?: number; page?: number; size?: number; orderNo?: string }) => {
+export const getAdminOrderList = (params: { status?: number; page?: number; size?: number; orderNo?: string; userId?: number; startTime?: string; endTime?: string }) => {
   return request<PageResult<Order>>({
     url: '/api/admin/orders',
     method: 'get',
@@ -95,6 +102,13 @@ export const shipOrder = (orderNo: string, data: { trackingCompany: string; trac
     url: `/api/admin/orders/${orderNo}/ship`,
     method: 'post',
     data
+  });
+};
+
+export const adminDeleteOrder = (orderNo: string) => {
+  return request<void>({
+    url: `/api/admin/orders/${orderNo}`,
+    method: 'delete'
   });
 };
 

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { Star, Calendar, Coin, Ticket, ShoppingBag, Present, InfoFilled, CircleCheck } from '@element-plus/icons-vue'
 import UserLayout from '@/components/layout/UserLayout.vue'
@@ -101,6 +101,53 @@ const getBenefitColor = (type: string) => {
   return colors[type] || 'blue'
 }
 
+const memberDayBenefits = computed(() => {
+  if (!currentMemberDay.value) return []
+  const benefits: { id: number; type: string; title: string; description: string; value: string }[] = []
+  let id = 1
+  if (currentMemberDay.value.discountRate) {
+    const discount = (currentMemberDay.value.discountRate * 10).toFixed(1).replace(/\.0$/, '')
+    benefits.push({
+      id: id++,
+      type: 'discount',
+      title: '专属折扣',
+      description: '会员日商品折扣优惠',
+      value: `${discount}折`
+    })
+  }
+  if (currentMemberDay.value.pointsMultiplier && currentMemberDay.value.pointsMultiplier > 1) {
+    benefits.push({
+      id: id++,
+      type: 'points',
+      title: '积分翻倍',
+      description: '购物积分倍率提升',
+      value: `${currentMemberDay.value.pointsMultiplier}倍`
+    })
+  }
+  if (currentMemberDay.value.activityType === 2) {
+    benefits.push({
+      id: id++,
+      type: 'coupon',
+      title: '专属优惠券',
+      description: '会员日专属优惠券',
+      value: '立即领取'
+    })
+  }
+  benefits.push({
+    id: id++,
+    type: 'exclusive',
+    title: '会员特权',
+    description: '会员日专属活动',
+    value: '限时享受'
+  })
+  return benefits
+})
+
+const formatDiscountRate = (rate: number | null | undefined) => {
+  if (!rate) return ''
+  return (rate * 10).toFixed(1).replace(/\.0$/, '')
+}
+
 const goToProducts = () => {
   router.push('/products')
 }
@@ -174,7 +221,7 @@ onUnmounted(() => {
                   <ShoppingBag class="btn-icon" />
                   立即抢购
                 </el-button>
-                <el-button size="large" class="action-btn secondary-btn" @click="goToCoupons">
+                <el-button v-if="currentMemberDay.activityType === 2" size="large" class="action-btn secondary-btn" @click="goToCoupons">
                   <Ticket class="btn-icon" />
                   领取优惠券
                 </el-button>
@@ -191,7 +238,7 @@ onUnmounted(() => {
             </div>
             <div class="benefits-grid">
               <div 
-                v-for="benefit in currentMemberDay.benefits" 
+                v-for="benefit in memberDayBenefits" 
                 :key="benefit.id"
                 class="benefit-card"
               >
@@ -216,11 +263,11 @@ onUnmounted(() => {
               <ul class="rules-list">
                 <li class="rule-item">
                   <CircleCheck class="rule-icon" />
-                  <span>会员日期间，商品享受{{ currentMemberDay.discountRate }}折优惠</span>
+                  <span>会员日期间，商品享受{{ formatDiscountRate(currentMemberDay.discountRate) }}折优惠</span>
                 </li>
                 <li class="rule-item">
                   <CircleCheck class="rule-icon" />
-                  <span>购物积分翻倍，每消费1元获得 {{ currentMemberDay.pointsMultiplier }} 积分</span>
+                  <span>购物积分翻倍，每消费1元获得 {{ currentMemberDay.pointsMultiplier || 1 }} 积分</span>
                 </li>
                 <li class="rule-item">
                   <CircleCheck class="rule-icon" />
@@ -598,7 +645,6 @@ onUnmounted(() => {
 }
 
 .rule-item span {
-  white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }

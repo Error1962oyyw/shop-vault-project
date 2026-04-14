@@ -5,7 +5,7 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { 
   Shop, SwitchButton, User, List, Money, RefreshLeft,
   TrendCharts, DataAnalysis, Timer, ShoppingCart, Coin, Present,
-  ArrowDown
+  ArrowDown, Goods, ChatDotRound, Medal, Calendar
 } from '@element-plus/icons-vue'
 import { getDashboardStats } from '@/api/dashboard'
 import { useUserStore } from '@/stores/user'
@@ -24,53 +24,55 @@ const autoRefreshInterval = ref<number | null>(null)
 
 const isMainDashboard = computed(() => route.path === '/admin')
 
+import type { Component } from 'vue'
+
 interface MenuItem {
   path: string;
-  icon: string;
+  icon: Component;
   title: string;
   isMain?: boolean;
 }
 
 interface MenuGroup {
   title: string;
-  icon: string;
+  icon: Component;
   items: MenuItem[];
 }
 
 const menuGroups: MenuGroup[] = [
   {
     title: '数据大屏',
-    icon: 'DataAnalysis',
+    icon: DataAnalysis,
     items: [
-      { path: '/admin', icon: 'DataAnalysis', title: '数据大屏', isMain: true }
+      { path: '/admin', icon: DataAnalysis, title: '数据大屏', isMain: true }
     ]
   },
   {
     title: '商品订单',
-    icon: 'Goods',
+    icon: Goods,
     items: [
-      { path: '/admin/products', icon: 'Goods', title: '商品管理' },
-      { path: '/admin/orders', icon: 'List', title: '订单管理' }
+      { path: '/admin/products', icon: Goods, title: '商品管理' },
+      { path: '/admin/orders', icon: List, title: '订单管理' }
     ]
   },
   {
     title: '售后服务',
-    icon: 'RefreshLeft',
+    icon: RefreshLeft,
     items: [
-      { path: '/admin/after-sales', icon: 'RefreshLeft', title: '售后管理' },
-      { path: '/admin/comments', icon: 'ChatDotRound', title: '评价管理' },
-      { path: '/admin/chat', icon: 'ChatDotRound', title: '客服消息' }
+      { path: '/admin/after-sales', icon: RefreshLeft, title: '售后管理' },
+      { path: '/admin/comments', icon: ChatDotRound, title: '评价管理' },
+      { path: '/admin/chat', icon: ChatDotRound, title: '客服消息' }
     ]
   },
   {
     title: '会员营销',
-    icon: 'User',
+    icon: User,
     items: [
-      { path: '/admin/users', icon: 'User', title: '用户管理' },
-      { path: '/admin/vip-users', icon: 'Medal', title: 'VIP会员' },
-      { path: '/admin/member-days', icon: 'Calendar', title: '会员日活动' },
-      { path: '/admin/points-rules', icon: 'Coin', title: '积分倍率' },
-      { path: '/admin/points-products', icon: 'Present', title: '积分商城' }
+      { path: '/admin/users', icon: User, title: '用户管理' },
+      { path: '/admin/vip-users', icon: Medal, title: 'VIP会员' },
+      { path: '/admin/member-days', icon: Calendar, title: '会员日活动' },
+      { path: '/admin/points-rules', icon: Coin, title: '积分倍率' },
+      { path: '/admin/points-products', icon: Present, title: '积分商城' }
     ]
   }
 ]

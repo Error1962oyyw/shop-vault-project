@@ -3,8 +3,8 @@ package com.TsukasaChan.ShopVault.manager;
 import com.TsukasaChan.ShopVault.entity.order.Order;
 import com.TsukasaChan.ShopVault.entity.order.OrderItem;
 import com.TsukasaChan.ShopVault.entity.product.Product;
-import com.TsukasaChan.ShopVault.service.order.OrderItemService;
-import com.TsukasaChan.ShopVault.service.order.OrderService;
+import com.TsukasaChan.ShopVault.mapper.order.OrderItemMapper;
+import com.TsukasaChan.ShopVault.mapper.order.OrderMapper;
 import com.TsukasaChan.ShopVault.service.product.ProductService;
 import com.TsukasaChan.ShopVault.service.system.UserPreferenceService;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
@@ -23,8 +23,8 @@ import java.util.stream.Collectors;
 @SuppressWarnings("null")
 public class RecommendationEngine {
 
-    private final OrderService orderService;
-    private final OrderItemService orderItemService;
+    private final OrderMapper orderMapper;
+    private final OrderItemMapper orderItemMapper;
     private final ProductService productService;
     private final UserPreferenceService userPreferenceService;
     private final RedisTemplate<String, Object> redisTemplate;
@@ -45,14 +45,14 @@ public class RecommendationEngine {
             }
         }
 
-        List<Order> userOrders = orderService.list(new LambdaQueryWrapper<Order>().eq(Order::getUserId, userId));
+        List<Order> userOrders = orderMapper.selectList(new LambdaQueryWrapper<Order>().eq(Order::getUserId, userId));
         
         if (userOrders.isEmpty()) {
             return getNewUserRecommendations(userId, recommendCount);
         }
 
         List<Long> userOrderIds = userOrders.stream().map(Order::getId).collect(Collectors.toList());
-        List<OrderItem> userOrderItems = orderItemService.list(new LambdaQueryWrapper<OrderItem>().in(OrderItem::getOrderId, userOrderIds));
+        List<OrderItem> userOrderItems = orderItemMapper.selectList(new LambdaQueryWrapper<OrderItem>().in(OrderItem::getOrderId, userOrderIds));
         Set<Long> userPurchasedProductIds = userOrderItems.stream().map(OrderItem::getProductId).collect(Collectors.toSet());
 
         if (userPurchasedProductIds.isEmpty()) {
@@ -160,7 +160,7 @@ public class RecommendationEngine {
     }
 
     public String getRecommendationExplanation(Long userId, Long productId) {
-        List<Order> userOrders = orderService.list(new LambdaQueryWrapper<Order>().eq(Order::getUserId, userId));
+        List<Order> userOrders = orderMapper.selectList(new LambdaQueryWrapper<Order>().eq(Order::getUserId, userId));
         if (userOrders.isEmpty()) {
             return "热门商品推荐";
         }
@@ -183,12 +183,12 @@ public class RecommendationEngine {
 
     private Set<Long> getUserPurchasedProductIds(List<Order> userOrders) {
         List<Long> userOrderIds = userOrders.stream().map(Order::getId).toList();
-        List<OrderItem> userOrderItems = orderItemService.list(new LambdaQueryWrapper<OrderItem>().in(OrderItem::getOrderId, userOrderIds));
+        List<OrderItem> userOrderItems = orderItemMapper.selectList(new LambdaQueryWrapper<OrderItem>().in(OrderItem::getOrderId, userOrderIds));
         return userOrderItems.stream().map(OrderItem::getProductId).collect(Collectors.toSet());
     }
 
     private Map<Long, Map<Long, Integer>> buildItemCoOccurrenceMatrix() {
-        List<OrderItem> allOrderItems = orderItemService.list();
+        List<OrderItem> allOrderItems = orderItemMapper.selectList(null);
         Map<Long, List<Long>> orderToProductsMap = allOrderItems.stream()
                 .collect(Collectors.groupingBy(OrderItem::getOrderId,
                         Collectors.mapping(OrderItem::getProductId, Collectors.toList())));

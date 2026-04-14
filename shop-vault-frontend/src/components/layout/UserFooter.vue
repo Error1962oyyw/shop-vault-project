@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { Shop } from '@element-plus/icons-vue'
 </script>
 
 <template>

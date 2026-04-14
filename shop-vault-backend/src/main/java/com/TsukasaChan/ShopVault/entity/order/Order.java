@@ -101,6 +101,9 @@ public class Order implements Serializable {
 
     private String remark;
 
+    @TableField(value = "is_deleted")
+    private Integer isDeleted;
+
     private LocalDateTime createTime;
 
     private LocalDateTime updateTime;

@@ -23,13 +23,13 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(BadCredentialsException.class)
     public ResponseEntity<Result<String>> handleBadCredentialsException(BadCredentialsException e) {
         log.warn("密码错误: {}", e.getMessage());
-        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Result.error(401, "密码错误，请重新输入"));
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Result.error(401, "邮箱或密码错误"));
     }
 
     @ExceptionHandler(UsernameNotFoundException.class)
     public ResponseEntity<Result<String>> handleUsernameNotFoundException(UsernameNotFoundException e) {
         log.warn("用户不存在: {}", e.getMessage());
-        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Result.error(401, "邮箱不存在，请注册"));
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Result.error(401, "邮箱或密码错误"));
     }
 
     @ExceptionHandler(DisabledException.class)
@@ -44,7 +44,7 @@ public class GlobalExceptionHandler {
         
         if (cause instanceof UsernameNotFoundException) {
             log.warn("认证失败-用户不存在: {}", cause.getMessage());
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Result.error(401, "邮箱不存在，请注册"));
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Result.error(401, "邮箱或密码错误"));
         }
         if (cause instanceof DisabledException) {
             log.warn("认证失败-账户暂停: {}", cause.getMessage());
@@ -52,7 +52,7 @@ public class GlobalExceptionHandler {
         }
         if (cause instanceof BadCredentialsException) {
             log.warn("认证失败-密码错误: {}", cause.getMessage());
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Result.error(401, "密码错误，请重新输入"));
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Result.error(401, "邮箱或密码错误"));
         }
         
         log.error("认证服务异常: ", e);

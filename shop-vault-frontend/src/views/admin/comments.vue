@@ -66,7 +66,7 @@ onMounted(() => {
             <p class="comment-text">{{ row.content }}</p>
             <div v-if="row.images?.length" class="comment-images">
               <el-image 
-                v-for="(img, index) in row.images.slice(0, 3)" 
+                v-for="(img, index) in (row.images || []).slice(0, 3)" 
                 :key="index"
                 :src="img"
                 :preview-src-list="row.images"

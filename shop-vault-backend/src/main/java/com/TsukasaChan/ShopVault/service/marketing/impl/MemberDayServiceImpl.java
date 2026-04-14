@@ -61,16 +61,21 @@ public class MemberDayServiceImpl extends ServiceImpl<ActivityMapper, Activity> 
         dto.setPointsMultiplier(activity.getPointsMultiplier());
         dto.setRuleExpression(activity.getRuleExpression());
         dto.setIsActive(isRuleMatch(activity));
+        dto.setActivityType(activity.getActivityType());
 
-        StringBuilder desc = new StringBuilder();
-        if (activity.getDiscountRate() != null) {
-            int discount = BigDecimal.ONE.subtract(activity.getDiscountRate()).multiply(new BigDecimal("100")).intValue();
-            desc.append("全场").append(discount).append("折优惠；");
+        if (activity.getDescription() != null && !activity.getDescription().isEmpty()) {
+            dto.setDescription(activity.getDescription());
+        } else {
+            StringBuilder desc = new StringBuilder();
+            if (activity.getDiscountRate() != null) {
+                BigDecimal discount = activity.getDiscountRate().multiply(new BigDecimal("10")).setScale(1, java.math.RoundingMode.HALF_UP);
+                desc.append("全场").append(discount.stripTrailingZeros().toPlainString()).append("折优惠；");
+            }
+            if (activity.getPointsMultiplier() != null && activity.getPointsMultiplier().compareTo(BigDecimal.ONE) > 0) {
+                desc.append("购物积分").append(activity.getPointsMultiplier().stripTrailingZeros().toPlainString()).append("倍；");
+            }
+            dto.setDescription(desc.toString());
         }
-        if (activity.getPointsMultiplier() != null && activity.getPointsMultiplier().compareTo(BigDecimal.ONE) > 0) {
-            desc.append("购物积分").append(activity.getPointsMultiplier().intValue()).append("倍；");
-        }
-        dto.setDescription(desc.toString());
 
         return dto;
     }

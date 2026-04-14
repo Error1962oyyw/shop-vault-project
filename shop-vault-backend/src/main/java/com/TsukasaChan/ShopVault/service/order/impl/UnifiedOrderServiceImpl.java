@@ -180,12 +180,16 @@ public class UnifiedOrderServiceImpl extends ServiceImpl<OrderMapper, Order> imp
     }
 
     @Override
-    public IPage<OrderDetailDto> getUserOrders(Long userId, Integer status, int page, int size) {
+    public IPage<OrderDetailDto> getUserOrders(Long userId, Integer status, int page, int size, String keyword) {
         Page<Order> pageParam = new Page<>(page, size);
         LambdaQueryWrapper<Order> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(Order::getUserId, userId);
+        wrapper.and(w -> w.isNull(Order::getIsDeleted).or().ne(Order::getIsDeleted, 1));
         if (status != null) {
             wrapper.eq(Order::getStatus, status);
+        }
+        if (keyword != null && !keyword.isBlank()) {
+            wrapper.and(w -> w.like(Order::getOrderNo, keyword).or().like(Order::getProductName, keyword));
         }
         wrapper.orderByDesc(Order::getCreateTime);
         
@@ -399,6 +403,21 @@ public class UnifiedOrderServiceImpl extends ServiceImpl<OrderMapper, Order> imp
     }
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void deleteOrder(Long userId, Long orderId) {
+        Order order = getById(orderId);
+        if (order == null || !order.getUserId().equals(userId)) {
+            throw new RuntimeException("订单不存在");
+        }
+        if (order.getStatus() == Order.STATUS_PENDING_PAYMENT || order.getStatus() == Order.STATUS_PENDING_DELIVERY) {
+            throw new RuntimeException("进行中的订单无法删除，请先取消订单");
+        }
+        order.setIsDeleted(1);
+        this.updateById(order);
+        log.info("订单软删除成功, orderNo={}, userId={}", order.getOrderNo(), userId);
+    }
+
+    @Override
     public void cancelExpiredOrders() {
         List<Order> expiredOrders = getExpiredOrders();
         for (Order order : expiredOrders) {
@@ -452,7 +471,7 @@ public class UnifiedOrderServiceImpl extends ServiceImpl<OrderMapper, Order> imp
 
     private void processVipOrderAfterPayment(Order order) {
         int vipType = order.getOrderType() == Order.ORDER_TYPE_VIP ? VipConstants.TYPE_VIP_MONTHLY : VipConstants.TYPE_SVIP_YEARLY;
-        vipMembershipService.purchaseVip(order.getUserId(), vipType, "PURCHASE");
+        vipMembershipService.activateVipAfterOrderPayment(order.getUserId(), vipType);
         log.info("VIP订单支付后处理完成, userId={}, vipType={}", order.getUserId(), vipType);
     }
 

@@ -238,6 +238,13 @@ export const updateUserStatus = (userId: number, status: number) => {
   });
 };
 
+export const deleteUser = (userId: number) => {
+  return request<string>({
+    url: `/api/admin/users/${userId}`,
+    method: 'delete'
+  });
+};
+
 export interface Activity {
   id: number;
   name: string;

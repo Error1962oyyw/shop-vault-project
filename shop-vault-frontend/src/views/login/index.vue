@@ -6,6 +6,7 @@ import { User, Lock, Shop, Camera, MagicStick, Coin, ArrowRight, CircleCheck, Wa
 import { login } from '@/api/auth'
 import { useUserStore } from '@/stores/user'
 import { useCartStore } from '@/stores/cart'
+import { parseLoginError } from '@/utils/auth'
 
 const router = useRouter()
 const route = useRoute()
@@ -61,24 +62,9 @@ const handleLogin = async () => {
     const redirect = (route.query.redirect as string) || '/'
     router.push(redirect)
   } catch (error: any) {
-    const rawMsg = error?.response?.data?.msg || error?.message || ''
-    const status = error?.response?.status
-
-    if (rawMsg.includes('账户已被暂停') || rawMsg.includes('已被暂停') || rawMsg.includes('Disabled') || rawMsg.includes('禁用')) {
-      errorMessage.value = '您的账户已被暂停'
-    } else if (rawMsg.includes('邮箱不存在') || rawMsg.includes('用户不存在') || rawMsg.includes('not found') || rawMsg.includes('不存在') || rawMsg.includes('未注册')) {
-      errorMessage.value = '邮箱不存在，请注册'
-    } else if (rawMsg.includes('密码错误') || rawMsg.includes('密码不正确') || rawMsg.includes('invalid credentials') || rawMsg.includes('Bad credentials')) {
-      passwordError.value = '密码错误，请重新输入'
-    } else if (rawMsg && !rawMsg.includes('Request failed') && !rawMsg.includes('status code')) {
-      errorMessage.value = rawMsg
-    } else if (status === 403) {
-      errorMessage.value = '您的账户已被暂停'
-    } else if (status === 401) {
-      errorMessage.value = '邮箱或密码错误，请检查后重试'
-    } else {
-      errorMessage.value = '登录失败，请重试'
-    }
+    const { errorMessage: errMsg, passwordError: pwdErr } = parseLoginError(error)
+    errorMessage.value = errMsg
+    passwordError.value = pwdErr
   } finally {
     loading.value = false
   }

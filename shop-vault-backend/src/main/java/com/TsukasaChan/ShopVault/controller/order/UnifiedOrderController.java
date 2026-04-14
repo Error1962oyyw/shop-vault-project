@@ -99,10 +99,11 @@ public class UnifiedOrderController extends BaseController {
     @GetMapping
     public Result<IPage<OrderDetailDto>> getUserOrders(
             @RequestParam(required = false) Integer status,
+            @RequestParam(required = false) String keyword,
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "10") int size) {
         Long userId = getCurrentUserId();
-        return Result.success(unifiedOrderService.getUserOrders(userId, status, page, size));
+        return Result.success(unifiedOrderService.getUserOrders(userId, status, page, size, keyword));
     }
 
     @GetMapping("/{orderId}")
@@ -160,6 +161,18 @@ public class UnifiedOrderController extends BaseController {
             return Result.success();
         } catch (RuntimeException e) {
             log.error("取消订单失败, orderId={}, error={}", orderId, e.getMessage());
+            return Result.error(400, e.getMessage());
+        }
+    }
+
+    @DeleteMapping("/{orderId}")
+    public Result<Void> deleteOrder(@PathVariable Long orderId) {
+        Long userId = getCurrentUserId();
+        try {
+            unifiedOrderService.deleteOrder(userId, orderId);
+            return Result.success();
+        } catch (RuntimeException e) {
+            log.error("删除订单失败, orderId={}, error={}", orderId, e.getMessage());
             return Result.error(400, e.getMessage());
         }
     }

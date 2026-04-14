@@ -18,4 +18,7 @@ public class EmailRegisterDto {
 
     @NotBlank(message = "验证码不能为空")
     private String code;
+
+    @Size(min = 2, max = 20, message = "昵称长度必须在2-20个字符之间")
+    private String nickname;
 }

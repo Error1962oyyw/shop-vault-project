@@ -11,22 +11,27 @@ import { LazyLoadDirective } from './directives'
 let app: ReturnType<typeof createApp> | null = null
 let pinia: ReturnType<typeof createPinia> | null = null
 
-const errorHandler = (err: unknown, _instance: any, info: string) => {
-  console.error('Vue Error:', err)
-  console.error('Error Info:', info)
+const errorHandler = (err: unknown, _instance: any, _info: string) => {
+  if (import.meta.env.DEV) {
+    console.error('Vue Error:', err)
+  }
 }
 
-const warnHandler = (msg: string, _instance: any, trace: string) => {
-  console.warn('Vue Warning:', msg)
-  console.warn('Trace:', trace)
+const warnHandler = (_msg: string, _instance: any, _trace: string) => {
 }
 
 const globalErrorHandler = (event: ErrorEvent) => {
-  console.error('Global Error:', event.error)
+  if (import.meta.env.DEV) {
+    console.error('Global Error:', event.error)
+  }
+  event.preventDefault()
 }
 
 const unhandledRejectionHandler = (event: PromiseRejectionEvent) => {
-  console.error('Unhandled Promise Rejection:', event.reason)
+  if (import.meta.env.DEV) {
+    console.error('Unhandled Promise Rejection:', event.reason)
+  }
+  event.preventDefault()
 }
 
 function cleanup() {

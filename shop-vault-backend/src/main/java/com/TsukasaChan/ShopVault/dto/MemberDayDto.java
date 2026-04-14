@@ -24,4 +24,6 @@ public class MemberDayDto {
     private Boolean isActive;
 
     private String description;
+
+    private Integer activityType;
 }

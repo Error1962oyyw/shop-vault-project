@@ -106,6 +106,50 @@ public class VipMembershipServiceImpl extends ServiceImpl<VipMembershipMapper, V
 
     @Override
     @Transactional(rollbackFor = Exception.class)
+    public void activateVipAfterOrderPayment(Long userId, int vipType) {
+        int days;
+        int vipLevel;
+
+        if (vipType == VipMembership.TYPE_MONTHLY) {
+            days = VipConstants.DURATION_VIP_MONTHLY;
+            vipLevel = VipConstants.LEVEL_VIP;
+        } else if (vipType == VipMembership.TYPE_YEARLY) {
+            days = VipConstants.DURATION_VIP_YEARLY;
+            vipLevel = VipConstants.LEVEL_VIP;
+        } else if (vipType == VipMembership.TYPE_SVIP_YEARLY) {
+            days = VipConstants.DURATION_SVIP_YEARLY;
+            vipLevel = VipConstants.LEVEL_SVIP;
+        } else {
+            throw new RuntimeException("无效的VIP类型");
+        }
+
+        VipMembership membership = new VipMembership();
+        membership.setUserId(userId);
+        membership.setType(vipType);
+        membership.setVipLevel(vipLevel);
+        membership.setPointsCost(0);
+        membership.setSource("ORDER_PURCHASE");
+        membership.setStatus(VipMembership.STATUS_ACTIVE);
+        membership.setCreateTime(LocalDateTime.now());
+
+        VipMembership existingVip = getActiveVipByUserId(userId);
+        if (existingVip != null) {
+            membership.setStartTime(existingVip.getEndTime());
+            membership.setEndTime(existingVip.getEndTime().plusDays(days));
+        } else {
+            membership.setStartTime(LocalDateTime.now());
+            membership.setEndTime(LocalDateTime.now().plusDays(days));
+        }
+
+        if (!this.save(membership)) {
+            throw new RuntimeException("VIP会员记录保存失败");
+        }
+
+        userVipInfoService.extendVipWithLevel(userId, days, vipLevel);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
     public void purchaseVip(Long userId, int vipType, String paymentMethod) {
         User user = userService.getById(userId);
         if (user == null) {
@@ -234,12 +278,12 @@ public class VipMembershipServiceImpl extends ServiceImpl<VipMembershipMapper, V
                 .lt(VipMembership::getEndTime, LocalDateTime.now()));
 
         for (VipMembership membership : expiredList) {
-            membership.setStatus(VipMembership.STATUS_EXPIRED);
-            this.updateById(membership);
+            Long userId = membership.getUserId();
+            this.removeById(membership.getId());
 
-            VipMembership activeVip = getActiveVipByUserId(membership.getUserId());
+            VipMembership activeVip = getActiveVipByUserId(userId);
             if (activeVip == null) {
-                userVipInfoService.getByUserId(membership.getUserId());
+                userVipInfoService.getByUserId(userId);
             }
         }
     }

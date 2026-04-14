@@ -85,7 +85,8 @@ const handleRegister = async () => {
     await register({
       email: registerForm.email,
       code: registerForm.code,
-      password: registerForm.password
+      password: registerForm.password,
+      nickname: registerForm.nickname
     })
     ElMessage.success('注册成功，请登录')
     router.push('/login')

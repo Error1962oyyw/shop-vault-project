@@ -6,9 +6,9 @@ import { Coin, Ticket, Present, Star, Medal, Timer, Check, Calendar } from '@ele
 import UserLayout from '@/components/layout/UserLayout.vue'
 import { signIn, getPointsRecords, getAvailableCoupons, receiveCoupon, getMyCoupons, getSignInStatus } from '@/api/marketing'
 import { getProfile, rechargeBalance } from '@/api/user'
-import { getVipInfo, getVipHistory } from '@/api/vip'
+import { getVipInfo } from '@/api/vip'
 import type { PointsRecord, CouponTemplate, UserCoupon } from '@/types/api'
-import type { VipInfo, VipMembership } from '@/api/vip'
+import type { VipInfo } from '@/api/vip'
 
 const router = useRouter()
 
@@ -27,7 +27,6 @@ const rechargeAmount = ref(100)
 const rechargeLoading = ref(false)
 
 const vipInfo = ref<VipInfo | null>(null)
-const vipHistory = ref<VipMembership[]>([])
 const vipLoading = ref(false)
 const exchangeLoading = ref(false)
 
@@ -114,14 +113,6 @@ const fetchVipInfo = async () => {
     console.error('获取VIP信息失败', error)
   } finally {
     vipLoading.value = false
-  }
-}
-
-const fetchVipHistory = async () => {
-  try {
-    vipHistory.value = await getVipHistory()
-  } catch (error) {
-    console.error('获取VIP历史失败', error)
   }
 }
 
@@ -229,28 +220,6 @@ const formatDate = (date: string | undefined) => {
   return date ? date.split('T')[0] : ''
 }
 
-const getStatusText = (status: number) => {
-  const texts: Record<number, string> = {
-    0: '未激活',
-    1: '生效中',
-    2: '已过期'
-  }
-  return texts[status] || '未知'
-}
-
-const getStatusColor = (status: number): 'info' | 'success' | 'danger' => {
-  const colors: Record<number, 'info' | 'success' | 'danger'> = {
-    0: 'info',
-    1: 'success',
-    2: 'danger'
-  }
-  return colors[status] || 'info'
-}
-
-const getTypeText = (type: number) => {
-  return type === 1 ? '月卡' : '年卡'
-}
-
 const goToMemberDay = () => {
   router.push('/member-day')
 }
@@ -298,7 +267,6 @@ onMounted(() => {
   fetchPointsRecords()
   fetchCoupons()
   fetchVipInfo()
-  fetchVipHistory()
 })
 </script>
 
@@ -466,35 +434,6 @@ onMounted(() => {
                     >
                       立即购买
                     </el-button>
-                  </div>
-                </div>
-
-                <div v-if="vipHistory.length > 0" class="vip-history-section">
-                  <h3 class="history-title">会员记录</h3>
-                  <div class="history-list">
-                    <div 
-                      v-for="record in vipHistory" 
-                      :key="record.id"
-                      class="history-item"
-                    >
-                      <div class="history-left">
-                        <div class="history-icon">
-                          <Medal />
-                        </div>
-                        <div class="history-info">
-                          <div class="history-name">VIP{{ getTypeText(record.type) }}</div>
-                          <div class="history-time">
-                            {{ formatDate(record.startTime) }} ~ {{ formatDate(record.endTime) }}
-                          </div>
-                        </div>
-                      </div>
-                      <div class="history-right">
-                        <el-tag :type="getStatusColor(record.status)" size="small">
-                          {{ getStatusText(record.status) }}
-                        </el-tag>
-                        <div v-if="record.pointsCost > 0" class="history-cost">{{ record.pointsCost }}积分</div>
-                      </div>
-                    </div>
                   </div>
                 </div>
               </div>

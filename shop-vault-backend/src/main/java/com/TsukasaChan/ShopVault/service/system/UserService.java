@@ -7,7 +7,7 @@ import java.math.BigDecimal;
 import java.util.List;
 
 public interface UserService extends IService<User> {
-    void registerWithEmail(String email, String password);
+    void registerWithEmail(String email, String password, String nickname);
 
     void updateProfile(Long userId, User updateInfo);
 

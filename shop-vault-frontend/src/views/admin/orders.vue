@@ -1,8 +1,29 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { getAdminOrderList, shipOrder } from '@/api/order'
+import { getAdminOrderList, shipOrder, adminDeleteOrder } from '@/api/order'
 import type { Order, PageResult } from '@/types/api'
+
+const getStatusText = (status: number) => {
+  const texts: Record<number, string> = {
+    0: '待付款',
+    1: '待发货',
+    2: '待收货',
+    3: '已完成',
+    4: '已关闭',
+    5: '售后中'
+  }
+  return texts[status] || '未知'
+}
+
+const parseReceiverSnapshot = (snapshot: string | null | undefined) => {
+  if (!snapshot) return { name: '', phone: '' }
+  try {
+    return JSON.parse(snapshot)
+  } catch {
+    return { name: '', phone: '' }
+  }
+}
 
 const loading = ref(false)
 const orders = ref<Order[]>([])
@@ -11,6 +32,11 @@ const pagination = reactive({
   current: 1,
   size: 10,
   total: 0
+})
+const searchForm = reactive({
+  orderNo: '',
+  userId: undefined as number | undefined,
+  dateRange: [] as string[]
 })
 
 const tabs = [
@@ -25,11 +51,18 @@ const fetchOrders = async () => {
   loading.value = true
   try {
     const tab = tabs.find(t => t.value === activeTab.value)
-    const res: PageResult<Order> = await getAdminOrderList({
+    const params: any = {
       status: tab?.status,
       page: pagination.current,
       size: pagination.size
-    })
+    }
+    if (searchForm.orderNo) params.orderNo = searchForm.orderNo
+    if (searchForm.userId) params.userId = searchForm.userId
+    if (searchForm.dateRange && searchForm.dateRange.length === 2) {
+      params.startTime = searchForm.dateRange[0]
+      params.endTime = searchForm.dateRange[1]
+    }
+    const res: PageResult<Order> = await getAdminOrderList(params)
     orders.value = res.records
     pagination.total = res.total
   } catch (error: any) {
@@ -42,6 +75,19 @@ const fetchOrders = async () => {
 }
 
 const handleTabChange = () => {
+  pagination.current = 1
+  fetchOrders()
+}
+
+const handleSearch = () => {
+  pagination.current = 1
+  fetchOrders()
+}
+
+const handleResetSearch = () => {
+  searchForm.orderNo = ''
+  searchForm.userId = undefined
+  searchForm.dateRange = []
   pagination.current = 1
   fetchOrders()
 }
@@ -64,6 +110,21 @@ const handleShip = async (orderNo: string) => {
     fetchOrders()
   } catch (error) {
     // 用户取消或请求失败
+  }
+}
+
+const handleDelete = async (orderNo: string) => {
+  try {
+    await ElMessageBox.confirm('确认删除该订单？删除后无法恢复。', '删除确认', {
+      confirmButtonText: '确认删除',
+      cancelButtonText: '取消',
+      type: 'warning'
+    })
+    await adminDeleteOrder(orderNo)
+    ElMessage.success('订单已删除')
+    fetchOrders()
+  } catch (error) {
+    // 用户取消
   }
 }
 
@@ -102,58 +163,77 @@ onMounted(() => {
       />
     </el-tabs>
 
+    <div class="search-card">
+      <el-form :inline="true" class="search-form">
+        <el-form-item label="订单号">
+          <el-input v-model="searchForm.orderNo" placeholder="输入订单号" clearable style="width: 200px" />
+        </el-form-item>
+        <el-form-item label="用户ID">
+          <el-input v-model.number="searchForm.userId" placeholder="输入用户ID" clearable style="width: 140px" />
+        </el-form-item>
+        <el-form-item label="下单时间">
+          <el-date-picker
+            v-model="searchForm.dateRange"
+            type="datetimerange"
+            range-separator="至"
+            start-placeholder="开始时间"
+            end-placeholder="结束时间"
+            value-format="YYYY-MM-DDTHH:mm:ss"
+            style="width: 360px"
+          />
+        </el-form-item>
+        <el-form-item>
+          <el-button type="primary" @click="handleSearch">搜索</el-button>
+          <el-button @click="handleResetSearch">重置</el-button>
+        </el-form-item>
+      </el-form>
+    </div>
+
     <div class="content-card">
       <el-table :data="orders" v-loading="loading" stripe>
         <el-table-column prop="orderNo" label="订单编号" width="200" />
-        <el-table-column label="商品信息" min-width="250">
+        <el-table-column label="商品信息" min-width="200">
           <template #default="{ row }">
-            <div class="order-items">
-              <img 
-                v-for="item in row.items.slice(0, 2)" 
-                :key="item.id"
-                :src="item.productImage" 
-                :alt="item.productName"
-                class="item-image"
-              />
-              <span v-if="row.items.length > 2" class="more-items">
-                +{{ row.items.length - 2 }}
-              </span>
+            <div class="order-product">
+              <span>{{ row.productName || (row.orderType === 1 ? 'VIP会员' : row.orderType === 2 ? 'SVIP年卡' : '积分兑换') }}</span>
             </div>
           </template>
         </el-table-column>
-        <el-table-column label="收货人" width="120">
+        <el-table-column label="收货人" width="140">
           <template #default="{ row }">
             <div class="receiver-info">
-              <p class="receiver-name">{{ row.receiverName }}</p>
-              <p class="receiver-phone">{{ row.receiverPhone }}</p>
+              <p class="receiver-name">{{ parseReceiverSnapshot(row.receiverSnapshot).name || '-' }}</p>
+              <p class="receiver-phone">{{ parseReceiverSnapshot(row.receiverSnapshot).phone || '-' }}</p>
             </div>
           </template>
         </el-table-column>
-        <el-table-column label="金额" width="100">
+        <el-table-column label="金额" width="110">
           <template #default="{ row }">
-            <span class="amount">¥{{ row.payAmount.toFixed(2) }}</span>
+            <span class="amount">¥{{ (row.payAmount ?? 0).toFixed(2) }}</span>
           </template>
         </el-table-column>
         <el-table-column label="状态" width="100" align="center">
           <template #default="{ row }">
             <el-tag :type="getStatusColor(row.status)" size="small">
-              {{ row.statusText }}
+              {{ getStatusText(row.status) }}
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="createTime" label="下单时间" width="180" />
-        <el-table-column label="操作" width="120" align="center">
+        <el-table-column label="下单时间" width="180">
+          <template #default="{ row }">
+            {{ row.createTime ? row.createTime.replace('T', ' ').substring(0, 19) : '-' }}
+          </template>
+        </el-table-column>
+        <el-table-column label="操作" width="160" align="center">
           <template #default="{ row }">
             <template v-if="row.status === 1">
               <el-button type="primary" link size="small" @click="handleShip(row.orderNo)">
                 发货
               </el-button>
             </template>
-            <template v-else>
-              <el-button type="primary" link size="small">
-                详情
-              </el-button>
-            </template>
+            <el-button type="danger" link size="small" @click="handleDelete(row.orderNo)">
+              删除
+            </el-button>
           </template>
         </el-table-column>
       </el-table>
@@ -220,6 +300,20 @@ onMounted(() => {
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
 }
 
+.search-card {
+  background: #fff;
+  padding: 16px 20px;
+  border-radius: 16px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+  margin-bottom: 20px;
+}
+
+.search-form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
 :deep(.el-tabs__nav-wrap::after) {
   height: 1px;
   background: #e5e6eb;
@@ -250,25 +344,12 @@ onMounted(() => {
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
 }
 
-.order-items {
+.order-product {
   display: flex;
   align-items: center;
   gap: 8px;
-}
-
-.item-image {
-  width: 48px;
-  height: 48px;
-  border-radius: 10px;
-  object-fit: cover;
-}
-
-.more-items {
-  font-size: 12px;
-  color: #6b7280;
-  background: #f3f4f6;
-  padding: 2px 8px;
-  border-radius: 6px;
+  font-size: 14px;
+  color: #374151;
 }
 
 .receiver-info {

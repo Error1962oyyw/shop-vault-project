@@ -29,7 +29,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
 
     @Transactional(rollbackFor = Exception.class)
     @Override
-    public void registerWithEmail(String email, String password) {
+    public void registerWithEmail(String email, String password, String nickname) {
         long count = this.count(new LambdaQueryWrapper<User>().eq(User::getEmail, email));
         if (count > 0) {
             throw new RuntimeException("该邮箱已被注册");
@@ -39,7 +39,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         user.setUsername("sv_user_" + String.format("%08d", SECURE_RANDOM.nextInt(100000000)));
         user.setEmail(email);
         user.setPassword(passwordEncoder.encode(password));
-        user.setNickname("小铺用户_" + String.format("%04x", SECURE_RANDOM.nextInt(0x10000)));
+        user.setNickname(nickname != null && !nickname.isBlank() ? nickname : "小铺用户_" + String.format("%04x", SECURE_RANDOM.nextInt(0x10000)));
         user.setRole("USER");
         user.setPoints(0);
         user.setBalance(new BigDecimal("0.00"));

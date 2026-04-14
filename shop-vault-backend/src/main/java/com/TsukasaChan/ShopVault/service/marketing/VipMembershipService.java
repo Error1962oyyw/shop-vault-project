@@ -15,6 +15,8 @@ public interface VipMembershipService extends IService<VipMembership> {
 
     void purchaseVip(Long userId, int vipType, String paymentMethod);
 
+    void activateVipAfterOrderPayment(Long userId, int vipType);
+
     void checkAndExpireVip();
 
     List<VipMembership> getVipHistory(Long userId);

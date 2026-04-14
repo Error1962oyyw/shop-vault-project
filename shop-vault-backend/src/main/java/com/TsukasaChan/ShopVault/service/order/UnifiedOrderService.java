@@ -19,7 +19,7 @@ public interface UnifiedOrderService extends IService<Order> {
 
     Order getOrderByNo(String orderNo);
 
-    IPage<OrderDetailDto> getUserOrders(Long userId, Integer status, int page, int size);
+    IPage<OrderDetailDto> getUserOrders(Long userId, Integer status, int page, int size, String keyword);
 
     OrderDetailDto getOrderDetail(Long userId, Long orderId);
 
@@ -32,6 +32,8 @@ public interface UnifiedOrderService extends IService<Order> {
     boolean payOrderByPoints(Long userId, Long orderId);
 
     boolean cancelOrder(Long userId, Long orderId, String reason);
+
+    void deleteOrder(Long userId, Long orderId);
 
     void cancelExpiredOrders();
 
