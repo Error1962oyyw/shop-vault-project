@@ -3,6 +3,7 @@ package com.TsukasaChan.ShopVault.service.marketing.impl;
 import com.TsukasaChan.ShopVault.common.VipConstants;
 import com.TsukasaChan.ShopVault.entity.marketing.BalanceRecord;
 import com.TsukasaChan.ShopVault.entity.marketing.PointsRecord;
+import com.TsukasaChan.ShopVault.entity.marketing.UserVipInfo;
 import com.TsukasaChan.ShopVault.entity.marketing.VipMembership;
 import com.TsukasaChan.ShopVault.entity.system.User;
 import com.TsukasaChan.ShopVault.mapper.marketing.VipMembershipMapper;
@@ -283,7 +284,7 @@ public class VipMembershipServiceImpl extends ServiceImpl<VipMembershipMapper, V
 
             VipMembership activeVip = getActiveVipByUserId(userId);
             if (activeVip == null) {
-                userVipInfoService.getByUserId(userId);
+                userVipInfoService.updateVipLevel(userId, UserVipInfo.LEVEL_NORMAL, null);
             }
         }
     }

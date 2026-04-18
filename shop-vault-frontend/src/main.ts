@@ -20,6 +20,17 @@ const errorHandler = (err: unknown, _instance: any, _info: string) => {
 const warnHandler = (_msg: string, _instance: any, _trace: string) => {
 }
 
+const originalConsoleWarn = console.warn
+console.warn = (...args: any[]) => {
+  const msg = args[0]
+  if (typeof msg === 'string' && msg.includes('[warn]') && args.some((a: any) => 
+    a && typeof a === 'object' && (a.password || a.email || a.code || a.newPassword || a.confirmPassword || a.nickname)
+  )) {
+    return
+  }
+  originalConsoleWarn.apply(console, args)
+}
+
 const globalErrorHandler = (event: ErrorEvent) => {
   if (import.meta.env.DEV) {
     console.error('Global Error:', event.error)

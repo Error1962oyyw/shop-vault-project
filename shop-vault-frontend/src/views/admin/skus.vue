@@ -3,7 +3,7 @@ import { ref, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus } from '@element-plus/icons-vue'
 import { 
-  getProductSkus, 
+  getAdminProductSkus, 
   createSku, 
   updateSku, 
   deleteSku,
@@ -26,10 +26,8 @@ const selectedSku = ref<ProductSku | null>(null)
 const form = ref<SkuCreateParams>({
   productId: 0,
   skuCode: '',
-  skuName: '',
   specJson: '{}',
   price: 0,
-  originalPrice: 0,
   stock: 0,
   image: ''
 })
@@ -42,7 +40,7 @@ const fetchSkus = async () => {
   
   loading.value = true
   try {
-    skus.value = await getProductSkus(productId.value)
+    skus.value = await getAdminProductSkus(productId.value)
   } catch (error) {
     console.error('获取SKU列表失败', error)
   } finally {
@@ -61,10 +59,8 @@ const handleCreate = () => {
   form.value = {
     productId: productId.value,
     skuCode: '',
-    skuName: '',
     specJson: '{}',
     price: 0,
-    originalPrice: 0,
     stock: 0,
     image: ''
   }
@@ -77,10 +73,8 @@ const handleEdit = (row: ProductSku) => {
   form.value = {
     productId: row.productId,
     skuCode: row.skuCode,
-    skuName: row.skuName,
     specJson: row.specJson,
     price: row.price,
-    originalPrice: row.originalPrice,
     stock: row.stock,
     image: row.image || ''
   }
@@ -88,8 +82,8 @@ const handleEdit = (row: ProductSku) => {
 }
 
 const handleSubmit = async () => {
-  if (!form.value.skuCode || !form.value.skuName) {
-    ElMessage.warning('请填写SKU编码和名称')
+  if (!form.value.skuCode) {
+    ElMessage.warning('请填写SKU编码')
     return
   }
 
@@ -188,7 +182,6 @@ onMounted(() => {
 
     <el-table v-loading="loading" :data="skus" stripe>
       <el-table-column prop="skuCode" label="SKU编码" width="150" />
-      <el-table-column prop="skuName" label="SKU名称" min-width="150" />
       <el-table-column prop="specJson" label="规格" min-width="200">
         <template #default="{ row }">
           {{ formatSpec(row.specJson) }}
@@ -199,11 +192,6 @@ onMounted(() => {
           <span class="text-red-500 font-bold">¥{{ row.price }}</span>
         </template>
       </el-table-column>
-      <el-table-column prop="originalPrice" label="原价" width="100">
-        <template #default="{ row }">
-          ¥{{ row.originalPrice }}
-        </template>
-      </el-table-column>
       <el-table-column prop="stock" label="库存" width="100">
         <template #default="{ row }">
           <el-tag :type="row.stock > 10 ? 'success' : row.stock > 0 ? 'warning' : 'danger'">
@@ -211,7 +199,6 @@ onMounted(() => {
           </el-tag>
         </template>
       </el-table-column>
-      <el-table-column prop="sales" label="销量" width="80" />
       <el-table-column prop="status" label="状态" width="80">
         <template #default="{ row }">
           <el-tag :type="row.status === 1 ? 'success' : 'info'">
@@ -239,13 +226,10 @@ onMounted(() => {
 
     <el-empty v-if="!loading && skus.length === 0" description="请输入商品ID查询SKU" />
 
-    <el-dialog v-model="showDialog" :title="dialogType === 'create' ? '新建SKU' : '编辑SKU'" width="500px">
+    <el-dialog v-model="showDialog" :title="dialogType === 'create' ? '新建SKU' : '编辑SKU'" width="500px" :close-on-click-modal="false">
       <el-form :model="form" label-width="100px">
         <el-form-item label="SKU编码" required>
           <el-input v-model="form.skuCode" placeholder="请输入SKU编码" />
-        </el-form-item>
-        <el-form-item label="SKU名称" required>
-          <el-input v-model="form.skuName" placeholder="请输入SKU名称" />
         </el-form-item>
         <el-form-item label="规格JSON">
           <el-input 
@@ -257,9 +241,6 @@ onMounted(() => {
         </el-form-item>
         <el-form-item label="售价" required>
           <el-input-number v-model="form.price" :min="0" :precision="2" class="w-full" />
-        </el-form-item>
-        <el-form-item label="原价">
-          <el-input-number v-model="form.originalPrice" :min="0" :precision="2" class="w-full" />
         </el-form-item>
         <el-form-item label="库存" required>
           <el-input-number v-model="form.stock" :min="0" class="w-full" />
@@ -275,7 +256,7 @@ onMounted(() => {
       </template>
     </el-dialog>
 
-    <el-dialog v-model="stockDialog" :title="stockType === 'add' ? '增加库存' : '扣减库存'" width="400px">
+    <el-dialog v-model="stockDialog" :title="stockType === 'add' ? '增加库存' : '扣减库存'" width="400px" :close-on-click-modal="false">
       <el-form label-width="80px">
         <el-form-item label="当前库存">
           <span class="font-bold">{{ selectedSku?.stock }}</span>

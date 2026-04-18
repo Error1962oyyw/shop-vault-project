@@ -249,7 +249,7 @@ onMounted(() => {
       />
     </div>
 
-    <el-dialog v-model="showDialog" :title="dialogType === 'create' ? '新建优惠券' : '编辑优惠券'" width="500px">
+    <el-dialog v-model="showDialog" :title="dialogType === 'create' ? '新建优惠券' : '编辑优惠券'" width="500px" :close-on-click-modal="false">
       <el-form :model="form" label-width="100px">
         <el-form-item label="优惠券名称" required>
           <el-input v-model="form.name" placeholder="请输入优惠券名称" />

@@ -297,7 +297,7 @@ const handleImageDelete = () => {
     </div>
   </AdminPageLayout>
 
-  <el-dialog v-model="showDialog" :title="dialogType === 'add' ? '添加商品' : '编辑商品'" width="600px" class="custom-dialog">
+  <el-dialog v-model="showDialog" :title="dialogType === 'add' ? '添加商品' : '编辑商品'" width="600px" class="custom-dialog" :close-on-click-modal="false">
     <el-form :model="productForm" label-width="100px">
       <el-form-item label="商品名称" required>
         <el-input v-model="productForm.name" placeholder="请输入商品名称" />
@@ -319,7 +319,6 @@ const handleImageDelete = () => {
             v-else
             class="image-uploader"
             :show-file-list="false"
-            :before-upload="() => false"
             :http-request="handleImageUpload"
             accept="image/*"
           >

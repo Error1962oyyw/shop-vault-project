@@ -73,6 +73,13 @@ export const deleteOrder = (orderId: number) => {
   });
 };
 
+export const confirmReceive = (orderId: number) => {
+  return request<void>({
+    url: `/api/orders/${orderId}/confirm-receive`,
+    method: 'post'
+  });
+};
+
 export const cartCheckout = (data: { addressId: number; couponId?: number; pointsUsed?: number; remark?: string }) => {
   return request<{ orderId: number; orderNo: string }>({
     url: '/api/orders/checkout',

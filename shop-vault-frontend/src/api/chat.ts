@@ -25,8 +25,7 @@ export const sendImageMessage = (file: File) => {
   return request<string>({
     url: '/api/chat/send-image',
     method: 'post',
-    data: formData,
-    headers: { 'Content-Type': 'multipart/form-data' }
+    data: formData
   });
 };
 
@@ -52,8 +51,7 @@ export const adminReplyImage = (userId: number, file: File) => {
   return request<string>({
     url: '/api/chat/admin/reply-image',
     method: 'post',
-    data: formData,
-    headers: { 'Content-Type': 'multipart/form-data' }
+    data: formData
   });
 };
 

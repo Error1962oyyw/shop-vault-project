@@ -42,6 +42,14 @@ export const sendCode = (email: string) => {
   });
 };
 
+export const checkEmail = (email: string) => {
+  return request<boolean>({
+    url: AUTH_API.CHECK_EMAIL,
+    method: 'get',
+    params: { email }
+  });
+};
+
 export const register = (data: RegisterParams) => {
   return request<void>({
     url: AUTH_API.REGISTER,

@@ -65,7 +65,11 @@ public class Product implements Serializable {
      */
     private String detailImages;
 
+    private BigDecimal freight;
+
     private LocalDateTime createTime;
+
+    private LocalDateTime updateTime;
 
     private Integer version;
 

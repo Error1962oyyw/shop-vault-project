@@ -153,7 +153,7 @@ onMounted(() => {
                   </div>
 
                   <div class="item-price">
-                    <span class="price-text">¥{{ item.price.toFixed(2) }}</span>
+                    <span class="price-text">¥{{ (item.price ?? 0).toFixed(2) }}</span>
                   </div>
 
                   <div class="item-quantity">
@@ -168,7 +168,7 @@ onMounted(() => {
                   </div>
 
                   <div class="item-subtotal">
-                    <span class="subtotal-text">¥{{ (item.price * item.quantity).toFixed(2) }}</span>
+                    <span class="subtotal-text">¥{{ ((item.price ?? 0) * item.quantity).toFixed(2) }}</span>
                   </div>
 
                   <div class="item-action">
@@ -254,7 +254,7 @@ onMounted(() => {
 
 .cart-header {
   padding: 24px 32px;
-  border-bottom: 1px solid var(--border-color);
+  border-bottom: 1px solid var(--el-border-color-lighter);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -269,7 +269,7 @@ onMounted(() => {
 .cart-title {
   font-size: 24px;
   font-weight: 700;
-  color: var(--text-primary);
+  color: var(--el-text-color-primary);
   display: flex;
   align-items: center;
   gap: 12px;
@@ -277,7 +277,7 @@ onMounted(() => {
 }
 
 .title-icon {
-  color: var(--primary-color);
+  color: var(--el-color-primary);
   font-size: 18px;
   width: 24px;
   height: 24px;

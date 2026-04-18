@@ -3,7 +3,7 @@ import { ref, reactive, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { Message, Key, Lock } from '@element-plus/icons-vue'
-import { sendCode, resetPassword } from '@/api/auth'
+import { sendCode, checkEmail, resetPassword } from '@/api/auth'
 
 const router = useRouter()
 
@@ -28,7 +28,7 @@ const rules = {
     { required: true, message: '请输入邮箱', trigger: 'blur' },
     { type: 'email', message: '请输入正确的邮箱格式', trigger: 'blur' }
   ],
-  code: [{ required: true, message: '请输入验证码', trigger: 'blur' }],
+  code: [{ required: true, message: '请输入验证码', trigger: 'change' }],
   newPassword: [
     { required: true, message: '请输入新密码', trigger: 'blur' },
     { min: 6, max: 20, message: '密码长度为6-20个字符', trigger: 'blur' }
@@ -54,6 +54,11 @@ const handleSendCode = async () => {
     return
   }
   try {
+    const exists = await checkEmail(form.email)
+    if (!exists) {
+      ElMessage.error('该邮箱尚未注册，请先注册账号')
+      return
+    }
     await sendCode(form.email)
     ElMessage.success('验证码已发送')
     countdown.value = 60

@@ -162,6 +162,8 @@ public class OrderCreationServiceImpl extends ServiceImpl<OrderMapper, Order> im
             item.setQuantity(quantity);
 
             Order order = buildOrder(userId, totalAmount, orderNo, userCouponId);
+            order.setProductName(product.getName());
+            order.setQuantity(quantity);
             this.save(order);
 
             item.setOrderId(order.getId());
@@ -235,6 +237,7 @@ public class OrderCreationServiceImpl extends ServiceImpl<OrderMapper, Order> im
                 item.setOrderNo(orderNo);
                 item.setProductId(product.getId());
                 item.setProductName(product.getName());
+                item.setProductImg(product.getMainImage());
                 item.setProductPrice(product.getPrice());
                 item.setQuantity(cartItem.getQuantity());
                 orderItems.add(item);
@@ -244,6 +247,10 @@ public class OrderCreationServiceImpl extends ServiceImpl<OrderMapper, Order> im
             }
 
             Order order = buildOrder(userId, totalAmount, orderNo, userCouponId);
+            if (!orderItems.isEmpty()) {
+                order.setProductName(orderItems.get(0).getProductName());
+                order.setQuantity(orderItems.stream().mapToInt(OrderItem::getQuantity).sum());
+            }
             this.save(order);
 
             for (OrderItem item : orderItems) {

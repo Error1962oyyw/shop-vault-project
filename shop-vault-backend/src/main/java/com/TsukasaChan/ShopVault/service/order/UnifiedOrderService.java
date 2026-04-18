@@ -35,6 +35,8 @@ public interface UnifiedOrderService extends IService<Order> {
 
     void deleteOrder(Long userId, Long orderId);
 
+    void confirmReceive(String orderNo, Long userId);
+
     void cancelExpiredOrders();
 
     void processOrderPayment(Long orderId, String paymentMethod);

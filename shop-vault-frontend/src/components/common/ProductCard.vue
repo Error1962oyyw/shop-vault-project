@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useRouter } from 'vue-router'
-import { ShoppingCart, Star, View } from '@element-plus/icons-vue'
+import { Star } from '@element-plus/icons-vue'
 import type { Product } from '@/types/api'
 
 const props = defineProps<{
@@ -57,28 +57,6 @@ const goToDetail = () => {
         <div class="text-center">
           <div class="text-white text-xl font-bold mb-1">已售罄</div>
           <div class="text-white/70 text-sm">敬请期待</div>
-        </div>
-      </div>
-      
-      <div class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-4 translate-y-full group-hover:translate-y-0 transition-transform duration-300">
-        <div class="flex gap-2">
-          <el-button 
-            type="primary" 
-            size="small" 
-            class="flex-1 bg-white/20 backdrop-blur-sm border-0 hover:bg-white/30 text-white rounded-lg font-medium"
-            @click.stop
-          >
-            <View class="w-4 h-4 mr-1" />
-            查看详情
-          </el-button>
-          <el-button 
-            type="primary" 
-            size="small" 
-            class="bg-blue-500 hover:bg-blue-600 border-0 rounded-lg"
-            @click.stop
-          >
-            <ShoppingCart class="w-4 h-4" />
-          </el-button>
         </div>
       </div>
     </div>

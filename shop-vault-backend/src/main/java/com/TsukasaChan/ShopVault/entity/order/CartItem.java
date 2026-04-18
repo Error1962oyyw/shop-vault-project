@@ -8,11 +8,9 @@ import lombok.Data;
 
 import java.io.Serial;
 import java.io.Serializable;
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
-/**
- * 购物车表
- */
 @Data
 @TableName("oms_cart_item")
 public class CartItem implements Serializable {
@@ -37,4 +35,19 @@ public class CartItem implements Serializable {
     private LocalDateTime createTime;
 
     private LocalDateTime updateTime;
+
+    @TableField(exist = false)
+    private String productName;
+
+    @TableField(exist = false)
+    private String productImage;
+
+    @TableField(exist = false)
+    private BigDecimal price;
+
+    @TableField(exist = false)
+    private Integer stock;
+
+    @TableField(exist = false)
+    private BigDecimal freight;
 }

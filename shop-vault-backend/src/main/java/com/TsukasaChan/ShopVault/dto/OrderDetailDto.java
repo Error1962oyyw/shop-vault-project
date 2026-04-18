@@ -34,6 +34,8 @@ public class OrderDetailDto {
 
     private LocalDateTime paymentTime;
 
+    private LocalDateTime deliveryTime;
+
     private LocalDateTime createTime;
 
     private LocalDateTime closeTime;
@@ -57,6 +59,14 @@ public class OrderDetailDto {
     private Integer quantity;
 
     private BigDecimal productPrice;
+
+    private BigDecimal discountAmount;
+
+    private BigDecimal freightAmount;
+
+    private BigDecimal balanceAmount;
+
+    private Integer pointsEarned;
 
     private String remark;
 }

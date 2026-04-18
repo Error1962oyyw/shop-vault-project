@@ -182,7 +182,7 @@ onMounted(() => {
       </el-table-column>
     </el-table>
 
-    <el-dialog v-model="adjustDialogVisible" title="调整会员权益" width="400px">
+    <el-dialog v-model="adjustDialogVisible" title="调整会员权益" width="400px" :close-on-click-modal="false">
       <el-form :model="adjustForm" label-width="100px">
         <el-form-item label="会员等级">
           <el-select v-model="adjustForm.vipLevel" placeholder="请选择会员等级">

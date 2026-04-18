@@ -48,7 +48,18 @@ public class ProductServiceImpl extends ServiceImpl<ProductMapper, Product> impl
         wrapper.eq(Product::getStatus, 1);
 
         if (StringUtils.hasText(keyword)) wrapper.like(Product::getName, keyword);
-        if (categoryId != null) wrapper.eq(Product::getCategoryId, categoryId);
+        if (categoryId != null) {
+            List<Long> childCategoryIds = categoryService.list(
+                new LambdaQueryWrapper<Category>().eq(Category::getParentId, categoryId)
+            ).stream().map(Category::getId).toList();
+            if (childCategoryIds.isEmpty()) {
+                wrapper.eq(Product::getCategoryId, categoryId);
+            } else {
+                List<Long> allIds = new ArrayList<>(childCategoryIds);
+                allIds.add(categoryId);
+                wrapper.in(Product::getCategoryId, allIds);
+            }
+        }
 
         List<String> allowedSortBy = Arrays.asList("sales", "price", "createTime", "default");
         if (!allowedSortBy.contains(sortBy)) {

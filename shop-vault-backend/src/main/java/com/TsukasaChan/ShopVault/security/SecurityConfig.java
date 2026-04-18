@@ -25,6 +25,20 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
+                .cors(cors -> cors.configurationSource(request -> {
+                    var config = new org.springframework.web.cors.CorsConfiguration();
+                    config.setAllowedOriginPatterns(java.util.List.of(
+                            "http://localhost:*",
+                            "http://127.0.0.1:*",
+                            "http://192.168.*.*:*",
+                            "https://localhost:*"
+                    ));
+                    config.setAllowedMethods(java.util.List.of("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
+                    config.setAllowedHeaders(java.util.List.of("*"));
+                    config.setAllowCredentials(true);
+                    config.setMaxAge(3600L);
+                    return config;
+                }))
                 .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(
@@ -32,6 +46,7 @@ public class SecurityConfig {
                                 "/api/category/**",
                                 "/api/product/list",
                                 "/api/product/detail/**",
+                                "/api/product/skus/**",
                                 "/api/product/yolo-search",
                                 "/api/product/hot-categories",
                                 "/api/recommendation/guess-you-like",

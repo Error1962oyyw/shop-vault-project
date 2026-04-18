@@ -1,14 +1,13 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, reactive, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { ElMessage, ElMessageBox } from 'element-plus'
+import { ElMessage } from 'element-plus'
+import { Star, StarFilled, ShoppingCart, Present, Ticket, Pointer } from '@element-plus/icons-vue'
 import DOMPurify from 'dompurify'
 import UserLayout from '@/components/layout/UserLayout.vue'
-import { FavoriteButton } from '@/components/common'
-import { getProductDetail, getCommentList } from '@/api/product'
+import { getProductDetail, getCommentList, getProductSkus, toggleFavorite } from '@/api/product'
 import { addToCart } from '@/api/cart'
 import { getApplicableCoupons, getCurrentMemberDay } from '@/api/marketing'
-import { getProductSkus } from '@/api/admin'
 import { useCartStore } from '@/stores/cart'
 import { useUserStore } from '@/stores/user'
 import type { Product, Comment, PageResult, ProductSku, UserCoupon, MemberDay } from '@/types/api'
@@ -21,6 +20,22 @@ const userStore = useUserStore()
 const loading = ref(true)
 const product = ref<Product | null>(null)
 const currentImage = ref('')
+
+const productImages = computed(() => {
+  if (!product.value) return []
+  const images: string[] = []
+  if (product.value.mainImage) images.push(product.value.mainImage)
+  if (product.value.detailImages) {
+    try {
+      const parsed = JSON.parse(product.value.detailImages)
+      if (Array.isArray(parsed)) images.push(...parsed)
+    } catch {
+      const parts = product.value.detailImages.split(',').filter(Boolean)
+      images.push(...parts)
+    }
+  }
+  return images
+})
 const quantity = ref(1)
 const activeTab = ref('detail')
 
@@ -42,8 +57,15 @@ const memberDay = ref<MemberDay | null>(null)
 const productId = computed(() => Number(route.params.id))
 
 const sanitizedDetail = computed(() => {
-  const raw = product.value?.detail || product.value?.description || ''
-  return DOMPurify.sanitize(raw)
+  const detailHtml = product.value?.detailHtml
+  if (detailHtml) return DOMPurify.sanitize(detailHtml)
+  const subTitle = product.value?.subTitle || ''
+  if (!subTitle) return ''
+  const escaped = subTitle
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+  return DOMPurify.sanitize(escaped.replace(/\n/g, '<br/>'))
 })
 
 const currentPrice = computed(() => {
@@ -220,6 +242,23 @@ const handleAddToCart = async () => {
   }
 }
 
+const handleToggleFavorite = async () => {
+  if (!userStore.token) {
+    ElMessage.warning('请先登录')
+    router.push('/login')
+    return
+  }
+  try {
+    const result = await toggleFavorite(product.value!.id)
+    product.value!.isFavorite = result
+    ElMessage.success(result ? '已收藏' : '已取消收藏')
+  } catch (error) {
+    console.error('收藏操作失败', error)
+  }
+}
+
+const showBuyNowDialog = ref(false)
+
 const handleBuyNow = async () => {
   if (!userStore.token) {
     ElMessage.warning('请先登录')
@@ -232,31 +271,13 @@ const handleBuyNow = async () => {
     return
   }
 
-  const productName = product.value?.name || '商品'
-  const price = currentPrice.value
-  const qty = quantity.value
+  showBuyNowDialog.value = true
+}
 
+const confirmBuyNow = async () => {
   try {
-    await ElMessageBox.confirm(
-      `商品名称：${productName}\n单价：¥${price.toFixed(2)}\n数量：${qty}\n合计：¥${(price * qty).toFixed(2)}`,
-      '确认购买',
-      {
-        confirmButtonText: '确认购买',
-        cancelButtonText: '取消',
-        type: 'warning'
-      }
-    )
-  } catch {
-    return
-  }
-
-  try {
-    await addToCart({
-      productId: productId.value,
-      quantity: quantity.value,
-      skuId: selectedSku.value?.id
-    })
-    router.push('/checkout')
+    showBuyNowDialog.value = false
+    router.push(`/checkout?productId=${productId.value}&quantity=${quantity.value}${selectedSku.value ? `&skuId=${selectedSku.value.id}` : ''}`)
   } catch (error) {
     console.error('立即购买失败', error)
   }
@@ -297,7 +318,7 @@ watch(() => route.params.id, (newId, oldId) => {
                 </div>
                 <div class="thumbnails">
                   <div 
-                    v-for="(img, index) in [product.mainImage, ...product.images]" 
+                    v-for="(img, index) in productImages" 
                     :key="index"
                     class="thumbnail"
                     :class="{ active: currentImage === img }"
@@ -312,7 +333,7 @@ watch(() => route.params.id, (newId, oldId) => {
                     :class="{ active: selectedSku?.id === sku.id }"
                     @click="currentImage = sku.image"
                   >
-                    <img :src="sku.image" :alt="sku.skuName" class="thumbnail-image" />
+                    <img :src="sku.image" :alt="sku.skuCode" class="thumbnail-image" />
                   </div>
                 </div>
               </div>
@@ -323,16 +344,13 @@ watch(() => route.params.id, (newId, oldId) => {
                 <div class="price-section">
                   <div class="price-row">
                     <span class="current-price">¥{{ discountPrice.toFixed(2) }}</span>
-                    <span v-if="selectedSku && selectedSku.originalPrice > currentPrice" class="original-price">
-                      ¥{{ selectedSku.originalPrice.toFixed(2) }}
-                    </span>
-                    <span v-else-if="product.originalPrice > product.price" class="original-price">
+                    <span v-if="product.originalPrice > product.price" class="original-price">
                       ¥{{ product.originalPrice.toFixed(2) }}
                     </span>
                     <el-tag v-if="memberDay && memberDay.status === 1" type="danger" size="small">
                       会员日{{ memberDay.discountRate }}折
                     </el-tag>
-                    <el-tag v-else-if="product.originalPrice > product.price || (selectedSku && selectedSku.originalPrice > currentPrice)" type="danger" size="small">
+                    <el-tag v-else-if="product.originalPrice > product.price" type="danger" size="small">
                       限时优惠
                     </el-tag>
                   </div>
@@ -435,10 +453,15 @@ watch(() => route.params.id, (newId, oldId) => {
                     <el-icon><ShoppingCart /></el-icon>
                     加入购物车
                   </el-button>
-                  <FavoriteButton 
-                    :product-id="product.id" 
-                    :is-favorite="product.isFavorite"
-                  />
+                  <el-button
+                    :type="product.isFavorite ? 'danger' : 'default'"
+                    size="large"
+                    class="favorite-btn"
+                    @click="handleToggleFavorite"
+                  >
+                    <el-icon><StarFilled v-if="product.isFavorite" /><Star v-else /></el-icon>
+                    {{ product.isFavorite ? '已收藏' : '收藏' }}
+                  </el-button>
                 </div>
               </div>
             </div>
@@ -447,7 +470,10 @@ watch(() => route.params.id, (newId, oldId) => {
           <div class="tabs-card">
             <el-tabs v-model="activeTab" class="product-tabs">
               <el-tab-pane label="商品详情" name="detail">
-                <div class="detail-content" v-html="sanitizedDetail"></div>
+                <div class="detail-content">
+                  <div v-if="sanitizedDetail" v-html="sanitizedDetail" class="detail-text"></div>
+                  <el-empty v-if="!sanitizedDetail" description="暂无详情" />
+                </div>
               </el-tab-pane>
               
               <el-tab-pane label="用户评价" name="comments">
@@ -509,6 +535,43 @@ watch(() => route.params.id, (newId, oldId) => {
         </div>
       </template>
     </div>
+
+    <el-dialog
+      v-model="showBuyNowDialog"
+      title="确认购买"
+      width="520px"
+      :close-on-click-modal="false"
+      class="purchase-dialog"
+    >
+      <div v-if="product" class="purchase-content">
+        <div class="purchase-header-row">
+          <span class="purchase-label">商品名称</span>
+          <span class="purchase-value purchase-name">{{ product.name }}</span>
+        </div>
+        <div class="purchase-header-row">
+          <span class="purchase-label">单价</span>
+          <span class="purchase-value purchase-price">¥{{ currentPrice.toFixed(2) }}</span>
+        </div>
+        <div class="purchase-header-row">
+          <span class="purchase-label">数量</span>
+          <span class="purchase-value">{{ quantity }}</span>
+        </div>
+        <div class="purchase-header-row">
+          <span class="purchase-label">合计</span>
+          <span class="purchase-value purchase-price">¥{{ (currentPrice * quantity).toFixed(2) }}</span>
+        </div>
+        <div v-if="selectedSku" class="purchase-header-row">
+          <span class="purchase-label">规格</span>
+          <span class="purchase-value">{{ selectedSku.specJson }}</span>
+        </div>
+      </div>
+      <template #footer>
+        <div class="dialog-footer">
+          <el-button size="large" @click="showBuyNowDialog = false">取消</el-button>
+          <el-button type="danger" size="large" @click="confirmBuyNow">确认购买</el-button>
+        </div>
+      </template>
+    </el-dialog>
   </UserLayout>
 </template>
 
@@ -780,6 +843,18 @@ watch(() => route.params.id, (newId, oldId) => {
   box-shadow: 0 8px 24px rgba(245, 158, 11, 0.3);
 }
 
+.favorite-btn {
+  height: 52px;
+  font-size: 16px;
+  font-weight: 600;
+  border-radius: var(--radius-md);
+  transition: all 0.3s ease;
+}
+
+.favorite-btn:hover {
+  transform: translateY(-2px);
+}
+
 .tabs-card {
   background: #ffffff;
   border-radius: var(--radius-md);
@@ -792,6 +867,26 @@ watch(() => route.params.id, (newId, oldId) => {
 
 .detail-content {
   padding: 24px 0;
+}
+
+.detail-text {
+  line-height: 1.8;
+  color: #374151;
+  font-size: 15px;
+  word-break: break-word;
+}
+
+.detail-images {
+  margin-top: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.detail-image {
+  width: 100%;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
 }
 
 .comments-section {
@@ -913,5 +1008,42 @@ watch(() => route.params.id, (newId, oldId) => {
   .product-tabs {
     padding: 8px 20px 20px;
   }
+}
+
+.purchase-content {
+  .purchase-header-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--el-border-color-lighter);
+  }
+
+  .purchase-label {
+    color: var(--el-text-color-secondary);
+    font-size: 14px;
+  }
+
+  .purchase-value {
+    font-size: 14px;
+    color: var(--el-text-color-primary);
+  }
+
+  .purchase-name {
+    font-weight: 600;
+    font-size: 16px;
+  }
+
+  .purchase-price {
+    color: var(--el-color-danger);
+    font-weight: 700;
+    font-size: 20px;
+  }
+}
+
+.dialog-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
 }
 </style>

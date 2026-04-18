@@ -3,7 +3,7 @@ import { ref, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { Clock, List, Medal, Search } from '@element-plus/icons-vue'
-import { getUserOrders, cancelOrder, deleteOrder } from '@/api/order'
+import { getUserOrders, cancelOrder, deleteOrder, confirmReceive } from '@/api/order'
 import { formatMoney, formatDateTime } from '@/utils/format'
 import type { OrderDetail } from '@/types/api'
 import UserLayout from '@/components/layout/UserLayout.vue'
@@ -159,6 +159,23 @@ const handleDelete = async (order: OrderDetail) => {
   }
 }
 
+const handleConfirmReceive = async (order: OrderDetail) => {
+  try {
+    await ElMessageBox.confirm('确认已收到商品？确认后无法撤销。', '确认收货', {
+      confirmButtonText: '确认收货',
+      cancelButtonText: '再想想',
+      type: 'info'
+    })
+    await confirmReceive(order.id)
+    ElMessage.success('确认收货成功')
+    fetchOrders()
+  } catch (error: any) {
+    if (error !== 'cancel') {
+      ElMessage.error(error?.response?.data?.msg || error?.message || '确认收货失败')
+    }
+  }
+}
+
 const viewOrderDetail = (orderId: number) => {
   router.push(`/orders/${orderId}`)
 }
@@ -210,10 +227,13 @@ onUnmounted(() => {
   <UserLayout>
     <div class="orders-page animate-fade-in">
       <div class="page-header">
-        <h1>
-          <List class="header-icon" />
-          我的订单
-        </h1>
+        <div class="header-left">
+          <h1 class="page-title">
+            <el-icon class="title-icon"><List /></el-icon>
+            我的订单
+            <span class="page-count">({{ total }}笔)</span>
+          </h1>
+        </div>
       </div>
 
     <div class="status-tabs">
@@ -329,6 +349,7 @@ onUnmounted(() => {
               type="success" 
               plain 
               size="small"
+              @click.stop="handleConfirmReceive(order)"
             >
               确认收货
             </el-button>
@@ -370,22 +391,37 @@ onUnmounted(() => {
 }
 
 .page-header {
-  margin-bottom: 24px;
-}
-
-.page-header h1 {
-  font-size: 24px;
-  font-weight: 600;
-  color: #1f2937;
+  padding: 24px 32px;
+  border-bottom: 1px solid var(--el-border-color-lighter);
   display: flex;
   align-items: center;
-  gap: 10px;
+  justify-content: space-between;
+  background: linear-gradient(135deg, rgba(22, 119, 255, 0.03) 0%, rgba(64, 150, 255, 0.03) 100%);
+  margin-bottom: 0;
 }
 
-.header-icon {
-  width: 28px;
-  height: 28px;
-  color: #1677ff;
+.page-title {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--el-text-color-primary);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 0;
+}
+
+.title-icon {
+  color: var(--el-color-primary);
+  font-size: 18px;
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+}
+
+.page-count {
+  font-size: 14px;
+  font-weight: 400;
+  color: var(--el-text-color-secondary);
 }
 
 .header-icon :deep(svg) {

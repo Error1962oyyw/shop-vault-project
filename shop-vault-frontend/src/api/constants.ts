@@ -6,6 +6,7 @@ export const AUTH_API = {
   REFRESH: '/api/auth/refresh',
   LOGOUT: '/api/auth/logout',
   SEND_CODE: '/api/auth/send-code',
+  CHECK_EMAIL: '/api/auth/check-email',
   REGISTER: '/api/auth/register',
   RESET_PASSWORD: '/api/auth/reset-password',
 } as const

@@ -178,7 +178,7 @@ onMounted(() => {
       </el-table>
     </el-card>
 
-    <el-dialog v-model="dialogVisible" :title="dialogTitle" width="600px">
+    <el-dialog v-model="dialogVisible" :title="dialogTitle" width="600px" :close-on-click-modal="false">
       <el-form ref="formRef" :model="form" :rules="formRules" label-width="100px">
         <el-form-item label="规则编码" prop="ruleCode">
           <el-input v-model="form.ruleCode" placeholder="如: SIGN_IN, PURCHASE" />

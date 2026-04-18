@@ -144,6 +144,24 @@ const handleProtectedNavigation = (path: string) => {
   router.push(path)
 }
 
+const handleMemberDayNavigation = async () => {
+  if (!isLoggedIn.value) {
+    ElMessage.warning('请先登录')
+    router.push('/login')
+    return
+  }
+  if (!userStore.userInfo) {
+    await userStore.fetchUserInfo()
+  }
+  const level = userStore.userInfo?.memberLevel ?? 0
+  if (level < 1) {
+    ElMessage.warning('会员日仅限VIP/SVIP用户参与，请先开通会员')
+    router.push('/points')
+    return
+  }
+  router.push('/member-day')
+}
+
 onMounted(() => {
   loading.value = true
   Promise.all([
@@ -213,7 +231,7 @@ onMounted(() => {
                 </div>
                 <span>会员中心</span>
               </div>
-              <div class="action-item" @click="handleProtectedNavigation('/member-day')">
+              <div class="action-item" @click="handleMemberDayNavigation">
                 <div class="action-icon action-icon-purple">
                   <CalendarIcon />
                 </div>

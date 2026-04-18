@@ -36,8 +36,9 @@ public class AdminPointsProductController extends BaseController {
         return Result.success("添加成功");
     }
 
-    @PutMapping
-    public Result<String> update(@RequestBody PointsProduct product) {
+    @PutMapping("/{id}")
+    public Result<String> update(@PathVariable Long id, @RequestBody PointsProduct product) {
+        product.setId(id);
         pointsProductService.updateById(product);
         return Result.success("更新成功");
     }

@@ -151,6 +151,14 @@ const formatPrice = (price: number) => {
   return price.toFixed(2)
 }
 
+const isVirtualProduct = (product: PointsProduct) => {
+  return product.type === 2 || product.type === 3 || product.type === 4
+}
+
+const isOutOfStock = (product: PointsProduct) => {
+  return !isVirtualProduct(product) && (product.stock == null || product.stock <= 0)
+}
+
 onMounted(() => {
   fetchUserInfo()
   fetchProducts()
@@ -246,7 +254,7 @@ onMounted(() => {
                 </div>
                 <div class="product-stock">
                   <Timer class="stock-icon" />
-                  库存: {{ product.stock }}
+                  {{ isVirtualProduct(product) ? '不限' : `库存: ${product.stock}` }}
                 </div>
               </div>
               <div class="product-footer">
@@ -258,11 +266,11 @@ onMounted(() => {
                 <el-button 
                   type="warning" 
                   :loading="exchangeLoading === product.id"
-                  :disabled="product.stock <= 0 || userInfo.points < product.pointsCost"
+                  :disabled="isOutOfStock(product) || userInfo.points < product.pointsCost"
                   class="exchange-btn"
                   @click="handleExchange(product)"
                 >
-                  {{ product.stock <= 0 ? '已兑完' : userInfo.points < product.pointsCost ? '积分不足' : '立即兑换' }}
+                  {{ isOutOfStock(product) ? '已兑完' : userInfo.points < product.pointsCost ? '积分不足' : '立即兑换' }}
                 </el-button>
               </div>
               <div v-if="product.type === 1" class="after-sales-notice">

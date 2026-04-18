@@ -6,9 +6,11 @@ import com.TsukasaChan.ShopVault.controller.BaseController;
 import com.TsukasaChan.ShopVault.dto.PasswordUpdateDto;
 import com.TsukasaChan.ShopVault.dto.UpdateProfileDto;
 import com.TsukasaChan.ShopVault.entity.marketing.BalanceRecord;
+import com.TsukasaChan.ShopVault.entity.marketing.UserVipInfo;
 import com.TsukasaChan.ShopVault.entity.system.User;
 import com.TsukasaChan.ShopVault.integration.LocalFileService;
 import com.TsukasaChan.ShopVault.service.marketing.BalanceRecordService;
+import com.TsukasaChan.ShopVault.service.marketing.UserVipInfoService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -24,11 +26,14 @@ public class UserController extends BaseController {
 
     private final LocalFileService localFileService;
     private final BalanceRecordService balanceRecordService;
+    private final UserVipInfoService userVipInfoService;
 
     @GetMapping("/profile")
     public Result<User> getProfile() {
         User user = getCurrentUser();
         user.setPassword(null);
+        UserVipInfo vipInfo = userVipInfoService.getByUserId(user.getId());
+        user.setMemberLevel(vipInfo != null ? vipInfo.getVipLevel() : UserVipInfo.LEVEL_NORMAL);
         return Result.success(user);
     }
 

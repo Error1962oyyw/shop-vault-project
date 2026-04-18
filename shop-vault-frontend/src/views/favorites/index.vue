@@ -3,7 +3,8 @@ import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import UserLayout from '@/components/layout/UserLayout.vue'
 import { getFavoriteList, toggleFavorite } from '@/api/product'
-import { ElMessage, ElMessageBox } from 'element-plus'
+import { ElMessage } from 'element-plus'
+import { StarFilled, Delete } from '@element-plus/icons-vue'
 import type { Favorite } from '@/types/api'
 
 const router = useRouter()
@@ -23,51 +24,6 @@ const fetchFavorites = async () => {
   }
 }
 
-const handleRemoveFavorite = async (favorite: Favorite) => {
-  try {
-    await ElMessageBox.confirm('确定要取消收藏该商品吗？', '提示', {
-      confirmButtonText: '确定',
-      cancelButtonText: '取消',
-      type: 'warning'
-    })
-    
-    await toggleFavorite(favorite.productId)
-    favorites.value = favorites.value.filter(f => f.id !== favorite.id)
-    selectedIds.value = selectedIds.value.filter(id => id !== favorite.id)
-    ElMessage.success('已取消收藏')
-  } catch (error) {
-    if (error !== 'cancel') {
-      console.error('取消收藏失败', error)
-    }
-  }
-}
-
-const handleBatchRemove = async () => {
-  if (selectedIds.value.length === 0) {
-    ElMessage.warning('请选择要取消收藏的商品')
-    return
-  }
-
-  try {
-    await ElMessageBox.confirm(`确定要取消收藏选中的 ${selectedIds.value.length} 个商品吗？`, '提示', {
-      confirmButtonText: '确定',
-      cancelButtonText: '取消',
-      type: 'warning'
-    })
-
-    const selectedFavorites = favorites.value.filter(f => selectedIds.value.includes(f.id))
-    await Promise.all(selectedFavorites.map(f => toggleFavorite(f.productId)))
-    
-    favorites.value = favorites.value.filter(f => !selectedIds.value.includes(f.id))
-    selectedIds.value = []
-    ElMessage.success('批量取消收藏成功')
-  } catch (error) {
-    if (error !== 'cancel') {
-      console.error('批量取消收藏失败', error)
-    }
-  }
-}
-
 const handleSelectAll = (val: string | number | boolean) => {
   if (val) {
     selectedIds.value = favorites.value.map(f => f.id)
@@ -78,6 +34,33 @@ const handleSelectAll = (val: string | number | boolean) => {
 
 const goToProduct = (productId: number) => {
   router.push(`/product/${productId}`)
+}
+
+const handleRemoveFavorite = async (favorite: Favorite) => {
+  try {
+    await toggleFavorite(favorite.productId)
+    favorites.value = favorites.value.filter(f => f.id !== favorite.id)
+    selectedIds.value = selectedIds.value.filter(id => id !== favorite.id)
+    ElMessage.success('已取消收藏')
+  } catch (error) {
+    console.error('取消收藏失败', error)
+  }
+}
+
+const handleBatchRemove = async () => {
+  if (selectedIds.value.length === 0) {
+    ElMessage.warning('请选择要取消收藏的商品')
+    return
+  }
+  try {
+    const selectedFavorites = favorites.value.filter(f => selectedIds.value.includes(f.id))
+    await Promise.all(selectedFavorites.map(f => toggleFavorite(f.productId)))
+    favorites.value = favorites.value.filter(f => !selectedIds.value.includes(f.id))
+    selectedIds.value = []
+    ElMessage.success('批量取消收藏成功')
+  } catch (error) {
+    console.error('批量取消收藏失败', error)
+  }
 }
 
 const formatDate = (date: string) => {
@@ -96,7 +79,10 @@ onMounted(() => {
         <div class="favorites-card">
           <div class="card-header">
             <div>
-              <h1 class="page-title">我的收藏</h1>
+              <h1 class="page-title">
+                <el-icon class="title-icon"><StarFilled /></el-icon>
+                我的收藏
+              </h1>
               <p class="page-subtitle">共 {{ favorites.length }} 件商品</p>
             </div>
             <el-button 
@@ -142,17 +128,6 @@ onMounted(() => {
                         }
                       }"
                     />
-                    <div class="delete-btn-wrapper">
-                      <el-button 
-                        type="danger" 
-                        size="small" 
-                        circle
-                        @click.stop="handleRemoveFavorite(favorite)"
-                        class="delete-btn"
-                      >
-                        <el-icon><Delete /></el-icon>
-                      </el-button>
-                    </div>
                   </div>
                   <img 
                     :src="favorite.productImage || '/placeholder.png'" 
@@ -170,7 +145,7 @@ onMounted(() => {
                     </h3>
                     
                     <div class="price-row">
-                      <span class="price">¥{{ favorite.price }}</span>
+                      <span class="price">¥{{ (favorite.price ?? 0).toFixed(2) }}</span>
                     </div>
                     
                     <div class="date-info">
@@ -184,6 +159,16 @@ onMounted(() => {
                       @click="goToProduct(favorite.productId)"
                     >
                       查看详情
+                    </el-button>
+                    <el-button 
+                      type="danger" 
+                      size="small" 
+                      plain
+                      class="remove-btn"
+                      @click.stop="handleRemoveFavorite(favorite)"
+                    >
+                      <el-icon><Delete /></el-icon>
+                      取消收藏
                     </el-button>
                   </div>
                 </div>
@@ -228,17 +213,29 @@ onMounted(() => {
 
 .card-header {
   padding: 24px 32px;
-  border-bottom: 1px solid #f3f4f6;
+  border-bottom: 1px solid var(--el-border-color-lighter);
   display: flex;
   align-items: center;
   justify-content: space-between;
+  background: linear-gradient(135deg, rgba(22, 119, 255, 0.03) 0%, rgba(64, 150, 255, 0.03) 100%);
 }
 
 .page-title {
   font-size: 24px;
   font-weight: 700;
-  color: #1f2937;
+  color: var(--el-text-color-primary);
+  display: flex;
+  align-items: center;
+  gap: 12px;
   margin: 0 0 4px 0;
+}
+
+.title-icon {
+  color: var(--el-color-primary);
+  font-size: 18px;
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
 }
 
 .page-subtitle {
@@ -260,6 +257,25 @@ onMounted(() => {
   padding: 16px 32px;
   background: #f9fafb;
   border-bottom: 1px solid #f3f4f6;
+}
+
+:deep(.select-bar .el-checkbox__inner) {
+  width: 22px;
+  height: 22px;
+  border-width: 2px;
+}
+
+:deep(.select-bar .el-checkbox__inner::after) {
+  width: 6px;
+  height: 12px;
+  left: 6px;
+  top: 1px;
+}
+
+:deep(.select-bar .el-checkbox.is-checked .el-checkbox__inner) {
+  background-color: var(--el-color-primary);
+  border-color: var(--el-color-primary);
+  box-shadow: 0 0 0 3px rgba(22, 119, 255, 0.2);
 }
 
 .favorites-content {
@@ -305,27 +321,30 @@ onMounted(() => {
   z-index: 10;
 }
 
-.delete-btn-wrapper {
-  opacity: 0;
-  transition: opacity 0.3s ease;
+:deep(.select-checkbox .el-checkbox__inner) {
+  width: 22px;
+  height: 22px;
+  border-width: 2px;
 }
 
-.item-wrapper:hover .delete-btn-wrapper {
-  opacity: 1;
+:deep(.select-checkbox .el-checkbox__inner::after) {
+  width: 6px;
+  height: 12px;
+  left: 6px;
+  top: 1px;
 }
 
-.delete-btn {
-  transition: all 0.3s ease;
-}
-
-.delete-btn:hover {
-  transform: scale(1.1);
+:deep(.select-checkbox.is-checked .el-checkbox__inner) {
+  background-color: var(--el-color-primary);
+  border-color: var(--el-color-primary);
+  box-shadow: 0 0 0 3px rgba(22, 119, 255, 0.2);
 }
 
 .product-image {
   width: 100%;
   height: 220px;
-  object-fit: cover;
+  object-fit: contain;
+  background: #f9fafb;
   cursor: pointer;
   transition: transform 0.3s ease;
 }
@@ -374,7 +393,7 @@ onMounted(() => {
 }
 
 .view-btn {
-  width: 100%;
+  flex: 1;
   height: 40px;
   font-weight: 600;
   border-radius: var(--radius-sm);
@@ -384,6 +403,17 @@ onMounted(() => {
 .view-btn:hover {
   transform: translateY(-2px);
   box-shadow: 0 8px 24px rgba(22, 119, 255, 0.3);
+}
+
+.remove-btn {
+  height: 40px;
+  font-weight: 600;
+  border-radius: var(--radius-sm);
+  transition: all 0.3s ease;
+}
+
+.item-body .el-button + .el-button {
+  margin-left: 8px;
 }
 
 .empty-state {

@@ -26,4 +26,6 @@ public interface UserService extends IService<User> {
     User getByUsername(String username);
 
     boolean updateBalanceWithLock(Long userId, BigDecimal amount);
+
+    boolean existsByEmail(String email);
 }

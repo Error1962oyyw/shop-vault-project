@@ -177,6 +177,40 @@ public class UnifiedOrderController extends BaseController {
         }
     }
 
+    @PostMapping("/{orderId}/confirm-receive")
+    public Result<Void> confirmReceive(@PathVariable Long orderId) {
+        Long userId = getCurrentUserId();
+        try {
+            Order order = unifiedOrderService.getById(orderId);
+            if (order == null || !order.getUserId().equals(userId)) {
+                return Result.error(404, "订单不存在");
+            }
+            if (order.getStatus() != Order.STATUS_PENDING_RECEIVE) {
+                return Result.error(400, "当前订单状态不支持确认收货");
+            }
+            unifiedOrderService.confirmReceive(order.getOrderNo(), userId);
+            return Result.success();
+        } catch (RuntimeException e) {
+            log.error("确认收货失败, orderId={}, error={}", orderId, e.getMessage());
+            return Result.error(400, e.getMessage());
+        }
+    }
+
+    @PostMapping("/{orderId}/after-sales")
+    public Result<Void> applyAfterSales(@PathVariable Long orderId, @RequestBody Map<String, String> params) {
+        Long userId = getCurrentUserId();
+        try {
+            Order order = unifiedOrderService.getById(orderId);
+            if (order == null || !order.getUserId().equals(userId)) {
+                return Result.error(404, "订单不存在");
+            }
+            return Result.success();
+        } catch (RuntimeException e) {
+            log.error("申请售后失败, orderId={}, error={}", orderId, e.getMessage());
+            return Result.error(400, e.getMessage());
+        }
+    }
+
     @PostMapping("/checkout")
     public Result<Map<String, Object>> cartCheckout(@RequestBody CartCheckoutDto dto) {
         Long userId = getCurrentUserId();

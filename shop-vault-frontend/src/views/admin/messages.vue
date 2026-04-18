@@ -134,7 +134,7 @@ onMounted(() => {
       </el-table-column>
     </el-table>
 
-    <el-dialog v-model="showDialog" title="发送消息" width="500px">
+    <el-dialog v-model="showDialog" title="发送消息" width="500px" :close-on-click-modal="false">
       <el-form :model="form" label-width="80px">
         <el-form-item label="推送目标">
           <el-radio-group v-model="pushTarget">
@@ -192,6 +192,7 @@ onMounted(() => {
 .line-clamp-2 {
   display: -webkit-box;
   -webkit-line-clamp: 2;
+  line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }

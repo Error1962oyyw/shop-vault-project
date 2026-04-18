@@ -8,6 +8,7 @@ import com.TsukasaChan.ShopVault.dto.OrderDetailDto;
 import com.TsukasaChan.ShopVault.entity.order.Order;
 import com.TsukasaChan.ShopVault.entity.order.OrderItem;
 import com.TsukasaChan.ShopVault.entity.order.PaymentRecord;
+import com.TsukasaChan.ShopVault.entity.system.Address;
 import com.TsukasaChan.ShopVault.entity.system.User;
 import com.TsukasaChan.ShopVault.entity.marketing.PointsProduct;
 import com.TsukasaChan.ShopVault.mapper.order.OrderMapper;
@@ -17,6 +18,7 @@ import com.TsukasaChan.ShopVault.service.order.OrderLifecycleService;
 import com.TsukasaChan.ShopVault.service.order.PaymentRecordService;
 import com.TsukasaChan.ShopVault.service.order.UnifiedOrderService;
 import com.TsukasaChan.ShopVault.service.system.UserService;
+import com.TsukasaChan.ShopVault.service.system.AddressService;
 import com.TsukasaChan.ShopVault.service.marketing.PointsProductService;
 import com.TsukasaChan.ShopVault.service.marketing.PointsRecordService;
 import com.TsukasaChan.ShopVault.service.marketing.VipMembershipService;
@@ -43,6 +45,7 @@ public class UnifiedOrderServiceImpl extends ServiceImpl<OrderMapper, Order> imp
     private final OrderItemService orderItemService;
     private final PaymentRecordService paymentRecordService;
     private final UserService userService;
+    private final AddressService addressService;
     private final PointsProductService pointsProductService;
     private final PointsRecordService pointsRecordService;
     private final VipMembershipService vipMembershipService;
@@ -238,14 +241,18 @@ public class UnifiedOrderServiceImpl extends ServiceImpl<OrderMapper, Order> imp
             throw new RuntimeException("余额扣除失败");
         }
 
-        order.setStatus(Order.STATUS_PENDING_DELIVERY);
+        boolean isVipOrder = order.getOrderType() == Order.ORDER_TYPE_VIP || order.getOrderType() == Order.ORDER_TYPE_SVIP;
+        order.setStatus(isVipOrder ? Order.STATUS_COMPLETED : Order.STATUS_PENDING_DELIVERY);
         order.setPaymentMethod(Order.PAYMENT_METHOD_BALANCE);
         order.setPaymentTime(LocalDateTime.now());
+        if (isVipOrder) {
+            order.setDeliveryTime(LocalDateTime.now());
+        }
         updateById(order);
 
         paymentRecordService.updatePaymentSuccess(record.getId(), null);
 
-        if (order.getOrderType() == Order.ORDER_TYPE_VIP || order.getOrderType() == Order.ORDER_TYPE_SVIP) {
+        if (isVipOrder) {
             processVipOrderAfterPayment(order);
         }
 
@@ -274,14 +281,18 @@ public class UnifiedOrderServiceImpl extends ServiceImpl<OrderMapper, Order> imp
             throw new RuntimeException("支付记录不存在");
         }
 
-        order.setStatus(Order.STATUS_PENDING_DELIVERY);
+        boolean isVipOrder = order.getOrderType() == Order.ORDER_TYPE_VIP || order.getOrderType() == Order.ORDER_TYPE_SVIP;
+        order.setStatus(isVipOrder ? Order.STATUS_COMPLETED : Order.STATUS_PENDING_DELIVERY);
         order.setPaymentMethod(Order.PAYMENT_METHOD_DIRECT);
         order.setPaymentTime(LocalDateTime.now());
+        if (isVipOrder) {
+            order.setDeliveryTime(LocalDateTime.now());
+        }
         updateById(order);
 
         paymentRecordService.updatePaymentSuccess(record.getId(), null);
 
-        if (order.getOrderType() == Order.ORDER_TYPE_VIP || order.getOrderType() == Order.ORDER_TYPE_SVIP) {
+        if (isVipOrder) {
             processVipOrderAfterPayment(order);
         }
 
@@ -326,14 +337,19 @@ public class UnifiedOrderServiceImpl extends ServiceImpl<OrderMapper, Order> imp
             throw new RuntimeException("余额扣除失败");
         }
 
-        order.setStatus(Order.STATUS_PENDING_DELIVERY);
+        boolean isVipOrder = order.getOrderType() == Order.ORDER_TYPE_VIP || order.getOrderType() == Order.ORDER_TYPE_SVIP;
+        order.setStatus(isVipOrder ? Order.STATUS_COMPLETED : Order.STATUS_PENDING_DELIVERY);
         order.setPaymentMethod(Order.PAYMENT_METHOD_COMBO);
         order.setPaymentTime(LocalDateTime.now());
+        order.setBalanceAmount(balanceAmount);
+        if (isVipOrder) {
+            order.setDeliveryTime(LocalDateTime.now());
+        }
         updateById(order);
 
         paymentRecordService.updatePaymentSuccess(record.getId(), null);
 
-        if (order.getOrderType() == Order.ORDER_TYPE_VIP || order.getOrderType() == Order.ORDER_TYPE_SVIP) {
+        if (isVipOrder) {
             processVipOrderAfterPayment(order);
         }
 
@@ -418,6 +434,13 @@ public class UnifiedOrderServiceImpl extends ServiceImpl<OrderMapper, Order> imp
     }
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void confirmReceive(String orderNo, Long userId) {
+        orderLifecycleService.confirmReceive(orderNo, userId);
+        log.info("确认收货成功, orderNo={}, userId={}", orderNo, userId);
+    }
+
+    @Override
     public void cancelExpiredOrders() {
         List<Order> expiredOrders = getExpiredOrders();
         for (Order order : expiredOrders) {
@@ -490,6 +513,7 @@ public class UnifiedOrderServiceImpl extends ServiceImpl<OrderMapper, Order> imp
         dto.setPaymentMethodName(getPaymentMethodName(order.getPaymentMethod()));
         dto.setExpireTime(order.getExpireTime());
         dto.setPaymentTime(order.getPaymentTime());
+        dto.setDeliveryTime(order.getDeliveryTime());
         dto.setCreateTime(order.getCreateTime());
         dto.setCloseTime(order.getCloseTime());
         dto.setCloseReason(order.getCloseReason());
@@ -497,6 +521,52 @@ public class UnifiedOrderServiceImpl extends ServiceImpl<OrderMapper, Order> imp
         dto.setTrackingNo(order.getTrackingNo());
         dto.setProductName(order.getProductName());
         dto.setRemark(order.getRemark());
+
+        if (order.getProductName() == null && order.getId() != null) {
+            List<OrderItem> items = orderItemService.list(new LambdaQueryWrapper<OrderItem>()
+                    .eq(OrderItem::getOrderId, order.getId()));
+            if (!items.isEmpty()) {
+                OrderItem firstItem = items.get(0);
+                dto.setProductName(firstItem.getProductName());
+                dto.setProductImage(firstItem.getProductImg());
+                dto.setProductPrice(firstItem.getProductPrice());
+                dto.setQuantity(items.stream().mapToInt(OrderItem::getQuantity).sum());
+            }
+        } else {
+            dto.setQuantity(order.getQuantity());
+        }
+
+        BigDecimal discountAmount = BigDecimal.ZERO;
+        if (order.getCouponDiscount() != null) discountAmount = discountAmount.add(order.getCouponDiscount());
+        if (order.getVipDiscount() != null) discountAmount = discountAmount.add(order.getVipDiscount());
+        if (order.getPointsDiscount() != null) discountAmount = discountAmount.add(order.getPointsDiscount());
+        dto.setDiscountAmount(discountAmount);
+
+        dto.setBalanceAmount(order.getBalanceAmount());
+        dto.setFreightAmount(order.getFreightAmount());
+
+        if (order.getReceiverSnapshot() != null) {
+            try {
+                com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+                com.fasterxml.jackson.databind.JsonNode node = mapper.readTree(order.getReceiverSnapshot());
+                if (node.has("receiverName")) dto.setReceiverName(node.get("receiverName").asText());
+                if (node.has("receiverPhone")) dto.setReceiverPhone(node.get("receiverPhone").asText());
+                if (node.has("address")) dto.setReceiverAddress(node.get("address").asText());
+            } catch (Exception ignored) {}
+        } else if (order.getAddressId() != null) {
+            try {
+                Address address = addressService.getById(order.getAddressId());
+                if (address != null) {
+                    dto.setReceiverName(address.getReceiverName());
+                    dto.setReceiverPhone(address.getReceiverPhone());
+                    dto.setReceiverAddress(
+                        address.getProvince() + address.getCity() + address.getRegion() + address.getDetailAddress());
+                }
+            } catch (Exception ignored) {}
+        }
+
+        dto.setPointsEarned(order.getPointsEarned());
+
         return dto;
     }
 

@@ -193,7 +193,7 @@ onMounted(() => {
 
     <el-empty v-if="!loading && mappings.length === 0" description="暂无映射数据" />
 
-    <el-dialog v-model="showDialog" :title="dialogType === 'create' ? '新建映射' : '编辑映射'" width="500px">
+    <el-dialog v-model="showDialog" :title="dialogType === 'create' ? '新建映射' : '编辑映射'" width="500px" :close-on-click-modal="false">
       <el-form :model="form" label-width="100px">
         <el-form-item label="YOLO标签" required>
           <el-select 

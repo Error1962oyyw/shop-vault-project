@@ -1,5 +1,5 @@
 import request from '@/utils/request';
-import type { Product, ProductListParams, PageResult, Category, Comment, Favorite, YoloSearchResult, AddCommentParams } from '@/types/api';
+import type { Product, ProductListParams, PageResult, Category, Comment, Favorite, YoloSearchResult, AddCommentParams, ProductSku } from '@/types/api';
 
 export const getProductList = (params: ProductListParams) => {
   return request<PageResult<Product>>({
@@ -16,6 +16,13 @@ export const getProductDetail = (id: number) => {
   });
 };
 
+export const getProductSkus = (productId: number) => {
+  return request<ProductSku[]>({
+    url: `/api/product/skus/${productId}`,
+    method: 'get'
+  });
+};
+
 export const yoloSearch = (file: File) => {
   const formData = new FormData();
   formData.append('file', file);
@@ -23,7 +30,6 @@ export const yoloSearch = (file: File) => {
     url: '/api/product/yolo-search',
     method: 'post',
     data: formData,
-    headers: { 'Content-Type': 'multipart/form-data' },
     timeout: 30000
   });
 };
@@ -113,8 +119,7 @@ export const uploadImage = (file: File) => {
   return request<string>({
     url: '/api/upload/image',
     method: 'post',
-    data: formData,
-    headers: { 'Content-Type': 'multipart/form-data' }
+    data: formData
   });
 };
 
@@ -124,13 +129,22 @@ export const publishProduct = (data: {
   price: number;
   originalPrice?: number;
   stock: number;
-  description?: string;
+  subTitle?: string;
   mainImage?: string;
-  detailImages?: string[];
+  detailImages?: string;
+  freight?: number;
 }) => {
   return request<void>({
     url: '/api/product/publish',
     method: 'post',
+    data
+  });
+};
+
+export const updateProduct = (id: number, data: Record<string, unknown>) => {
+  return request<void>({
+    url: `/api/product/update/${id}`,
+    method: 'put',
     data
   });
 };

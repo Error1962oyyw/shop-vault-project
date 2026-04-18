@@ -149,4 +149,9 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
                 .setSql("balance = IFNULL(balance, 0) + {0}", amount);
         return update(updateWrapper);
     }
+
+    @Override
+    public boolean existsByEmail(String email) {
+        return this.count(new LambdaQueryWrapper<User>().eq(User::getEmail, email)) > 0;
+    }
 }

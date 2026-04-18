@@ -47,11 +47,22 @@ public class PointsProductServiceImpl extends ServiceImpl<PointsProductMapper, P
     public List<PointsProduct> getAvailableProducts() {
         List<PointsProduct> products = ServiceUtils.queryList(this, wrapper -> wrapper
                 .eq(PointsProduct::getStatus, PointsProduct.STATUS_ENABLED)
-                .gt(PointsProduct::getStock, 0)
+                .and(w -> w
+                        .gt(PointsProduct::getStock, 0)
+                        .or()
+                        .in(PointsProduct::getType,
+                                PointsProduct.TYPE_COUPON,
+                                PointsProduct.TYPE_VIP_MONTHLY,
+                                PointsProduct.TYPE_VIP_YEARLY)
+                )
                 .orderByAsc(PointsProduct::getSortOrder));
 
         for (PointsProduct product : products) {
-            product.setRemainStock(product.getStock());
+            if (product.getStock() != null && product.getStock() > 0) {
+                product.setRemainStock(product.getStock());
+            } else {
+                product.setRemainStock(Integer.MAX_VALUE);
+            }
         }
         return products;
     }
@@ -95,7 +106,10 @@ public class PointsProductServiceImpl extends ServiceImpl<PointsProductMapper, P
             throw new RuntimeException("积分不足，兑换需要 " + pointsProduct.getPointsCost() + " 积分");
         }
 
-        if (pointsProduct.getStock() <= 0) {
+        if (pointsProduct.getStock() != null && pointsProduct.getStock() <= 0
+                && pointsProduct.getType() != PointsProduct.TYPE_COUPON
+                && pointsProduct.getType() != PointsProduct.TYPE_VIP_MONTHLY
+                && pointsProduct.getType() != PointsProduct.TYPE_VIP_YEARLY) {
             throw new RuntimeException("商品库存不足");
         }
 
@@ -108,13 +122,19 @@ public class PointsProductServiceImpl extends ServiceImpl<PointsProductMapper, P
             throw new RuntimeException("积分不足，兑换需要 " + pointsProduct.getPointsCost() + " 积分");
         }
 
-        int stockUpdated = getBaseMapper().update(null,
-                new LambdaUpdateWrapper<PointsProduct>()
-                        .setSql("stock = stock - 1")
-                        .eq(PointsProduct::getId, productId)
-                        .gt(PointsProduct::getStock, 0));
-        if (stockUpdated == 0) {
-            throw new RuntimeException("商品库存不足");
+        boolean isVirtual = pointsProduct.getType() == PointsProduct.TYPE_COUPON
+                || pointsProduct.getType() == PointsProduct.TYPE_VIP_MONTHLY
+                || pointsProduct.getType() == PointsProduct.TYPE_VIP_YEARLY;
+
+        if (!isVirtual) {
+            int stockUpdated = getBaseMapper().update(null,
+                    new LambdaUpdateWrapper<PointsProduct>()
+                            .setSql("stock = stock - 1")
+                            .eq(PointsProduct::getId, productId)
+                            .gt(PointsProduct::getStock, 0));
+            if (stockUpdated == 0) {
+                throw new RuntimeException("商品库存不足");
+            }
         }
 
         PointsRecord record = new PointsRecord();

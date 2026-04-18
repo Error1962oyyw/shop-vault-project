@@ -83,7 +83,16 @@ const fetchCategories = async () => {
 const fetchProducts = async () => {
   loading.value = true
   try {
-    const categoryId = filters.categoryIds.length > 0 ? filters.categoryIds[0] : undefined
+    let categoryId = undefined
+    if (filters.categoryIds.length > 0) {
+      const selectedId = filters.categoryIds[0]
+      const parentCat = categories.value.find(c => c.id === selectedId)
+      if (parentCat && parentCat.children?.length) {
+        categoryId = selectedId
+      } else {
+        categoryId = selectedId
+      }
+    }
     
     const res: PageResult<Product> = await getProductList({
       categoryId: categoryId,

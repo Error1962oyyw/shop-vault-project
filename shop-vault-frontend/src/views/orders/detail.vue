@@ -48,6 +48,21 @@ const isOrderPayable = computed(() => {
 
 const isBalanceSufficient = computed(() => userBalance.value >= orderAmount.value)
 
+const isVipOrder = computed(() => {
+  if (!order.value) return false
+  return order.value.orderType === 2 || order.value.orderType === 3
+})
+
+const getPaymentMethodText = (method: string) => {
+  const map: Record<string, string> = {
+    'BALANCE': '余额支付',
+    'DIRECT': '直接支付',
+    'COMBO': '组合支付',
+    'POINTS': '积分支付'
+  }
+  return map[method] || method
+}
+
 const balanceShortfall = computed(() => Math.max(0, orderAmount.value - userBalance.value))
 
 const balancePaymentAmount = computed(() => {
@@ -258,9 +273,9 @@ onMounted(() => {
                   :alt="getOrderDisplayName(order)"
                   class="product-image"
                 />
-                <div v-else class="product-image-fallback" :class="order.orderType === 1 || order.orderType === 2 ? 'vip' : ''">
+                <div v-else class="vip-icon-box" :class="order.orderType === 2 ? 'svip' : 'vip'">
                   <el-icon :size="32"><Medal /></el-icon>
-                  <span>{{ order.orderType === 2 ? 'SVIP' : 'VIP' }}</span>
+                  <span class="vip-label">{{ order.orderType === 2 ? 'SVIP' : 'VIP' }}</span>
                 </div>
                 <div class="product-info">
                   <h3 class="product-name">{{ getOrderDisplayName(order) }}</h3>
@@ -353,6 +368,39 @@ onMounted(() => {
                 <span class="price-label total-label">实付金额</span>
                 <span class="price-value total-value">{{ order.status === 4 ? formatMoney(0) : formatMoney(order.payAmount || order.totalAmount || 0) }}</span>
               </div>
+              <template v-if="order.status !== 0 && order.status !== 4 && order.paymentMethod">
+                <el-divider />
+                <div class="price-row">
+                  <span class="price-label">支付方式</span>
+                  <span class="price-value">{{ getPaymentMethodText(order.paymentMethod) }}</span>
+                </div>
+                <template v-if="order.paymentMethod === 'COMBO'">
+                  <div class="price-row">
+                    <span class="price-label">余额支付</span>
+                    <span class="price-value">{{ formatMoney(order.balanceAmount ?? 0) }}</span>
+                  </div>
+                  <div class="price-row">
+                    <span class="price-label">在线支付</span>
+                    <span class="price-value">{{ formatMoney((order.payAmount || 0) - (order.balanceAmount ?? 0)) }}</span>
+                  </div>
+                </template>
+                <template v-if="isVipOrder">
+                  <div class="price-row discount-row">
+                    <span class="price-label">优惠券</span>
+                    <span class="price-value" style="color: var(--el-text-color-secondary)">不可使用</span>
+                  </div>
+                  <div class="price-row discount-row">
+                    <span class="price-label">会员折扣</span>
+                    <span class="price-value" style="color: var(--el-text-color-secondary)">不可使用</span>
+                  </div>
+                </template>
+                <template v-if="order.status === 3 && (order.pointsEarned ?? 0) > 0">
+                  <div class="price-row">
+                    <span class="price-label">获得积分</span>
+                    <span class="price-value" style="color: var(--el-color-success)">+{{ order.pointsEarned }}</span>
+                  </div>
+                </template>
+              </template>
             </div>
           </el-card>
 
@@ -738,9 +786,31 @@ onMounted(() => {
   gap: 2px;
 }
 
-.product-image-fallback.vip {
-  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+.vip-icon-box {
+  width: 80px;
+  height: 80px;
+  border-radius: 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
   color: #fff;
+  flex-shrink: 0;
+  gap: 2px;
+}
+
+.vip-icon-box.vip {
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+}
+
+.vip-icon-box.svip {
+  background: linear-gradient(135deg, #722ed1 0%, #531dab 100%);
+}
+
+.vip-label {
+  font-weight: 800;
+  font-size: 12px;
+  letter-spacing: 1px;
 }
 
 .product-info {

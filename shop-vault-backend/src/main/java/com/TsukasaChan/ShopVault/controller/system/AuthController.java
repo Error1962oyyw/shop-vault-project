@@ -59,7 +59,7 @@ public class AuthController {
         if (count != null && count == 1) {
             redisTemplate.expire(rateKey, 60, TimeUnit.SECONDS);
         }
-        if (count != null && count > RATE_LIMIT_PER_MINUTE) {
+        if (count != null && count >= RATE_LIMIT_PER_MINUTE) {
             throw new RuntimeException("操作过于频繁，请稍后再试");
         }
     }
@@ -175,6 +175,12 @@ public class AuthController {
     public Result<String> sendCode(@RequestParam String email) {
         verificationService.sendVerificationCode(email);
         return Result.success("验证码已发送至邮箱，请注意查收");
+    }
+
+    @GetMapping("/check-email")
+    public Result<Boolean> checkEmail(@RequestParam String email) {
+        boolean exists = userService.existsByEmail(email);
+        return Result.success(exists);
     }
 
     @LogOperation(module = "系统安全", action = "新用户邮箱注册")

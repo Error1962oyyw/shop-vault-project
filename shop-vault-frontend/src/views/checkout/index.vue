@@ -13,6 +13,7 @@ import {
 } from '@element-plus/icons-vue'
 import { getAddressList } from '@/api/user'
 import { getCartList } from '@/api/cart'
+import { getProductDetail } from '@/api/product'
 import { cartCheckout, buyNow, createVipOrder, createPointsExchangeOrder, getUserOrders } from '@/api/order'
 import { getApplicableCoupons, getBestCoupon, getCurrentMemberDay } from '@/api/marketing'
 import { useUserStore } from '@/stores/user'
@@ -73,7 +74,11 @@ const freightAmount = computed(() => {
   if (isVipOrder.value || isPointsOrder.value) {
     return 0
   }
-  return productAmount.value >= 99 ? 0 : 10
+  const maxFreight = cartItems.value.reduce((max, item) => {
+    const itemFreight = (item as any).freight ?? 0
+    return Math.max(max, itemFreight)
+  }, 0)
+  return maxFreight
 })
 
 const discountAmount = computed(() => {
@@ -137,21 +142,18 @@ const fetchCartItems = async () => {
   loading.value = true
   try {
     if (productId.value) {
-      const allItems = await getCartList()
-      cartItems.value = allItems.filter(item => item.productId === productId.value)
-      if (cartItems.value.length > 0) {
-        const item = cartItems.value[0]
-        cartItems.value = [{
-          id: item.id,
-          productId: item.productId,
-          productName: item.productName,
-          productImage: item.productImage,
-          price: item.price,
-          quantity: quantity.value,
-          stock: item.stock,
-          selected: true
-        }]
-      }
+      const product = await getProductDetail(productId.value)
+      cartItems.value = [{
+        id: 0,
+        productId: product.id,
+        productName: product.name,
+        productImage: product.mainImage,
+        price: product.price,
+        quantity: quantity.value,
+        stock: product.stock,
+        freight: product.freight ?? 0,
+        selected: true
+      }]
     } else if (cartIds.value.length > 0) {
       const allItems = await getCartList()
       cartItems.value = allItems.filter(item => cartIds.value.includes(item.id))
@@ -577,6 +579,7 @@ onMounted(async () => {
       v-model="showCouponDialog"
       title="选择优惠券"
       width="500px"
+      :close-on-click-modal="false"
     >
       <div class="coupon-list">
         <div

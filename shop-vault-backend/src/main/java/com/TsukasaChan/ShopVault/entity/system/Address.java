@@ -44,4 +44,6 @@ public class Address implements Serializable {
     private Integer isDefault;
 
     private LocalDateTime createTime;
+
+    private LocalDateTime updateTime;
 }

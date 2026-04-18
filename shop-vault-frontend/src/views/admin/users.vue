@@ -2,6 +2,7 @@
 import { ref, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { getUserList, updateUserStatus, deleteUser } from '@/api/admin'
+import request from '@/utils/request'
 import { Search, Lock, Unlock, Edit, Delete } from '@element-plus/icons-vue'
 import { usePagination } from '@/composables'
 import { AdminPageLayout } from '@/components/admin'
@@ -132,25 +133,17 @@ const openAdjustDialog = (user: UserItem) => {
 
 const handleAdjustConfirm = async () => {
   try {
-    const res = await fetch('/api/admin/users/' + adjustForm.value.userId + '/adjust', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer ' + localStorage.getItem('token')
-      },
-      body: JSON.stringify({
+    await request({
+      url: `/api/admin/users/${adjustForm.value.userId}/adjust`,
+      method: 'post',
+      data: {
         pointsChange: adjustForm.value.pointsChange,
         balanceChange: adjustForm.value.balanceChange
-      })
+      }
     })
-    if (res.ok) {
-      ElMessage.success('调整成功')
-      adjustDialogVisible.value = false
-      fetchUsers()
-    } else {
-      const data = await res.json()
-      ElMessage.error(data.message || '调整失败')
-    }
+    ElMessage.success('调整成功')
+    adjustDialogVisible.value = false
+    fetchUsers()
   } catch (error) {
     ElMessage.error('调整失败')
   }
@@ -262,7 +255,7 @@ onMounted(() => {
       />
     </div>
 
-    <el-dialog v-model="adjustDialogVisible" title="调整用户数据" width="400px">
+    <el-dialog v-model="adjustDialogVisible" title="调整用户数据" width="400px" :close-on-click-modal="false">
       <el-form label-width="80px">
         <el-form-item label="当前积分">
           <span>{{ adjustForm.points }}</span>

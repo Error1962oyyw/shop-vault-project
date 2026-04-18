@@ -6,9 +6,10 @@ import UserLayout from '@/components/layout/UserLayout.vue'
 import { getProfile, updateProfile, updatePassword, getAddressList, addAddress, updateAddress, deleteAddress, setDefaultAddress, uploadAvatar } from '@/api/user'
 import { regionOptions } from '@/utils/region'
 import { getSignInStatus, signIn } from '@/api/marketing'
+import { sendCode } from '@/api/auth'
 import { useUserStore } from '@/stores/user'
 import type { UserInfo, Address } from '@/types/api'
-import { Coin, User, Lock, Location, Plus, Camera } from '@element-plus/icons-vue'
+import { Coin, User, Lock, Location, Plus, Camera, Key, Message } from '@element-plus/icons-vue'
 
 const router = useRouter()
 const userStore = useUserStore()
@@ -37,9 +38,15 @@ const originalProfileForm = ref({
 
 const passwordStep = ref(1)
 const passwordForm = ref({
+  email: '',
+  code: '',
   oldPassword: '',
   newPassword: '',
   confirmPassword: ''
+})
+const passwordCountdown = ref(0)
+const canSendPasswordCode = computed(() => {
+  return passwordForm.value.email && passwordCountdown.value === 0
 })
 
 const avatarUrl = computed(() => {
@@ -224,20 +231,49 @@ const handleAvatarChange = async (event: Event) => {
   }
 }
 
+const handleSendPasswordCode = async () => {
+  if (!passwordForm.value.email) {
+    ElMessage.warning('请输入邮箱')
+    return
+  }
+  try {
+    await sendCode(passwordForm.value.email)
+    ElMessage.success('验证码已发送')
+    passwordCountdown.value = 60
+    const timer = setInterval(() => {
+      passwordCountdown.value--
+      if (passwordCountdown.value <= 0) {
+        clearInterval(timer)
+      }
+    }, 1000)
+  } catch (error: any) {
+    const msg = error?.response?.data?.msg || error?.message || '发送验证码失败'
+    ElMessage.error(msg)
+  }
+}
+
 const handleNextPasswordStep = async () => {
   if (passwordStep.value === 1) {
-    if (!passwordForm.value.oldPassword) {
-      ElMessage.warning('请输入当前密码')
+    if (!passwordForm.value.email) {
+      ElMessage.warning('请输入注册邮箱')
+      return
+    }
+    if (!passwordForm.value.code) {
+      ElMessage.warning('请输入验证码')
       return
     }
     passwordStep.value = 2
   } else if (passwordStep.value === 2) {
-    if (passwordForm.value.newPassword !== passwordForm.value.confirmPassword) {
-      ElMessage.error('两次输入的密码不一致')
+    if (!passwordForm.value.oldPassword) {
+      ElMessage.warning('请输入当前密码')
       return
     }
-    if (passwordForm.value.newPassword.length < 8) {
-      ElMessage.error('密码长度至少8个字符')
+    if (passwordForm.value.newPassword.length < 6 || passwordForm.value.newPassword.length > 20) {
+      ElMessage.error('新密码长度为6-20个字符')
+      return
+    }
+    if (passwordForm.value.newPassword !== passwordForm.value.confirmPassword) {
+      ElMessage.error('两次输入的密码不一致')
       return
     }
     try {
@@ -248,10 +284,13 @@ const handleNextPasswordStep = async () => {
       ElMessage.success('密码修改成功')
       passwordStep.value = 1
       passwordForm.value = { 
+        email: '', 
+        code: '', 
         oldPassword: '', 
         newPassword: '', 
         confirmPassword: '' 
       }
+      passwordCountdown.value = 0
       await userStore.fetchUserInfo()
     } catch (error: any) {
       const msg = error?.response?.data?.msg || error?.message || '修改密码失败'
@@ -495,16 +534,32 @@ onMounted(() => {
                     <div class="step-line"></div>
                     <div class="step-dot"></div>
                   </div>
-                  <p class="step-hint">步骤一：输入当前密码</p>
+                  <p class="step-hint">步骤一：验证邮箱身份</p>
                   <el-form label-position="top" class="profile-form">
-                    <el-form-item label="当前密码">
+                    <el-form-item label="注册邮箱">
                       <el-input 
-                        v-model="passwordForm.oldPassword" 
-                        type="password"
-                        show-password
-                        placeholder="请输入当前密码"
+                        v-model="passwordForm.email" 
+                        placeholder="请输入注册时使用的邮箱"
+                        :prefix-icon="Message"
                         class="form-input"
                       />
+                    </el-form-item>
+                    <el-form-item label="验证码">
+                      <div class="code-input-wrapper">
+                        <el-input 
+                          v-model="passwordForm.code" 
+                          placeholder="请输入验证码"
+                          :prefix-icon="Key"
+                          class="code-input"
+                        />
+                        <el-button 
+                          :disabled="!canSendPasswordCode"
+                          @click="handleSendPasswordCode"
+                          class="code-btn"
+                        >
+                          {{ passwordCountdown > 0 ? `${passwordCountdown}s` : '获取验证码' }}
+                        </el-button>
+                      </div>
                     </el-form-item>
                     <el-form-item>
                       <el-button type="primary" @click="handleNextPasswordStep" class="save-btn">
@@ -520,14 +575,23 @@ onMounted(() => {
                     <div class="step-line step-line-completed"></div>
                     <div class="step-dot step-active"></div>
                   </div>
-                  <p class="step-hint">步骤二：设置新密码</p>
+                  <p class="step-hint">步骤二：验证当前密码并设置新密码</p>
                   <el-form label-position="top" class="profile-form">
+                    <el-form-item label="当前密码">
+                      <el-input 
+                        v-model="passwordForm.oldPassword" 
+                        type="password"
+                        show-password
+                        placeholder="请输入当前密码"
+                        class="form-input"
+                      />
+                    </el-form-item>
                     <el-form-item label="新密码">
                       <el-input 
                         v-model="passwordForm.newPassword" 
                         type="password" 
                         show-password
-                        placeholder="请输入新密码" 
+                        placeholder="请输入新密码(6-20位)" 
                         class="form-input"
                       />
                     </el-form-item>

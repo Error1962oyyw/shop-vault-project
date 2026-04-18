@@ -31,11 +31,13 @@ public class LocalFileService {
     private Path uploadPath;
 
     private static final Set<String> ALLOWED_IMAGE_TYPES = Set.of(
-            "image/jpeg", "image/png", "image/gif", "image/webp", "image/bmp"
+            "image/jpeg", "image/png", "image/gif", "image/webp", "image/bmp",
+            "image/heic", "image/heif", "image/avif"
     );
     
     private static final Set<String> ALLOWED_EXTENSIONS = Set.of(
-            ".jpg", ".jpeg", ".png", ".gif", ".webp", ".bmp"
+            ".jpg", ".jpeg", ".png", ".gif", ".webp", ".bmp",
+            ".heic", ".heif", ".avif"
     );
     
     private static final long MAX_FILE_SIZE = 10 * 1024 * 1024;
@@ -87,7 +89,7 @@ public class LocalFileService {
         }
         
         if (!ALLOWED_EXTENSIONS.contains(extension)) {
-            throw new RuntimeException("只支持图片文件格式: jpg, jpeg, png, gif, webp, bmp");
+            throw new RuntimeException("只支持图片文件格式: jpg, jpeg, png, gif, webp, bmp, heic, heif, avif");
         }
         
         String contentType = file.getContentType();
@@ -104,8 +106,9 @@ public class LocalFileService {
     }
     
     private void validateFileContent(MultipartFile file, String extension) throws IOException {
+        int headerSize = ".webp".equals(extension) ? 12 : 8;
         try (InputStream is = file.getInputStream()) {
-            byte[] header = new byte[8];
+            byte[] header = new byte[headerSize];
             int bytesRead = is.read(header);
             
             if (bytesRead < 2) {
@@ -118,8 +121,10 @@ public class LocalFileService {
                 case ".jpg", ".jpeg" -> magicNumber.startsWith("FFD8FF");
                 case ".png" -> magicNumber.startsWith("89504E47");
                 case ".gif" -> magicNumber.startsWith("47494638");
-                case ".webp" -> magicNumber.contains("52494646") && magicNumber.contains("57454250");
+                case ".webp" -> magicNumber.startsWith("52494646") && magicNumber.contains("57454250");
                 case ".bmp" -> magicNumber.startsWith("424D");
+                case ".heic", ".heif" -> true;
+                case ".avif" -> true;
                 default -> false;
             };
             

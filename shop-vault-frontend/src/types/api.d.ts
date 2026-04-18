@@ -35,13 +35,14 @@ export interface Product {
   parentCategoryId?: number;
   categoryName: string;
   mainImage: string;
-  images: string[];
+  subTitle: string;
+  detailHtml: string;
+  detailImages: string;
+  freight: number;
   price: number;
   originalPrice: number;
   stock: number;
   sales: number;
-  description: string;
-  detail: string;
   status: number;
   isFavorite: boolean;
   createTime: string;
@@ -77,6 +78,7 @@ export interface CartItem {
   quantity: number;
   stock: number;
   selected: boolean;
+  freight?: number;
 }
 
 export interface Address {
@@ -374,12 +376,9 @@ export interface ProductSku {
   id: number;
   productId: number;
   skuCode: string;
-  skuName: string;
   specJson: string;
   price: number;
-  originalPrice: number;
   stock: number;
-  sales: number;
   image: string;
   status: number;
 }
@@ -486,6 +485,8 @@ export interface OrderDetail {
   productPrice: number;
   discountAmount?: number;
   freightAmount?: number;
+  balanceAmount?: number;
+  pointsEarned?: number;
   remark: string;
 }
 
@@ -514,10 +515,8 @@ export interface CouponTemplateParams {
 export interface SkuCreateParams {
   productId: number;
   skuCode: string;
-  skuName: string;
   specJson: string;
   price: number;
-  originalPrice: number;
   stock: number;
   image?: string;
 }

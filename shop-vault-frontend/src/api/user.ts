@@ -73,8 +73,7 @@ export const uploadAvatar = (file: File) => {
   return request<string>({
     url: '/api/user/avatar',
     method: 'post',
-    data: formData,
-    headers: { 'Content-Type': 'multipart/form-data' }
+    data: formData
   });
 };
 

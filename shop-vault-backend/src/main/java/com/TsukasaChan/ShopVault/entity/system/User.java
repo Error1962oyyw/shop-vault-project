@@ -54,4 +54,7 @@ public class User implements Serializable {
     private Integer isFirstLogin;
 
     private Integer preferenceSet;
+
+    @TableField(exist = false)
+    private Integer memberLevel;
 }

@@ -57,7 +57,7 @@ export const expireCoupons = () => {
   });
 };
 
-export const getProductSkus = (productId: number) => {
+export const getAdminProductSkus = (productId: number) => {
   return request<ProductSku[]>({
     url: `/api/admin/skus/product/${productId}`,
     method: 'get'

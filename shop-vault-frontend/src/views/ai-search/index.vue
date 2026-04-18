@@ -227,7 +227,7 @@ const triggerUpload = () => {
                 <input
                   ref="fileInputRef"
                   type="file"
-                  accept="image/jpeg,image/png,image/jpg,image/webp"
+                  accept="image/jpeg,image/png,image/jpg,image/webp,image/heic,image/heif,image/avif"
                   style="display: none"
                   @change="handleFileChange"
                 />

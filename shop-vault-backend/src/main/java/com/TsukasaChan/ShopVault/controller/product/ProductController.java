@@ -7,6 +7,7 @@ import com.TsukasaChan.ShopVault.controller.BaseController;
 import com.TsukasaChan.ShopVault.dto.YoloSearchResultDto;
 import com.TsukasaChan.ShopVault.entity.product.Category;
 import com.TsukasaChan.ShopVault.entity.product.Product;
+import com.TsukasaChan.ShopVault.entity.product.ProductSku;
 import com.TsukasaChan.ShopVault.integration.YoloClientService;
 import com.TsukasaChan.ShopVault.service.product.CategoryService;
 import com.TsukasaChan.ShopVault.service.product.ProductService;
@@ -26,6 +27,7 @@ public class ProductController extends BaseController {
     private final ProductService productService;
     private final CategoryService categoryService;
     private final YoloClientService yoloClientService;
+    private final com.TsukasaChan.ShopVault.service.product.ProductSkuService productSkuService;
 
     @LogOperation(module = "商品管理", action = "发布新商品")
     @PreAuthorize("hasRole('ADMIN')")
@@ -80,5 +82,29 @@ public class ProductController extends BaseController {
     @GetMapping("/detail/{id}")
     public Result<Product> getProductDetail(@PathVariable Long id) {
         return Result.success(productService.getProductDetailWithCategory(id, SecurityUtils.getCurrentUsername()));
+    }
+
+    @GetMapping("/skus/{productId}")
+    public Result<List<ProductSku>> getProductSkus(@PathVariable Long productId) {
+        return Result.success(productSkuService.listByProductId(productId));
+    }
+
+    @LogOperation(module = "商品管理", action = "更新商品")
+    @PreAuthorize("hasRole('ADMIN')")
+    @PutMapping("/update/{id}")
+    public Result<String> updateProduct(@PathVariable Long id, @RequestBody Product product) {
+        Product existing = productService.getById(id);
+        if (existing == null) {
+            return Result.error(404, "商品不存在");
+        }
+        product.setId(id);
+        if (product.getCategoryId() != null) {
+            Category category = categoryService.getById(product.getCategoryId());
+            if (category != null) {
+                product.setCategoryName(category.getName());
+            }
+        }
+        productService.updateById(product);
+        return Result.success("商品更新成功");
     }
 }

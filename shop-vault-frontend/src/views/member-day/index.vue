@@ -8,9 +8,12 @@ import {
   getUpcomingMemberDays, 
   checkMemberDay
 } from '@/api/marketing'
+import { useUserStore } from '@/stores/user'
+import { ElMessage } from 'element-plus'
 import type { MemberDay, Activity } from '@/types/api'
 
 const router = useRouter()
+const userStore = useUserStore()
 
 const currentMemberDay = ref<MemberDay | null>(null)
 const upcomingMemberDays = ref<Activity[]>([])
@@ -156,7 +159,16 @@ const goToCoupons = () => {
   router.push('/profile')
 }
 
-onMounted(() => {
+onMounted(async () => {
+  if (!userStore.userInfo) {
+    await userStore.fetchUserInfo()
+  }
+  const level = userStore.userInfo?.memberLevel ?? 0
+  if (level < 1) {
+    ElMessage.warning('会员日仅限VIP/SVIP用户参与')
+    router.replace('/points')
+    return
+  }
   loading.value = true
   Promise.all([
     fetchCurrentMemberDay(),

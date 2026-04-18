@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
-import { ElMessage, ElMessageBox } from 'element-plus'
-import { Coin, Ticket, Present, Star, Medal, Timer, Check, Calendar } from '@element-plus/icons-vue'
+import { ElMessage } from 'element-plus'
+import { Coin, Ticket, Present, Star, Medal, Timer, Check, Calendar, Warning } from '@element-plus/icons-vue'
 import UserLayout from '@/components/layout/UserLayout.vue'
 import { signIn, getPointsRecords, getAvailableCoupons, receiveCoupon, getMyCoupons, getSignInStatus } from '@/api/marketing'
 import { getProfile, rechargeBalance } from '@/api/user'
@@ -147,30 +147,25 @@ const handleClaimCoupon = async (couponId: number) => {
   }
 }
 
+const showPurchaseDialog = ref(false)
+const purchasingCard = ref<typeof vipCards[0] | null>(null)
+
 const handlePurchaseVip = async (type: number) => {
   const card = vipCards.find(c => c.type === type)
   if (!card) return
+  purchasingCard.value = card
+  showPurchaseDialog.value = true
+}
 
-  try {
-    await ElMessageBox.confirm(
-      `商品名称：${card.name}\n价格：¥${card.price}\n有效期：${card.duration}\n\n会员权益：${card.benefits.map(b => '✓ ' + b).join('\n')}`,
-      '确认购买',
-      {
-        confirmButtonText: '确认购买',
-        cancelButtonText: '取消',
-        type: 'warning'
-      }
-    )
-  } catch {
-    return
-  }
-
+const confirmPurchaseVip = () => {
+  showPurchaseDialog.value = false
+  if (!purchasingCard.value) return
   router.push({
     path: '/checkout',
     query: {
-      vipType: String(type),
-      price: String(card.price),
-      name: card.name
+      vipType: String(purchasingCard.value.type),
+      price: String(purchasingCard.value.price),
+      name: purchasingCard.value.name
     }
   })
 }
@@ -510,6 +505,7 @@ onMounted(() => {
       title="账户充值"
       width="400px"
       class="recharge-dialog"
+      :close-on-click-modal="false"
     >
       <div class="recharge-content">
         <div class="current-balance">
@@ -541,6 +537,47 @@ onMounted(() => {
         <el-button type="primary" :loading="rechargeLoading" @click="handleRecharge">
           确认充值 ¥{{ rechargeAmount }}
         </el-button>
+      </template>
+    </el-dialog>
+
+    <el-dialog
+      v-model="showPurchaseDialog"
+      title="确认购买"
+      width="520px"
+      :close-on-click-modal="false"
+      class="purchase-dialog"
+    >
+      <div v-if="purchasingCard" class="purchase-content">
+        <div class="purchase-header-row">
+          <span class="purchase-label">商品名称</span>
+          <span class="purchase-value purchase-name">{{ purchasingCard.name }}</span>
+        </div>
+        <div class="purchase-header-row">
+          <span class="purchase-label">价格</span>
+          <span class="purchase-value purchase-price">¥{{ purchasingCard.price }}</span>
+        </div>
+        <div class="purchase-header-row">
+          <span class="purchase-label">有效期</span>
+          <span class="purchase-value">{{ purchasingCard.duration }}</span>
+        </div>
+        <el-divider />
+        <div class="purchase-benefits">
+          <p class="benefits-title">会员权益</p>
+          <div v-for="(benefit, index) in purchasingCard.benefits" :key="index" class="purchase-benefit-item">
+            <Check class="benefit-check" />
+            {{ benefit }}
+          </div>
+        </div>
+        <div class="purchase-notice">
+          <Warning style="width: 16px; height: 16px; flex-shrink: 0" />
+          VIP/SVIP购买不享受优惠券及会员折扣优惠
+        </div>
+      </div>
+      <template #footer>
+        <div class="dialog-footer">
+          <el-button size="large" @click="showPurchaseDialog = false">取消</el-button>
+          <el-button type="danger" size="large" @click="confirmPurchaseVip">确认购买</el-button>
+        </div>
       </template>
     </el-dialog>
   </UserLayout>
@@ -1528,5 +1565,80 @@ onMounted(() => {
     width: 100%;
     justify-content: space-between;
   }
+}
+
+.purchase-content {
+  .purchase-header-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--el-border-color-lighter);
+  }
+
+  .purchase-label {
+    color: var(--el-text-color-secondary);
+    font-size: 14px;
+  }
+
+  .purchase-value {
+    font-size: 14px;
+    color: var(--el-text-color-primary);
+  }
+
+  .purchase-name {
+    font-weight: 600;
+    font-size: 16px;
+  }
+
+  .purchase-price {
+    color: var(--el-color-danger);
+    font-weight: 700;
+    font-size: 20px;
+  }
+
+  .purchase-benefits {
+    margin: 16px 0;
+
+    .benefits-title {
+      font-weight: 600;
+      margin-bottom: 12px;
+      color: var(--el-text-color-primary);
+    }
+  }
+
+  .purchase-benefit-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 0;
+    color: var(--el-text-color-regular);
+    font-size: 14px;
+  }
+
+  .benefit-check {
+    color: var(--el-color-success);
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+  }
+
+  .purchase-notice {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px;
+    background: var(--el-color-warning-light-9);
+    border-radius: 8px;
+    color: var(--el-color-warning-dark-2);
+    font-size: 13px;
+    margin-top: 16px;
+  }
+}
+
+.dialog-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
 }
 </style>

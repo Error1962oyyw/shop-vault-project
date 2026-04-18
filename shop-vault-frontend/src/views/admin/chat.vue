@@ -301,7 +301,7 @@ onMounted(() => {
               <input 
                 ref="imageInputRef"
                 type="file"
-                accept="image/jpeg,image/png,image/jpg,image/webp,image/gif"
+                accept="image/jpeg,image/png,image/jpg,image/webp,image/gif,image/heic,image/heif,image/avif"
                 style="display: none"
                 @change="handleImageChange"
               />

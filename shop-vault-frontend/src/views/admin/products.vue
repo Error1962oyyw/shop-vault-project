@@ -2,7 +2,7 @@
 import { ref, computed, onMounted, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Search, Plus, Upload, Delete, Setting } from '@element-plus/icons-vue'
-import { getProductList, publishProduct, getCategoryList, uploadImage } from '@/api/product'
+import { getProductList, publishProduct, getCategoryList, uploadImage, updateProduct } from '@/api/product'
 import { getSpecTemplates, getProductSpecs, addProductSpec, deleteProductSpec, addProductSpecValue, deleteProductSpecValue } from '@/api/spec'
 import { usePagination } from '@/composables'
 import { AdminPageLayout } from '@/components/admin'
@@ -18,6 +18,19 @@ const { pagination, handleCurrentChange, setTotal, getParams } = usePagination({
 })
 
 const showPublishDialog = ref(false)
+const showEditDialog = ref(false)
+const editForm = ref({
+  id: 0,
+  name: '',
+  price: 0,
+  originalPrice: 0,
+  stock: 0,
+  subTitle: '',
+  mainImage: '',
+  detailImages: [] as string[]
+})
+const editMainImageUploading = ref(false)
+const editDetailImagesUploading = ref(false)
 const publishForm = ref({
   name: '',
   parentCategoryId: undefined as number | undefined,
@@ -177,9 +190,9 @@ const handlePublish = async () => {
       price: publishForm.value.price,
       originalPrice: publishForm.value.originalPrice || undefined,
       stock: publishForm.value.stock,
-      description: publishForm.value.description || undefined,
+      subTitle: publishForm.value.description || undefined,
       mainImage: publishForm.value.mainImage || undefined,
-      detailImages: publishForm.value.detailImages.length > 0 ? publishForm.value.detailImages : undefined
+      detailImages: publishForm.value.detailImages.length > 0 ? publishForm.value.detailImages.join(',') : undefined
     })
     ElMessage.success('发布成功')
     showPublishDialog.value = false
@@ -209,6 +222,101 @@ const resetForm = () => {
 const openPublishDialog = () => {
   resetForm()
   showPublishDialog.value = true
+}
+
+const openEditDialog = (product: Product) => {
+  editForm.value = {
+    id: product.id,
+    name: product.name,
+    price: product.price,
+    originalPrice: product.originalPrice,
+    stock: product.stock,
+    subTitle: product.subTitle || '',
+    mainImage: product.mainImage || '',
+    detailImages: product.detailImages ? (() => {
+      try {
+        const parsed = JSON.parse(product.detailImages)
+        return Array.isArray(parsed) ? parsed : product.detailImages.split(',').filter(Boolean)
+      } catch {
+        return product.detailImages.split(',').filter(Boolean)
+      }
+    })() : []
+  }
+  showEditDialog.value = true
+}
+
+const handleEditMainImageUpload = async (options: { file: File }) => {
+  editMainImageUploading.value = true
+  try {
+    const url = await uploadImage(options.file)
+    editForm.value.mainImage = url
+    ElMessage.success('主图上传成功')
+  } catch (error) {
+    console.error('上传失败', error)
+    ElMessage.error('上传失败，请重试')
+  } finally {
+    editMainImageUploading.value = false
+  }
+}
+
+const handleEditMainImageDelete = () => {
+  editForm.value.mainImage = ''
+}
+
+const handleEditDetailImagesUpload = async (options: { file: File }) => {
+  editDetailImagesUploading.value = true
+  try {
+    const url = await uploadImage(options.file)
+    editForm.value.detailImages.push(url)
+    ElMessage.success('详情图上传成功')
+  } catch (error) {
+    console.error('上传失败', error)
+    ElMessage.error('上传失败，请重试')
+  } finally {
+    editDetailImagesUploading.value = false
+  }
+}
+
+const handleEditDetailImageDelete = (index: number) => {
+  editForm.value.detailImages.splice(index, 1)
+}
+
+const moveEditDetailImage = (index: number, direction: 'left' | 'right') => {
+  const images = editForm.value.detailImages
+  if (direction === 'left' && index > 0) {
+    [images[index], images[index - 1]] = [images[index - 1], images[index]]
+  } else if (direction === 'right' && index < images.length - 1) {
+    [images[index], images[index + 1]] = [images[index + 1], images[index]]
+  }
+}
+
+const handleEditSubmit = async () => {
+  if (!editForm.value.name.trim()) {
+    ElMessage.warning('请输入商品名称')
+    return
+  }
+  if (editForm.value.price <= 0) {
+    ElMessage.warning('请输入有效的商品价格')
+    return
+  }
+
+  try {
+    await updateProduct(editForm.value.id, {
+      name: editForm.value.name,
+      price: editForm.value.price,
+      originalPrice: editForm.value.originalPrice || undefined,
+      stock: editForm.value.stock,
+      subTitle: editForm.value.subTitle || undefined,
+      mainImage: editForm.value.mainImage || undefined,
+      detailImages: editForm.value.detailImages.length > 0 ? editForm.value.detailImages.join(',') : undefined
+    })
+    ElMessage.success('更新成功')
+    showEditDialog.value = false
+    fetchProducts()
+  } catch (error) {
+    console.error('更新失败', error)
+    ElMessage.error('更新失败，请重试')
+  }
 }
 
 const openSpecDialog = async (productId: number) => {
@@ -394,7 +502,7 @@ onMounted(() => {
       </el-table-column>
       <el-table-column label="操作" width="200" align="center">
         <template #default="{ row }">
-          <el-button type="primary" link size="small">编辑</el-button>
+          <el-button type="primary" link size="small" @click="openEditDialog(row)">编辑</el-button>
           <el-button type="warning" link size="small" @click="openSpecDialog(row.id)">
             <el-icon class="mr-1"><Setting /></el-icon>
             规格
@@ -415,7 +523,7 @@ onMounted(() => {
     </div>
   </AdminPageLayout>
 
-  <el-dialog v-model="showPublishDialog" title="发布商品" width="650px" class="custom-dialog" @close="resetForm">
+  <el-dialog v-model="showPublishDialog" title="发布商品" width="650px" class="custom-dialog" :close-on-click-modal="false" @close="resetForm">
     <el-form :model="publishForm" label-width="100px" class="publish-form">
       <el-form-item label="商品名称" required>
         <el-input v-model="publishForm.name" placeholder="请输入商品名称" />
@@ -511,7 +619,6 @@ onMounted(() => {
             v-else
             class="main-image-uploader"
             :show-file-list="false"
-            :before-upload="() => false"
             :http-request="handleMainImageUpload"
             accept="image/*"
           >
@@ -521,7 +628,7 @@ onMounted(() => {
               <span v-else>点击上传主图</span>
             </div>
           </el-upload>
-          <div class="upload-tip">建议尺寸: 800x800px，支持 JPG、PNG 格式</div>
+          <div class="upload-tip">建议尺寸: 800x800px，支持 JPG、PNG、WebP、HEIC、AVIF 格式</div>
         </div>
       </el-form-item>
       
@@ -559,7 +666,6 @@ onMounted(() => {
             <el-upload
               class="detail-image-uploader"
               :show-file-list="false"
-              :before-upload="() => false"
               :http-request="handleDetailImagesUpload"
               accept="image/*"
               multiple
@@ -571,7 +677,7 @@ onMounted(() => {
               </div>
             </el-upload>
           </div>
-          <div class="upload-tip">支持多张图片上传，可拖拽排序，建议尺寸: 750x750px</div>
+          <div class="upload-tip">支持多张图片上传，可拖拽排序，建议尺寸: 750x750px，支持 JPG、PNG、WebP、HEIC、AVIF</div>
         </div>
       </el-form-item>
     </el-form>
@@ -581,7 +687,96 @@ onMounted(() => {
     </template>
   </el-dialog>
 
-  <el-dialog v-model="showSpecDialog" title="商品规格管理" width="700px" class="custom-dialog">
+  <el-dialog v-model="showEditDialog" title="编辑商品" width="650px" class="custom-dialog" :close-on-click-modal="false">
+    <el-form :model="editForm" label-width="100px" class="publish-form">
+      <el-form-item label="商品名称" required>
+        <el-input v-model="editForm.name" placeholder="请输入商品名称" />
+      </el-form-item>
+      <el-form-item label="售价" required>
+        <el-input-number v-model="editForm.price" :min="0" :precision="2" />
+        <span class="price-unit">元</span>
+      </el-form-item>
+      <el-form-item label="原价">
+        <el-input-number v-model="editForm.originalPrice" :min="0" :precision="2" />
+        <span class="price-unit">元</span>
+      </el-form-item>
+      <el-form-item label="库存" required>
+        <el-input-number v-model="editForm.stock" :min="0" />
+        <span class="price-unit">件</span>
+      </el-form-item>
+      <el-form-item label="商品描述">
+        <el-input 
+          v-model="editForm.subTitle" 
+          type="textarea" 
+          :rows="3"
+          placeholder="请输入商品描述"
+        />
+      </el-form-item>
+      <el-form-item label="商品主图">
+        <div class="image-upload-section">
+          <div v-if="editForm.mainImage" class="main-image-preview">
+            <img :src="editForm.mainImage" alt="主图预览" />
+            <div class="image-actions">
+              <el-button type="danger" size="small" :icon="Delete" @click="handleEditMainImageDelete">删除</el-button>
+            </div>
+          </div>
+          <el-upload
+            v-else
+            class="main-image-uploader"
+            :show-file-list="false"
+            :http-request="handleEditMainImageUpload"
+            accept="image/*"
+          >
+            <div class="upload-placeholder" :class="{ 'is-uploading': editMainImageUploading }">
+              <el-icon v-if="!editMainImageUploading" class="upload-icon"><Upload /></el-icon>
+              <span v-if="editMainImageUploading">上传中...</span>
+              <span v-else>点击上传主图</span>
+            </div>
+          </el-upload>
+        </div>
+      </el-form-item>
+      <el-form-item label="详情图片">
+        <div class="detail-images-section">
+          <div class="detail-images-list">
+            <div 
+              v-for="(img, index) in editForm.detailImages" 
+              :key="index" 
+              class="detail-image-item"
+            >
+              <img :src="img" :alt="`详情图${index + 1}`" />
+              <div class="image-actions-overlay">
+                <el-button-group size="small">
+                  <el-button :disabled="index === 0" @click="moveEditDetailImage(index, 'left')">←</el-button>
+                  <el-button :disabled="index === editForm.detailImages.length - 1" @click="moveEditDetailImage(index, 'right')">→</el-button>
+                </el-button-group>
+                <el-button type="danger" size="small" :icon="Delete" @click="handleEditDetailImageDelete(index)">删除</el-button>
+              </div>
+              <span class="image-index">{{ index + 1 }}</span>
+            </div>
+            <el-upload
+              class="detail-image-uploader"
+              :show-file-list="false"
+              :http-request="handleEditDetailImagesUpload"
+              accept="image/*"
+              multiple
+            >
+              <div class="add-detail-image" :class="{ 'is-uploading': editDetailImagesUploading }">
+                <el-icon v-if="!editDetailImagesUploading" class="add-icon"><Plus /></el-icon>
+                <span v-if="editDetailImagesUploading">上传中...</span>
+                <span v-else>添加图片</span>
+              </div>
+            </el-upload>
+          </div>
+        </div>
+      </el-form-item>
+    </el-form>
+    <template #footer>
+      <el-button @click="showEditDialog = false">取消</el-button>
+      <el-button type="primary" @click="handleEditSubmit">保存</el-button>
+    </template>
+  </el-dialog>
+
+  <el-dialog v-model="showSpecDialog" title="商品规格管理" width="700px" class="custom-dialog" :close-on-click-modal="false">
     <div class="spec-manager">
       <div class="spec-add-section">
         <el-divider content-position="left">添加规格</el-divider>

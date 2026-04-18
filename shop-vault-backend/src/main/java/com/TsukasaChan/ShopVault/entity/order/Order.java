@@ -59,6 +59,14 @@ public class Order implements Serializable {
 
     private String receiverSnapshot;
 
+    private Long addressId;
+
+    private BigDecimal freightAmount;
+
+    private Integer pointsEarned;
+
+    private Integer quantity;
+
     private String trackingCompany;
 
     private String trackingNo;
@@ -89,6 +97,8 @@ public class Order implements Serializable {
 
     private BigDecimal vipDiscount;
 
+    private BigDecimal balanceAmount;
+
     private Integer discountDisabled;
 
     private Long skuId;
@@ -102,7 +112,7 @@ public class Order implements Serializable {
     private String remark;
 
     @TableField(value = "is_deleted")
-    private Integer isDeleted;
+    private Integer isDeleted = 0;
 
     private LocalDateTime createTime;
 
